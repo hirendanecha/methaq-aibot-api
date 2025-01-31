@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+
+<html lang="en" xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:v="urn:schemas-microsoft-com:vml">
+
+<head>
+    <title></title>
+    <meta content="text/html; charset=utf-8" http-equiv="Content-Type" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+
+    <link href="https://fonts.googleapis.com/css2?family=Lato:wght@100;200;300;400;500;600;700;800;900" rel="stylesheet"
+        type="text/css" />
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+        }
+    </style>
+</head>
+
+<body style="background-color: #ffffff; margin: 0; padding: 0; -webkit-text-size-adjust: none; text-size-adjust: none;">
+
+    <!-- Logo -->
+    <div align="center" class="alignment" style="line-height: 10px; margin-top: 20px;">
+        <a href="<%= serverBaseUrl %>" style="outline: none" tabindex="-1" target="_blank"><img alt="Logo"
+                src="<%= serverBaseUrl %>/assets/dark-web-logo.png"
+                style="display: block; height: auto; border: 0; width: 300px; max-width: 100%;" title="Logo"
+                width="221" /></a>
+    </div>
+
+    <!-- Message -->
+    <div style="font-family: sans-serif; margin-top: 50px">
+        <div class=""
+            style="font-size: 12px; font-family: 'Lato', Tahoma, Verdana, Segoe, sans-serif; mso-line-height-alt: 14.4px; color: #9ca09d; line-height: 1.2;">
+            <p style="margin: 0; font-size: 14px; text-align: center; mso-line-height-alt: 16.8px;">
+                <span style="font-size: 42px"><strong>Your Claim Request</strong></span>
+            </p>
+
+            <div align="center" class="alignment" style=" margin-top: 20px;">
+                <% if(claim?.claimStatus==="New" ) { %>
+                    <p
+                        style=" margin: 0; font-size: 16px; text-align: center; mso-line-height-alt: 21px; margin-top: 40px;  width: 550px;">
+                        Hey <%= customerName %>, we have received
+                            your claim request, our representative
+                            will contact you soon.
+                    </p>
+                    <% } else if(claim?.claimStatus==="Accepted" ) { %>
+                        <p
+                            style=" margin: 0; font-size: 16px; text-align: center; mso-line-height-alt: 21px; margin-top: 40px;  width: 550px;">
+                            Dear <%= customerName %>, your claim request has been successfully accepted. Our team will
+                                contact you shortly for further assistance.
+                        </p>
+                        <% } else { %>
+                            <p
+                                style=" margin: 0; font-size: 16px; text-align: center; mso-line-height-alt: 21px; margin-top: 40px;  width: 550px;">
+                                Dear <%= customerName %>, we regret to inform you that your claim request has been
+                                    rejected.
+                                    For further details or assistance, please contact our support team.
+                            </p>
+                            <% if(claim?.reason) { %>
+                                <p
+                                    style=" margin: 0; font-size: 16px; text-align: center; mso-line-height-alt: 21px; margin-top: 40px;  width: 550px;">
+                                    Reason: <%= claim?.reason %>
+                                </p>
+                                <% } %>
+                                    <% } %>
+            </div>
+
+            <!-- Garage Details -->
+            <div style="margin-top: 40px;" align="center" class="alignment">
+                <h3 style="color: #333;">Recommended Garages in Your Area</h3>
+                <table style="border-collapse: collapse; width: 80%; margin: 0 auto; border: 1px solid #333;">
+                    <thead>
+                        <tr style="background-color: #f2f2f2;">
+                            <th style="border: 1px solid #333; padding: 8px; text-align: left;">Garage Name</th>
+                            <th style="border: 1px solid #333; padding: 8px; text-align: left;">Location</th>
+                            <th style="border: 1px solid #333; padding: 8px; text-align: left;">Phone</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td style="border: 1px solid #333; padding: 8px;">Citywide Auto Repair</td>
+                            <td style="border: 1px solid #333; padding: 8px;"><a
+                                    href="https://maps.example.com/location1" target="_blank">123 Main Street,
+                                    Springfield</a></td>
+                            <td style="border: 1px solid #333; padding: 8px;">+1 123-456-7890</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #333; padding: 8px;">Prestige Motors</td>
+                            <td style="border: 1px solid #333; padding: 8px;"><a
+                                    href="https://maps.example.com/location2" target="_blank">456 Elm Street,
+                                    Shelbyville</a></td>
+                            <td style="border: 1px solid #333; padding: 8px;">+1 987-654-3210</td>
+                        </tr>
+                        <tr>
+                            <td style="border: 1px solid #333; padding: 8px;">Elite Auto Works</td>
+                            <td style="border: 1px solid #333; padding: 8px;"><a
+                                    href="https://maps.example.com/location3" target="_blank">789 Oak Avenue, Capital
+                                    City</a></td>
+                            <td style="border: 1px solid #333; padding: 8px;">+1 456-789-1234</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Footer -->
+            <p style=" margin: 0; font-size: 16px; text-align: center; mso-line-height-alt: 21px; margin-top: 40px;">
+                Please feel free to contact us if you need any help.
+            </p>
+        </div>
+    </div>
+
+    <div align="center" class="alignment" style="line-height: 10px">
+        <img alt="Alternate text" class="big" src="<%= serverBaseUrl %>/assets/carclaim.png"
+            style="display: block; height: auto; border: 0; width: 432px; max-width: 100%;" title="Alternate text"
+            width="432" />
+    </div>
+
+
+    <!-- Color code -->
+    <table align="center" border="0" cellpadding="0" cellspacing="0" role="presentation"
+        style="background-color: #01C0C8; ; margin-top: 20px;" width="100%">
+        <tbody>
+            <tr>
+                <td>
+                    <table align="center" border="0" cellpadding="0" cellspacing="0" class="row-content stack"
+                        role="presentation">
+                        <tbody>
+                            <tr>
+                                <td class="column column-1" style="background-color: #01C0C8; height: 60px;"
+                                    width="100%">
+
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+
+    <div align="center" class="alignment" style="margin-top: 30px;">
+        <table border="0" cellpadding="0" cellspacing="0" class="social-table" role="presentation" width="140px">
+            <tr>
+                <td style="padding: 0 7px 0 7px">
+                    <a href="/" target="_blank"><img alt="Facebook" height="32"
+                            src="<%= serverBaseUrl %>/assets/facebook.png" title="Facebook" width="32" /></a>
+                </td>
+                <td style="padding: 0 7px 0 7px">
+                    <a href="/" target="_blank"><img alt="Twitter" height="32"
+                            src="<%= serverBaseUrl %>/assets/twitter.png" title="Twitter" width="32" /></a>
+                </td>
+                <td style="padding: 0 7px 0 7px">
+                    <a href="/" target="_blank"><img alt="Instagram" height="32"
+                            src="<%= serverBaseUrl %>/assets/instagram.png" title="Instagram" width="32" /></a>
+                </td>
+            </tr>
+        </table>
+    </div>
+
+    <div style="font-family: sans-serif; margin-top: 50px;color: #9ca09d;">
+        <p style="margin: 0;font-size: 14px;text-align: center; mso-line-height-alt: 18px;">
+            <span style="font-size: 12px">This messasge was sent to
+                <a href="mailto:<%= customerEmail %>" style="text-decoration: none; color: #9ca09d;"
+                    title="<%= customerEmail %>">
+                    <%= customerEmail %>
+                </a></span>
+        </p>
+    </div>
+
+    <div style="font-family: sans-serif; margin-top: 30px;color: #9ca09d;">
+        <p style="font-size: 12px;margin: 0;text-align: center;mso-line-height-alt: 18px;">
+            © <%= new Date().getFullYear(); %> methaq.ae All Rights Reserved.
+        </p>
+    </div>
+    <!-- End -->
+</body>
+
+</html>
