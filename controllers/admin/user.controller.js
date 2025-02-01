@@ -1,4 +1,3 @@
-const ClaimModel = require("../../models/motor-insurance/claim.model");
 const UserModel = require("../../models/user.model");
 const { getPagination, getCount, getPaginationData } = require("../../utils/fn");
 const { sendSuccessResponse, sendErrorResponse } = require("../../utils/response");
@@ -10,7 +9,7 @@ exports.createAgent = async (req, res) => {
 
         const adminRole = req.user.role;
 
-        if (adminRole !== "Admin" && adminRole !== "Supervisor") {
+        if (adminRole !== "Admin" && adminRole !== "SuperAdmin") {
             return sendErrorResponse(res, "You are not authorized to perform this operation.", 403, true, true);
         }
 
@@ -23,10 +22,11 @@ exports.createAgent = async (req, res) => {
                 password,
                 mobileNumber,
                 preferredEmirates,
-                department
+                ...(department && { department })
             });
             const savedUser = await user.save();
-            sendSuccessResponse(res, { data: savedUser });
+            const populatedUser = await savedUser.populate('department')
+            sendSuccessResponse(res, { data: populatedUser });
         } else {
             return sendErrorResponse(
                 res,
@@ -76,7 +76,8 @@ exports.getAllAgents = async (req, res) => {
         )
             .skip(offset)
             .limit(limit)
-            .sort({ createdAt: -1 });
+            .sort({ createdAt: -1 })
+            .populate('department');
 
         sendSuccessResponse(res, getPaginationData({ count, docs: users }, page, limit));
     } catch (error) {
@@ -87,7 +88,7 @@ exports.getAllAgents = async (req, res) => {
 exports.getAgent = async (req, res) => {
     try {
         const { userId } = req.params;
-        const agent = await UserModel.findById(userId);
+        const agent = await UserModel.findById(userId).populate('department');
         sendSuccessResponse(res, { data: agent });
     } catch (error) {
         sendErrorResponse(res, error.message);
@@ -99,7 +100,7 @@ exports.updateAgents = async (req, res) => {
         const { _id: adminId, role } = req.user;
         const { userId } = req.params;
 
-        if (role !== "Admin" && role !== "Supervisor") {
+        if (role !== "Admin" && role !== "SuperAdmin") {
             return sendErrorResponse(res, "You are not authorized to perform this operation.", 403, true, true);
         }
 
@@ -149,7 +150,7 @@ exports.deleteAgent = async (req, res) => {
         const { _id: adminId, role } = req.user;
         const { userId } = req.params;
 
-        if (role !== "Admin" && role !== "Supervisor") {
+        if (role !== "Admin" && role !== "SuperAdmin") {
             return sendErrorResponse(res, "You are not authorized to perform this operation.", 403, true, true);
         }
 
@@ -160,22 +161,22 @@ exports.deleteAgent = async (req, res) => {
     }
 }
 
-exports.listAllAgent = async (req, res) => {
-    try {
-        const { _id: adminId, role } = req.user;
-        const { claimId } = req.params;
+// exports.listAllAgent = async (req, res) => {
+//     try {
+//         const { _id: adminId, role } = req.user;
+//         const { claimId } = req.params;
 
-        const claim = await ClaimModel.findById(claimId);
-        const preferredEmiratesOfRepair = claim?.preferredEmiratesOfRepair;
+//         const claim = await ClaimModel.findById(claimId);
+//         const preferredEmiratesOfRepair = claim?.preferredEmiratesOfRepair;
 
-        const users = await UserModel.find(
-            {
-                role: { $in: ["Agent", "Admin", "Supervisor"] },
-                preferredEmirates: { $in: preferredEmiratesOfRepair }
-            }
-        )
-        sendSuccessResponse(res, { data: users });
-    } catch (error) {
-        sendErrorResponse(res, error.message);
-    }
-}
+//         const users = await UserModel.find(
+//             {
+//                 role: { $in: ["Agent", "Admin", "Supervisor"] },
+//                 preferredEmirates: { $in: preferredEmiratesOfRepair }
+//             }
+//         )
+//         sendSuccessResponse(res, { data: users });
+//     } catch (error) {
+//         sendErrorResponse(res, error.message);
+//     }
+// }

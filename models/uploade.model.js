@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const constants = require("../utils/constants");
 
 const Schema = mongoose.Schema;
 
@@ -10,6 +11,11 @@ const uploadSchema = new Schema(
     },
     url: {
       type: String,
+    },
+    status: {
+      type: String,
+      enum: constants.status.status,
+      default: constants.status.statusObj.pending,
     },
   },
   {

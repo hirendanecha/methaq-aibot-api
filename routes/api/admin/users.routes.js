@@ -8,6 +8,6 @@ router.get("/:userId/getagent", userCtrl.getAgent);
 router.put("/:userId/updateagent", userCtrl.updateAgents);
 router.post("/:userId/changepassword", userCtrl.changePassword);
 router.delete("/:userId/deleteagent", userCtrl.deleteAgent);
-router.get("/listallagent/:claimId", userCtrl.listAllAgent)
+// router.get("/listallagent/:claimId", userCtrl.listAllAgent)
 
 module.exports = router;

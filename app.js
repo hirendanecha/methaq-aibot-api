@@ -31,7 +31,7 @@ app.use(middleware);
 database.connect();
 
 // agenda start
-agenda.start();
+// agenda.start();
 
 app.use('/', indexRouter);
 

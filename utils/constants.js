@@ -1,19 +1,36 @@
 module.exports = {
-    database: {
-        options: {
-            // useNewUrlParser: true,
-            // useUnifiedTopology: true,
-        },
+  database: {
+    options: {
+      // useNewUrlParser: true,
+      // useUnifiedTopology: true,
     },
-    user: {
-        roles: ["Admin", "User", "Broker", "Agent", "Garage", "Supervisor"],
+  },
+  user: {
+    roles: [
+      "SuperAdmin",
+      "Admin",
+      "User",
+      "Broker",
+      "Agent",
+      "Garage",
+      "Supervisor",
+    ],
+  },
+  roles: {
+    superAdmin: "SuperAdmin",
+    admin: "Admin",
+    supervisor: "Supervisor",
+    agent: "Agent",
+    user: "User",
+    broker: "Broker",
+    garage: "Garage",
+  },
+  status: {
+    status: ["success", "pending", "failed"],
+    statusObj: {
+      success: "success",
+      pending: "pending",
+      failed: "failed",
     },
-    roles: {
-        admin: "Admin",
-        supervisor: "Supervisor",
-        agent: "Agent",
-        user: "User",
-        broker: "Broker",
-        garage: "Garage",
-    }
+  },
 };

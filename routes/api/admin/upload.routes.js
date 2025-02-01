@@ -10,7 +10,7 @@ router.post(
   "/",
   fileUpload(
     "documents",
-    ["pdf"],
+    ["pdf","word","text"],
     [{ name: "file", maxCount: 1, optional: true }]
   ),
   addDocument

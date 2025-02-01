@@ -1,6 +1,7 @@
 const fs = require("fs");
 const path = require("path");
 const pdfParse = require("pdf-parse");
+const mammoth = require("mammoth");
 
 
 const baseUrl = "";
@@ -238,7 +239,8 @@ exports.extractTextFromFile = async (file) => {
   
 
   if (mimeType === "text/plain") {
-    return file.data.toString("utf-8");
+    var data = fs.readFileSync(file.path, 'utf8');
+    return data.toString();
   } else if (mimeType === "application/pdf") {
     const pdfData = await pdfParse(file.path);
     return pdfData.text;
@@ -246,7 +248,7 @@ exports.extractTextFromFile = async (file) => {
     mimeType ===
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
   ) {
-    const result = await mammoth.extractRawText({ buffer: file.data });
+    const result = await mammoth.extractRawText({ path: file.path });
     return result.value;
   } else {
     throw new Error("Unsupported file type.");

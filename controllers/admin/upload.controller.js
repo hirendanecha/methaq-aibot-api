@@ -1,6 +1,11 @@
 const Embedding = require("../../models/embeddings.modal");
 const environment = require("../../utils/environment");
-const { extractTextFromFile } = require("../../utils/fn");
+const {
+  extractTextFromFile,
+  getPaginationData,
+  getPagination,
+  getCount,
+} = require("../../utils/fn");
 const OpenAIApi = require("openai");
 const {
   sendSuccessResponse,
@@ -10,6 +15,8 @@ const UploadModel = require("../../models/uploade.model");
 const { default: puppeteer } = require("puppeteer");
 const cheerio = require("cheerio");
 const files = require("../../helpers/files.helper");
+const { status } = require("../../utils/constants");
+const constants = require("../../utils/constants");
 
 const openai = new OpenAIApi({
   apiKey: environment.openaiApiKey,
@@ -38,10 +45,19 @@ function splitTextIntoChunks(text, chunkSize) {
 }
 
 const getAllDocument = async (req, res) => {
-  const { department } = req.query;
+  const { page = 1, size = 10, department } = req.query;
+  const { limit, offset } = getPagination(page, size);
+  const count = await getCount(UploadModel, { department });
   try {
-    const qnaList = await UploadModel.find({ department });
-    return sendSuccessResponse(res, { data: qnaList });
+    const qnaList = await UploadModel.find({ department })
+      .sort({ createdAt: -1 })
+      .skip(offset)
+      .limit(limit)
+      .lean();
+    return sendSuccessResponse(
+      res,
+      getPaginationData({ count, docs: qnaList }, page, limit)
+    );
   } catch (error) {
     return sendErrorResponse(res, error.message);
   }
@@ -126,7 +142,11 @@ const addDocument = async (req, res) => {
 
   const { file = [] } = req.files || {};
   try {
-    const newFile = new UploadModel({ file: file[0], department });
+    const newFile = new UploadModel({
+      ...(file[0] && { file: file[0] }),
+      department,
+      status: constants.status.statusObj.success,
+    });
     await newFile.save();
     let fileContent;
 
@@ -167,7 +187,8 @@ const addDocument = async (req, res) => {
 };
 
 const addUrl = async (req, res) => {
-  const { url,department } = req.body;
+  const { url, department } = req.body;
+  let savedFileId;
 
   try {
     if (!url || (!url.startsWith("http://") && !url.startsWith("https://"))) {
@@ -175,7 +196,8 @@ const addUrl = async (req, res) => {
     }
 
     const newFile = new UploadModel({ url, department });
-    await newFile.save();
+    const savedFile = await newFile.save();
+    savedFileId = savedFile._id;
 
     const browser = await puppeteer.launch();
     const page = await browser.newPage();
@@ -183,7 +205,7 @@ const addUrl = async (req, res) => {
     const toVisit = [url];
     const scrapedData = [];
 
-    while (toVisit.length<=1) {
+    while (toVisit.length <= 1) {
       const currentUrl = toVisit.pop();
       console.log(`Visiting: ${currentUrl}`);
       if (!currentUrl || visited.has(currentUrl)) continue;
@@ -239,9 +261,8 @@ const addUrl = async (req, res) => {
 
     for (const { content, title } of scrapedData) {
       const chunks = splitTextIntoChunks(content, MAX_TOKENS);
-      
+
       for (const chunk of chunks) {
-        
         const embedding = await openai.embeddings.create({
           model: "text-embedding-ada-002",
           input: chunk,
@@ -252,14 +273,18 @@ const addUrl = async (req, res) => {
           documentId: newFile._id,
         });
       }
-      
     }
 
-    // console.log("Documents:", documents);    
+    await UploadModel.findByIdAndUpdate(savedFile._id, {
+      status: constants.status.statusObj.success,
+    });
 
     return sendSuccessResponse(res, { data: [] }, 201);
   } catch (error) {
     console.error(error);
+    await UploadModel.findByIdAndUpdate(savedFileId, {
+      status: constants.status.statusObj.failed,
+    });
     return sendErrorResponse(res, error.message);
   }
 };
@@ -270,7 +295,9 @@ const deleteDocument = async (req, res) => {
     const uploadFile = await UploadModel.findByIdAndDelete(id);
     await Embedding.deleteMany({ documentId: id });
     await files
-      .deleteFileByPath(`${uploadFile?.file?.destination}/${uploadFile?.file?.filename}`)
+      .deleteFileByPath(
+        `${uploadFile?.file?.destination}/${uploadFile?.file?.filename}`
+      )
       .catch((err) => console.log(err));
     return sendSuccessResponse(res, "file deleted successfully.");
   } catch (error) {

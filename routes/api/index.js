@@ -5,14 +5,10 @@ const authorization = require("../../middleware/authorization");
 const constants = require('../../utils/constants');
 const authRoutes = require("./auth");
 const adminRoutes = require("./admin/index.routes");
-const publicRoutes = require("./public/index");
 const protectedRoutes = require("./protected/index")
 
 // Auth APIs
 router.use("/auth", authRoutes);
-
-// Motor Insurance Routes
-router.use(publicRoutes);
 
 // Middleware to check token
 router.use(authentication);

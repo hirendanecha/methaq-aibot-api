@@ -4,6 +4,7 @@ const PromptModel = require("../../models/prompt.model");
 const QnaModel = require("../../models/qna.model");
 const UploadModel = require("../../models/uploade.model");
 const UserModel = require("../../models/user.model");
+const Embedding = require("../../models/embeddings.modal");
 const {
   sendSuccessResponse,
   sendErrorResponse,
@@ -37,7 +38,7 @@ const addDepartment = async (req, res) => {
     const newDepartment = new DepartmentModel({
       name,
       description,
-      logo: `${logo[0]?.destination}/${logo[0]?.filename}`,
+      ...(logo[0] && { logo: `${logo[0]?.destination}/${logo[0]?.filename}` }),
     });
     await newDepartment.save();
     return sendSuccessResponse(res, { data: newDepartment }, 201);
@@ -77,21 +78,23 @@ const deleteDepartment = async (req, res) => {
     const department = await DepartmentModel.findByIdAndDelete(id);
     await PromptModel.deleteMany({ department: id });
     await QnaModel.deleteMany({ department: id });
-    const uploadFiles = await UploadModel.deleteMany({ department: id });
-    // for (let i = 0; i < uploadFiles?.length; i++) {
-    //   await files
-    //     .deleteFileByPath(
-    //       `${uploadFiles[i]?.file?.destination}/${uploadFiles[i]?.file?.filename}`
-    //     )
-    //     .catch((err) => console.log(err));
-    // }
-    // await Embedding.deleteMany({ documentId: id });
-    // await files
-    //   .deleteFileByPath(`${uploadFile?.file?.destination}/${uploadFile?.file?.filename}`)
-    //   .catch((err) => console.log(err));
-    await files
-      .deleteFileByPath(`${department?.logo}`)
-      .catch((err) => console.log(err));
+    const uploadFiles = await UploadModel.find({ department: id });
+    for (let i = 0; i < uploadFiles?.length; i++) {
+      await UploadModel.findByIdAndDelete(uploadFiles[i]?._id);
+      await Embedding.deleteMany({ documentId: uploadFiles[i]?._id });
+      if (uploadFiles[i]?.file) {
+        await files
+          .deleteFileByPath(
+            `${uploadFiles[i]?.file?.destination}/${uploadFiles[i]?.file?.filename}`
+          )
+          .catch((err) => console.log(err));
+      }
+    }
+    if (department?.logo) {
+      await files
+        .deleteFileByPath(`${department?.logo}`)
+        .catch((err) => console.log(err));
+    }
     return sendSuccessResponse(res, "Department deleted successfully.");
   } catch (error) {
     return sendErrorResponse(res, error.message);
