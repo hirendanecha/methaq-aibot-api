@@ -1,3 +1,4 @@
+const { fetchAndStoreDocuments } = require("../../helpers/pineconeupload.helper");
 const QnaModel = require("../../models/qna.model");
 const { sendSuccessResponse, sendErrorResponse } = require("../../utils/response");
 
@@ -17,6 +18,15 @@ const addQnA = async (req, res) => {
   try {
     const newQnA = new QnaModel({ question, answer, department });
     await newQnA.save();
+    let populatedQnA = await newQnA.populate('department')
+    populatedQnA = {
+      content: content,
+      department: {
+        _id: populatedQnA?.department._id,
+        name: populatedQnA?.department.name,
+      },
+    };
+    await fetchAndStoreDocuments({ details: populatedQnA });
     return sendSuccessResponse(res, { data: newQnA });
   } catch (error) {
     return sendErrorResponse(res, error.message);

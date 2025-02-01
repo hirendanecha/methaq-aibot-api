@@ -29,4 +29,9 @@ module.exports = {
     },
     carDetectionOcrApi: process.env.CAR_DETECTION_OCR_API,
     openaiApiKey: process.env.OPENAI_API_KEY,
+    pinecone: {
+        apiKey: process.env.PINECONE_API_KEY,
+        indexName: process.env.PINECONE_INDEX_NAME,
+        sharedSecret: process.env.SHARED_SECRET,
+    },
 };

@@ -17,6 +17,9 @@ const cheerio = require("cheerio");
 const files = require("../../helpers/files.helper");
 const { status } = require("../../utils/constants");
 const constants = require("../../utils/constants");
+const {
+  fetchAndStoreDocuments,
+} = require("../../helpers/pineconeupload.helper");
 
 const openai = new OpenAIApi({
   apiKey: environment.openaiApiKey,
@@ -161,6 +164,20 @@ const addDocument = async (req, res) => {
     fileContent = fileContent.replace(/<style.*?>.*?<\/style>/g, "");
     fileContent = fileContent.replace(/<\/?[^>]+(>|$)/g, "");
 
+    let upload = await UploadModel.findByIdAndUpdate(newFile._id, {
+      content: fileContent,
+    }).populate("department");
+
+    upload = {
+      content: fileContent,
+      department: {
+        _id: upload?.department._id,
+        name: upload?.department.name,
+      },
+    };
+
+    await fetchAndStoreDocuments({ details: upload });
+
     const chunks = fileContent
       .split("\n\n")
       .filter((chunk) => chunk.trim())
@@ -260,6 +277,17 @@ const addUrl = async (req, res) => {
     const documents = [];
 
     for (const { content, title } of scrapedData) {
+      const upload = await UploadModel.findByIdAndUpdate(newFile._id, {
+        content: content,
+      }).populate("department");
+      upload = {
+        content: content,
+        department: {
+          _id: upload?.department._id,
+          name: upload?.department.name,
+        },
+      };
+      await fetchAndStoreDocuments({ details: upload });
       const chunks = splitTextIntoChunks(content, MAX_TOKENS);
 
       for (const chunk of chunks) {

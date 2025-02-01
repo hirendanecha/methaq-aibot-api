@@ -6,6 +6,7 @@ const { addDepartment, getAllDepartment, deleteDepartment, updateDepartment } = 
 const router = express.Router();
 
 router.get("/", getAllDepartment);
+// router.get("/:id", getAllDepartmentData);
 router.post(
   "/",
   fileUpload(

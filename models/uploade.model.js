@@ -17,6 +17,9 @@ const uploadSchema = new Schema(
       enum: constants.status.status,
       default: constants.status.statusObj.pending,
     },
+    content: {
+      type: String,
+    },
   },
   {
     timestamps: true,
