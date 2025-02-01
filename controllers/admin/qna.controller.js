@@ -20,12 +20,14 @@ const addQnA = async (req, res) => {
     await newQnA.save();
     let populatedQnA = await newQnA.populate('department')
     populatedQnA = {
-      content: content,
+      content: newQnA.question + newQnA.answer,
       department: {
         _id: populatedQnA?.department._id,
         name: populatedQnA?.department.name,
       },
     };
+    console.log("populatedQnA", populatedQnA);
+    
     await fetchAndStoreDocuments({ details: populatedQnA });
     return sendSuccessResponse(res, { data: newQnA });
   } catch (error) {
