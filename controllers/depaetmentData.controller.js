@@ -47,4 +47,27 @@ const getAllDepartmentData = async (req, res) => {
   }
 };
 
-module.exports = { getAllDepartment, getAllDepartmentData };
+// get all department with their prompt
+const getAllDepartmentWithPrompt = async (req, res) => {
+  try {
+    const departmentList = await DepartmentModel.find().lean();
+    console.log("departmentList", departmentList);
+    
+    let departments = [];
+    for (let i = 0; i < departmentList?.length; i++) {
+      const prompts = await PromptModel.find({ department: departmentList[i]?._id.toString() }).lean();
+      console.log("prompts", prompts);
+      
+      let department = {
+        ...departmentList[i],
+        prompts,
+      };
+      departments.push(department);
+    }
+    return sendSuccessResponse(res, { data: departments });
+  } catch (error) {
+    return sendErrorResponse(res, error.message);
+  }
+};
+
+module.exports = { getAllDepartment, getAllDepartmentData, getAllDepartmentWithPrompt };
