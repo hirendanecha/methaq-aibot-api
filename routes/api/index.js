@@ -23,6 +23,7 @@ router.use(
   "/admin",
   authorization([
     constants.roles.admin,
+    constants.roles.superAdmin,
     constants.roles.supervisor,
     constants.roles.broker,
     constants.roles.agent,
