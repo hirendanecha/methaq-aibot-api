@@ -1,5 +1,5 @@
 const jwt = require("jsonwebtoken");
-const UserModel = require("../models/user.model");
+const UserModel = require("../models/agent.model");
 const { sendSuccessResponse, sendErrorResponse } = require("../utils/response");
 const environment = require("../utils/environment");
 const { generateRandomString } = require("../utils/fn");

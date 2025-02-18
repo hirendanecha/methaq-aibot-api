@@ -3,7 +3,7 @@ const Embedding = require("../models/embeddings.modal");
 const PromptModel = require("../models/prompt.model");
 const QnaModel = require("../models/qna.model");
 const UploadModel = require("../models/uploade.model");
-const UserModel = require("../models/user.model");
+const UserModel = require("../models/agent.model");
 const { sendSuccessResponse, sendErrorResponse } = require("../utils/response");
 
 const getAllDepartment = async (req, res) => {
