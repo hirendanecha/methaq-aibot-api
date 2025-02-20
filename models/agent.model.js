@@ -26,10 +26,10 @@ const AgentSchema = new Schema(
       enum: constants.user.roles,
       default: constants.roles.user,
     },
-    department: {
+    department: [{
       type: Schema.Types.ObjectId,
       ref: "departments",
-    },
+    }],
     isActive: { type: Boolean, default: false },
     assignChats: [{ type: mongoose.Schema.Types.ObjectId, ref: "Chat" }],
     workingHours: {

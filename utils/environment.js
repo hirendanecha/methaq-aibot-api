@@ -34,4 +34,10 @@ module.exports = {
         indexName: process.env.PINECONE_INDEX_NAME,
         sharedSecret: process.env.SHARED_SECRET,
     },
+    s3bucket: {
+        public: process.env.S3_PUBLIC_BUCKET,
+        iamUserKey: process.env.IAM_USER_KEY,
+        iamUserSecret: process.env.IAM_USER_SECRET,
+        region: process.env.S3_REGION,
+    },
 };
