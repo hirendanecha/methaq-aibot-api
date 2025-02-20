@@ -3,7 +3,7 @@ const Embedding = require("../models/embeddings.modal");
 const PromptModel = require("../models/prompt.model");
 const QnaModel = require("../models/qna.model");
 const UploadModel = require("../models/uploade.model");
-const UserModel = require("../models/agent.model");
+const UserModel = require("../models/user.model");
 const { sendSuccessResponse, sendErrorResponse } = require("../utils/response");
 
 const getAllDepartment = async (req, res) => {
@@ -52,12 +52,12 @@ const getAllDepartmentWithPrompt = async (req, res) => {
   try {
     const departmentList = await DepartmentModel.find().lean();
     console.log("departmentList", departmentList);
-    
+
     let departments = [];
     for (let i = 0; i < departmentList?.length; i++) {
       const prompts = await PromptModel.find({ department: departmentList[i]?._id.toString() }).lean();
       console.log("prompts", prompts);
-      
+
       let department = {
         ...departmentList[i],
         prompts,

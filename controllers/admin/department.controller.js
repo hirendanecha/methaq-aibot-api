@@ -3,7 +3,7 @@ const DepartmentModel = require("../../models/department.model");
 const PromptModel = require("../../models/prompt.model");
 const QnaModel = require("../../models/qna.model");
 const UploadModel = require("../../models/uploade.model");
-const UserModel = require("../../models/agent.model");
+const UserModel = require("../../models/user.model");
 const Embedding = require("../../models/embeddings.modal");
 const {
   sendSuccessResponse,
