@@ -9,8 +9,9 @@ const {
   sendSuccessResponse,
   sendErrorResponse,
 } = require("../../utils/response");
+// const s3 = require("../../helpers/s3.helper");
 
-const getAllDepartment = async (req, res) => {
+exports.getAllDepartment = async (req, res) => {
   try {
     const departmentList = await DepartmentModel.find().lean();
     let departments = [];
@@ -30,38 +31,84 @@ const getAllDepartment = async (req, res) => {
   }
 };
 
-const addDepartment = async (req, res) => {
-  const { name, description } = req.body;
-  const { logo = [] } = req.files || {};
-
+exports.addDepartment = async (req, res) => {
   try {
+    const { name, description } = req.body;
+
+    let columns = Object.keys(req.body);
+    let columnNames = columns.map((val) => {
+      return { [val]: req.body[val] };
+    });
+
+    const mergedObject = columnNames.reduce((result, currentObject) => {
+      return { ...result, ...currentObject };
+    }, {});
+
+    let logo = null;
+    if (req?.files?.logo) {
+      const fileData = req.files.logo[0];
+      const pathD = fileData?.path;
+      const npathD = pathD.replaceAll("\\", "/");
+
+      // const url = await s3.uploadPublic(npathD, `${fileData?.filename}`, `DepartmentLogos/${month}`);
+      logo = npathD.replace("public/", "");
+      console.log(logo, "logo");
+
+      mergedObject.logo = logo;
+    };
+
     const newDepartment = new DepartmentModel({
-      name,
-      description,
-      ...(logo[0] && { logo: `${logo[0]?.destination}/${logo[0]?.filename}` }),
+      ...mergedObject,
     });
     await newDepartment.save();
+
     return sendSuccessResponse(res, { data: newDepartment }, 201);
   } catch (error) {
     return sendErrorResponse(res, error.message);
   }
 };
 
-const updateDepartment = async (req, res) => {
-  const { id } = req.params;
-  const { name, description } = req.body;
-  const { logo = [] } = req.files || {};
+exports.updateDepartment = async (req, res) => {
   try {
-    const department = await DepartmentModel.findById(id);
+
+    const { id } = req.params;
+    const { name, description } = req.body;
+
+    let columns = Object.keys(req.body);
+    let columnNames = columns.map((val) => {
+      return { [val]: req.body[val] };
+    });
+
+    const mergedObject = columnNames.reduce((result, currentObject) => {
+      return { ...result, ...currentObject };
+    }, {});
+
+    let logo;
+    if (req?.files?.logo) {
+      const fileData = req.files.logo[0];
+      console.log(fileData, "data")
+      const pathD = fileData?.path;
+      const npathD = pathD.replaceAll("\\", "/");
+
+      // const url = await s3.uploadPublic(npathD, `${fileData?.filename}`, `DepartmentLogos/${month}`);
+      logo = npathD.replace("public/", "");
+      console.log(logo, "logo");
+      mergedObject.logo = logo;
+    };
+
+    const department = await DepartmentModel.findById(id).lean();
+    console.log(department?.logo, logo);
+
     const updatedDepartment = await DepartmentModel.findByIdAndUpdate(
       id,
       {
-        name,
-        description,
-        logo: `${logo[0]?.destination}/${logo[0]?.filename}`,
+        ...mergedObject
       },
-      { new: true }
+      {
+        new: true
+      }
     );
+
     await files
       .deleteFileByPath(`${department?.logo}`)
       .catch((err) => console.log(err));
@@ -72,7 +119,7 @@ const updateDepartment = async (req, res) => {
   }
 };
 
-const deleteDepartment = async (req, res) => {
+exports.deleteDepartment = async (req, res) => {
   const { id } = req.params;
   try {
     const department = await DepartmentModel.findByIdAndDelete(id);
@@ -99,11 +146,4 @@ const deleteDepartment = async (req, res) => {
   } catch (error) {
     return sendErrorResponse(res, error.message);
   }
-};
-
-module.exports = {
-  getAllDepartment,
-  addDepartment,
-  updateDepartment,
-  deleteDepartment,
 };
