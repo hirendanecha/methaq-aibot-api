@@ -20,6 +20,10 @@ const UserSchema = new Schema(
       required: true,
     },
     password: { type: String, select: false },
+    isOnline: {
+      type: Boolean,
+      default: false
+    },
     role: {
       type: String,
       enum: constants.user.roles,
