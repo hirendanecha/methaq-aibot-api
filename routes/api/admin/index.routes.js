@@ -5,11 +5,23 @@ const promptRoutes = require("./prompt.routes")
 const qnaRoutes = require("./qna.routes")
 const uploadRoutes = require("./upload.routes")
 const agentRoutes = require("./agents.routes")
+const customerRoutes = require("./customers.routes")
+
+/*
+    APIs for Admin
+    1. User APIs
+    2. Department APIs
+    3. Prompt APIs
+    4. QnA APIs
+    5. Document Training APIs
+    6. Customer APIs
+*/
 
 router.use("/user", agentRoutes);
 router.use("/department", departmentRoutes);
 router.use("/prompt", promptRoutes);
 router.use("/qna", qnaRoutes);
-router.use("/docTraining",uploadRoutes);
+router.use("/docTraining", uploadRoutes);
+router.use("/customers", customerRoutes);
 
 module.exports = router;

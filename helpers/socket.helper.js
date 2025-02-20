@@ -19,7 +19,7 @@ socket.config = (server) => {
     socket.on("joinRoom", (data) => {
       console.log("Received joinRoom event:", data);
       socket.join(data.userId);
-   
+
       handleSocketEvents(socket, io, data);
     });
 
@@ -65,6 +65,7 @@ socket.config = (server) => {
         method: "disconnect",
       });
     });
+
   });
 };
 

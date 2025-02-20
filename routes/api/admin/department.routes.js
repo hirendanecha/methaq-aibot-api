@@ -1,9 +1,14 @@
 const express = require("express");
-
+const router = express.Router();
 const { fileUpload } = require("../../../middleware/file-upload");
 const departmentCtrl = require("../../../controllers/admin/department.controller");
 
-const router = express.Router();
+/* APIs for Department
+  1. Get all Department
+  2. Create Department
+  3. Update Department by id
+  4. Delete Department by id
+*/
 
 router.get("/", departmentCtrl.getAllDepartment);
 // router.get("/:id", getAllDepartmentData);
