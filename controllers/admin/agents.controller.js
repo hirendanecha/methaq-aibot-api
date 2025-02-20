@@ -5,7 +5,7 @@ const { sendSuccessResponse, sendErrorResponse } = require("../../utils/response
 exports.createAgent = async (req, res) => {
     try {
         const { _id: adminId } = req.user;
-        const { email, password, role, fullName, mobileNumber, preferredEmirates,department } = req.body;
+        const { email, password, role, fullName, mobileNumber, preferredEmirates, department, workingHours } = req.body;
 
         const adminRole = req.user.role;
 
@@ -22,11 +22,13 @@ exports.createAgent = async (req, res) => {
                 password,
                 mobileNumber,
                 preferredEmirates,
-                ...(department && { department })
+                ...(department && { department }),
+                workingHours
             });
             const savedUser = await user.save();
-            const populatedUser = await savedUser.populate('department')
-            sendSuccessResponse(res, { data: populatedUser });
+            const populatedUser = await savedUser.populate('department');
+
+            return sendSuccessResponse(res, { data: populatedUser });
         } else {
             return sendErrorResponse(
                 res,

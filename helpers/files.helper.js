@@ -41,7 +41,7 @@ const files = {
 
       try {
         // Construct the full file path
-        const serverFilePath = path.join(__dirname, "..", filePath);
+        const serverFilePath = path.join(__dirname, "../public", filePath);
 
         // Check if the file exists and delete it
         fs.unlink(serverFilePath, (err) => {
