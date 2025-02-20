@@ -1,12 +1,16 @@
 const express = require("express");
-const { getAllPrompt, addPrompt, updatePrompt, deletePrompt } = require("../../../controllers/admin/prompt.controller");
-
-
+const promptCtrl = require("../../../controllers/admin/prompt.controller");
 const router = express.Router();
 
-router.get("/", getAllPrompt);
-router.post("/", addPrompt);
-router.put("/:id", updatePrompt);
-router.delete("/:id", deletePrompt);
+/* APIs for prompts
+    1. Get all prompts
+    2. Create prompt
+    3. Update prompt by id
+    4. Delete prompt by id
+*/
+router.get("/", promptCtrl.getAllPrompt);
+router.post("/", promptCtrl.addPrompt);
+router.put("/:id", promptCtrl.updatePrompt);
+router.delete("/:id", promptCtrl.deletePrompt);
 
 module.exports = router;

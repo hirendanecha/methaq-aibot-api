@@ -2,6 +2,14 @@ var express = require('express');
 var router = express.Router();
 const agentCtrl = require("../../../controllers/admin/agents.controller");
 
+/* APIs for agents
+ 1. Create agent
+ 2. Get all agents
+ 3. Get agent by userId
+ 4. Update agent by userId
+ 5. Change password
+ 6. Delete agent by userId
+*/
 router.post("/createagent", agentCtrl.createAgent);
 router.post("/getallagents", agentCtrl.getAllAgents);
 router.get("/:userId/getagent", agentCtrl.getAgent);

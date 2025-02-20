@@ -1,8 +1,9 @@
 const mongoose = require("mongoose");
-
-const ChatSchema = new mongoose.Schema({
-  userId: { type: String, required: true },
-  agentId: { type: String, required: false }, // Initially null for AI
+const Schema = mongoose.Schema;
+const ChatSchema = Schema({
+  userId: { type: Schema.Types.ObjectId, required: true, ref: "users" },
+  agentId: { type: Schema.Types.ObjectId, ref: "agents" }, // Initially null for AI
+  customerId: { type: Schema.Types.ObjectId, ref: "customers" }, // Initially null for AI
   department: { type: String, required: true }, // Default to "AI" and can be updated,
   isHandshakeRequested: { type: Boolean, default: false }, // Flag to check if handshake is requested
   isHuman: { type: Boolean, default: false }, // Flag to check if human is handling
