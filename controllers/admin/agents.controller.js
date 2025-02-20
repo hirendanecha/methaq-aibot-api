@@ -6,7 +6,7 @@ const { sendSuccessResponse, sendErrorResponse } = require("../../utils/response
 exports.createAgent = async (req, res) => {
     try {
         const { _id: adminId } = req.user;
-        const { email, password, role, fullName, mobileNumber, preferredEmirates, department, workingHours } = req.body;
+        const { email, password, role, fullName, mobileNumber, preferredEmirates, department, workingHours, permission } = req.body;
 
         const adminRole = req.user.role;
 
@@ -28,7 +28,7 @@ exports.createAgent = async (req, res) => {
             });
             const savedUser = await user.save();
             const populatedUser = await savedUser.populate('department')
-            const permissions = new ModuleAcessModel({ user: populatedUser._id });
+            const permissions = new ModuleAcessModel({ user: populatedUser._id, ...permission });
             await permissions.save();
             console.log(permissions, "permissions");
 
@@ -125,7 +125,16 @@ exports.updateAgents = async (req, res) => {
                 new: true
             }
         );
-
+        const updatedPermissions = await ModuleAcessModel.findOneAndUpdate(
+            { user: updateUser._id },
+            {
+                ...(mergedObject.permission || {}),
+            },
+            {
+                upsert: true,
+                new: true,
+            }
+        ).lean();
         sendSuccessResponse(res, { data: updateUser });
     } catch (error) {
         sendErrorResponse(res, error.message);
