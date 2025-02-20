@@ -1,30 +1,44 @@
 const express = require("express");
 
 const { fileUpload } = require("../../../middleware/file-upload");
-const { addDepartment, getAllDepartment, deleteDepartment, updateDepartment } = require("../../../controllers/admin/department.controller");
+const departmentCtrl = require("../../../controllers/admin/department.controller");
 
 const router = express.Router();
 
-router.get("/", getAllDepartment);
+router.get("/", departmentCtrl.getAllDepartment);
 // router.get("/:id", getAllDepartmentData);
+
 router.post(
   "/",
   fileUpload(
     "department",
-    ["image"],
-    [{ name: "logo", maxCount: 1, optional: true }]
+    ["pdf", "image"],
+    [
+      {
+        name: "logo",
+        maxCount: 1,
+        optional: true
+      }
+    ]
   ),
-  addDepartment
+  departmentCtrl.addDepartment
 );
+
 router.put(
   "/:id",
   fileUpload(
     "department",
-    ["image"],
-    [{ name: "logo", maxCount: 1, optional: true }]
-  ),
-  updateDepartment
+    ["pdf", "image"],
+    [
+      {
+        name: "logo",
+        maxCount: 1,
+        optional: true
+      }
+    ]),
+  departmentCtrl.updateDepartment
 );
-router.delete("/:id", deleteDepartment);
+
+router.delete("/:id", departmentCtrl.deleteDepartment);
 
 module.exports = router;

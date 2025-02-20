@@ -8,6 +8,11 @@ const DepartmentSchema = new Schema(
     description: { type: String },
     logo: { type: String },
     jobId: { type: Object },
+    messages: {
+      afterHoursResponse: { type: String },
+      allAgentsOfflineResponse: { type: String },
+      chatClosingMessage: { type: String }
+    },
   },
   {
     timestamps: true,
