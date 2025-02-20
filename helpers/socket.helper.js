@@ -1,4 +1,5 @@
 const { handleSocketEvents } = require("../controllers/socket.controller");
+const CustomerModel = require("../models/customer.model");
 const UserModel = require("../models/user.model");
 
 let logger = console;
@@ -101,6 +102,23 @@ socket.config = (server) => {
           socket.emit('idle', 'You are idle. Click here to be active again.');
         }, 10 * 60 * 1000); // 10 minutes
       }
+    });
+
+    socket.on("create-customer", async (params) => {
+      logger.info("create-customer", {
+        ...params,
+        address,
+        id: socket.id,
+        method: "create-customer",
+      });
+      const customer = await CustomerModel.create({
+        name: params.name,
+        email: params.email,
+        phone: params.phone,
+        notes: params.notes,
+      });
+      const newCustomers = customer.save();
+      socket.emit("customer-created", newCustomers);
     });
 
     socket.on("disconnect", () => {
