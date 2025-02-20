@@ -7,12 +7,8 @@ module.exports = {
   },
   user: {
     roles: [
-      "SuperAdmin",
       "Admin",
-      "User",
-      "Broker",
       "Agent",
-      "Garage",
       "Supervisor",
     ],
   },

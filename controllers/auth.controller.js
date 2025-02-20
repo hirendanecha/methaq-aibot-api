@@ -1,10 +1,11 @@
 const jwt = require("jsonwebtoken");
-const UserModel = require("../models/agent.model");
+const UserModel = require("../models/user.model");
 const { sendSuccessResponse, sendErrorResponse } = require("../utils/response");
 const environment = require("../utils/environment");
 const { generateRandomString } = require("../utils/fn");
 const dayjs = require("dayjs");
 const { sendHtmlEmail } = require("../helpers/email.helper");
+const ModuleAcessModel = require("../models/permission.model");
 
 // sign up
 exports.signup = async (req, res) => {
@@ -20,7 +21,7 @@ exports.signup = async (req, res) => {
         mobileNumber,
       });
       const savedUser = await user.save();
-      sendSuccessResponse(res, { data: savedUser });
+      sendSuccessResponse(res, { data: savedUser, message: "User created successfully" });
     } else {
       return sendErrorResponse(
         res,
@@ -217,14 +218,14 @@ exports.verifyOtp = (module) => async (req, res) => {
             customerName: user?.fullName,
             customerEmail: user?.email,
           };
-        //   await sendHtmlEmail(
-        //     "views/templates/welcome.ejs",
-        //     {
-        //       to: user?.email,
-        //       subject: `Welcome to the eSanad family!`,
-        //     },
-        //     data
-        //   );
+          //   await sendHtmlEmail(
+          //     "views/templates/welcome.ejs",
+          //     {
+          //       to: user?.email,
+          //       subject: `Welcome to the eSanad family!`,
+          //     },
+          //     data
+          //   );
         } catch (error) {
           console.log("Error sending welcome email", error);
         }
