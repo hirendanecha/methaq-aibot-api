@@ -76,10 +76,10 @@ exports.getAllAgents = async (req, res) => {
                     : {}),
             }
         )
+            .populate('department')
             .skip(offset)
             .limit(limit)
             .sort({ createdAt: -1 })
-            .populate('department');
 
         sendSuccessResponse(res, getPaginationData({ count, docs: users }, page, limit));
     } catch (error) {
