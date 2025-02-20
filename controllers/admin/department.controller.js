@@ -9,7 +9,8 @@ const {
   sendSuccessResponse,
   sendErrorResponse,
 } = require("../../utils/response");
-// const s3 = require("../../helpers/s3.helper");
+const s3 = require("../../helpers/s3.helper");
+const dayjs = require("dayjs");
 
 exports.getAllDepartment = async (req, res) => {
   try {
@@ -33,8 +34,6 @@ exports.getAllDepartment = async (req, res) => {
 
 exports.addDepartment = async (req, res) => {
   try {
-    const { name, description } = req.body;
-
     let columns = Object.keys(req.body);
     let columnNames = columns.map((val) => {
       return { [val]: req.body[val] };
@@ -44,17 +43,19 @@ exports.addDepartment = async (req, res) => {
       return { ...result, ...currentObject };
     }, {});
 
-    let logo = null;
     if (req?.files?.logo) {
       const fileData = req.files.logo[0];
       const pathD = fileData?.path;
       const npathD = pathD.replaceAll("\\", "/");
 
-      // const url = await s3.uploadPublic(npathD, `${fileData?.filename}`, `DepartmentLogos/${month}`);
-      logo = npathD.replace("public/", "");
-      console.log(logo, "logo");
+      const month = `${dayjs().year()}-${dayjs().month() + 1}`;
+      const url = await s3.uploadPublic(npathD, `${fileData?.filename}`, `DepartmentLogos/${month}`);
+      console.log(url, "url ");
 
-      mergedObject.logo = logo;
+      // logo = npathD.replace("public/", "");
+      // console.log(logo, "logo");
+
+      mergedObject.logo = url;
     };
 
     const newDepartment = new DepartmentModel({
@@ -70,9 +71,7 @@ exports.addDepartment = async (req, res) => {
 
 exports.updateDepartment = async (req, res) => {
   try {
-
     const { id } = req.params;
-    const { name, description } = req.body;
 
     let columns = Object.keys(req.body);
     let columnNames = columns.map((val) => {
@@ -83,21 +82,21 @@ exports.updateDepartment = async (req, res) => {
       return { ...result, ...currentObject };
     }, {});
 
-    let logo;
     if (req?.files?.logo) {
       const fileData = req.files.logo[0];
       console.log(fileData, "data")
       const pathD = fileData?.path;
       const npathD = pathD.replaceAll("\\", "/");
 
-      // const url = await s3.uploadPublic(npathD, `${fileData?.filename}`, `DepartmentLogos/${month}`);
-      logo = npathD.replace("public/", "");
-      console.log(logo, "logo");
-      mergedObject.logo = logo;
+      const month = `${dayjs().year()}-${dayjs().month() + 1}`;
+      const url = await s3.uploadPublic(npathD, `${fileData?.filename}`, `DepartmentLogos/${month}`);
+      console.log(url, "url ");
+
+      mergedObject.logo = url;
     };
 
     const department = await DepartmentModel.findById(id).lean();
-    console.log(department?.logo, logo);
+    console.log(department?.logo);
 
     const updatedDepartment = await DepartmentModel.findByIdAndUpdate(
       id,
