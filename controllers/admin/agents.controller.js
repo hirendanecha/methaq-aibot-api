@@ -1,3 +1,4 @@
+const ChatModel = require("../../models/chat.model");
 const ModuleAcessModel = require("../../models/permission.model");
 const UserModel = require("../../models/user.model");
 const { getPagination, getCount, getPaginationData } = require("../../utils/fn");
@@ -218,5 +219,21 @@ exports.updatePermissions = async (req, res) => {
 
     } catch (error) {
         sendErrorResponse(res, error.message);
+    }
+}
+
+exports.getChatList = async (req, res) => {
+    try {
+        const { _id: userId, role } = req.user;
+        let chats = [];
+        if (role === "Admin" || role === "Supervisor") {
+            chats = await ChatModel.find({}).lean();
+        }
+        else {
+            chats = await ChatModel.find({ adminId: userId }).lean();
+        }
+        return sendSuccessResponse(res, { data: chats });
+    } catch (error) {
+        return sendErrorResponse(res, error.message);
     }
 }

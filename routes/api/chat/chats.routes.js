@@ -19,6 +19,6 @@ router.post("/update-isHuman", updateIsHumanStatus);
 router.post("/agentChats", getAgentChats);
 
 // Get messages for a specific chat
-router.post("/messages/", getSingleUserChat);
+router.post("/getmessages", getSingleUserChat);
 
 module.exports = router;

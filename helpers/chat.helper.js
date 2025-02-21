@@ -15,9 +15,8 @@ const updateChatStatus = async (chatId, status) => {
   console.log("status", status);
   console.log("chatId", chatId);
 
-  const chat = await Chat.findByIdAndUpdate(chatId, status , { new: true });
+  const chat = await Chat.findByIdAndUpdate(chatId, status, { new: true });
   // console.log("chat updated", chat);
-  
   return chat;
 };
 

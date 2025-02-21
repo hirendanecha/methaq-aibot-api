@@ -1,30 +1,25 @@
 const { handleSocketEvents } = require("../controllers/socket.controller");
+const ChatModel = require("../models/chat.model");
 const CustomerModel = require("../models/customer.model");
+const MessageModel = require("../models/message.model");
 const UserModel = require("../models/user.model");
 
 let logger = console;
-const socket = {};
+const socketObj = {};
 
-socket.config = (server) => {
+socketObj.config = (server) => {
   const io = require("socket.io")(server, {
     transports: ["websocket", "polling"],
     cors: {
       origin: "*",
     },
   });
-  socket.io = io;
+  socketObj.io = io;
 
   const agents = {};
   io.sockets.on("connection", (socket) => {
     // console.log("A user connected:", socket.id);
     let address = socket.request.connection.remoteAddress;
-
-    socket.on("joinRoom", (data) => {
-      console.log("Received joinRoom event:", data);
-      socket.join(data.userId);
-
-      handleSocketEvents(socket, io, data);
-    });
 
     logger.info(`New Connection`, {
       address,
@@ -41,12 +36,25 @@ socket.config = (server) => {
       socket.leave(params.userId);
     });
 
-    socket.on("joinChat", async (params, cb) => {
-      // console.log("Received joinChat event:", params);
-
-      socket.join(params.chatId, {
+    socket.on("joinRoom", (params) => {
+      params = typeof params === "string" ? JSON.parse(params) : params;
+      socket.join(params.cust_id);
+      logger.info("joinroom", {
         ...params,
+      })
+    })
+
+    socket.on("joinChat", async (params, cb) => {
+      const customer = new CustomerModel({
+        isGuestUser: true
       });
+      const updatedCus = await customer.save();
+      const chat = new ChatModel({
+        customerId: updatedCus._id,
+      })
+      const updatedChat = await chat.save();
+
+      socket.join(updatedChat._id);
 
       logger.info("join", {
         ...params,
@@ -57,9 +65,66 @@ socket.config = (server) => {
 
       if (typeof cb === "function")
         cb({
-          room: params.chatId,
+          room: updatedChat._id,
+          cust_id: updatedCus._id
         });
     });
+
+    socket.on("save-message", async (params) => {
+      params = typeof params === "string" ? JSON.parse(params) : params;
+      const mess = {
+        chatId: params.chatId,
+        sender: params.sender,
+        sendType: params.sendType,
+        content: params.content,
+        attachment: params.attachment,
+        timestamp: params?.timestamp || new Date(),
+        receiver: params.receiver,
+        receiverType: params.receiverType
+      }
+      console.log(mess, "sadsdfsdffd");
+
+      socketObj.io.to(params.chatId).emit("message", mess);
+      const newMessage = new MessageModel(mess)
+      const final = await newMessage.save();
+      if (typeof cb === "function")
+        cb({
+          message: final,
+        });
+    });
+
+    socket.on("get-messages", async (params, cb) => {
+      params = typeof params === "string" ? JSON.parse(params) : params;
+      const messages = await MessageModel.find({ chatId: params.chatId }).sort({ timestamp: 1 });
+      console.log(messages, "messages");
+
+      if (typeof cb === "function")
+        cb({
+          messages: messages,
+        });
+    })
+
+    socket.on("send-message", async (params, cb) => {
+      console.log(params, typeof params, "params");
+      params = typeof params === "string" ? JSON.parse(params) : params;
+      const mess = {
+        chatId: params.chatId,
+        sender: params.sender,
+        sendType: "admin",
+        content: params.content,
+        attachment: params.attachment,
+        timestamp: params?.timestamp || new Date(),
+        receiver: params.receiver,
+        receiverType: "user"
+      }
+      socketObj.io.to(params.chatId).emit("message", mess);
+      const newMessage = new MessageModel(mess)
+      const final = await newMessage.save();
+      if (typeof cb === "function")
+        cb({
+          message: final,
+        });
+    })
 
     socket.on('activity', (params, cb) => {
       async function updateOnlineStatus(isOnline) {
@@ -122,6 +187,8 @@ socket.config = (server) => {
       socket.emit("customer-created", newCustomers);
     });
 
+
+
     socket.on("disconnect", () => {
       console.log("A user disconnected:", socket.id);
       logger.info("disconnected", {
@@ -133,4 +200,4 @@ socket.config = (server) => {
   });
 };
 
-module.exports = socket;
+module.exports = socketObj;

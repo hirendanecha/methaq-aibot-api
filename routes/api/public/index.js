@@ -1,7 +1,6 @@
 var express = require('express');
 var router = express.Router();
 const departmentRoutes = require("./depaetmentData.routes");
-const { storeChat, getChatHistory } = require('../../../controllers/chat/chat.controller');
 const chatRoutes = require("../chat/index.routes");
 
 router.use("/department", departmentRoutes);
