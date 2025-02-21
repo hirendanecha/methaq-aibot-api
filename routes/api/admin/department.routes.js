@@ -2,6 +2,7 @@ const express = require("express");
 const router = express.Router();
 const { fileUpload } = require("../../../middleware/file-upload");
 const departmentCtrl = require("../../../controllers/admin/department.controller");
+const { permissionAuthorization } = require("../../../middleware/authorization");
 
 /* APIs for Department
   1. Get all Department
@@ -10,7 +11,7 @@ const departmentCtrl = require("../../../controllers/admin/department.controller
   4. Delete Department by id
 */
 
-router.get("/", departmentCtrl.getAllDepartment);
+router.get("/", permissionAuthorization("commonPermission.department", ["read"]), departmentCtrl.getAllDepartment);
 // router.get("/:id", getAllDepartmentData);
 
 router.post(
@@ -26,6 +27,7 @@ router.post(
       }
     ]
   ),
+  permissionAuthorization("commonPermission.department", ["create"]),
   departmentCtrl.addDepartment
 );
 
@@ -41,9 +43,10 @@ router.put(
         optional: true
       }
     ]),
+  permissionAuthorization("commonPermission.department", ["update"]),
   departmentCtrl.updateDepartment
 );
 
-router.delete("/:id", departmentCtrl.deleteDepartment);
+router.delete("/:id", permissionAuthorization("commonPermission.department", ["delete"]), departmentCtrl.deleteDepartment);
 
 module.exports = router;
