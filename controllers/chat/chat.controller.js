@@ -34,9 +34,6 @@ const storeChat = async (req, res) => {
         department: department || "AI",
         isHandshakeRequested: false,
         isHuman: false,
-        messages: [
-          { sender: sender, content: content, messageType: messageType },
-        ],
       });
       await newChat.save();
     }

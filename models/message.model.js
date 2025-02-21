@@ -1,10 +1,16 @@
 const mongoose = require("mongoose");
 
 const messageSchema = new mongoose.Schema({
-  sender: { type: String, required: true }, // Example: "user" or "bot"
+  chatId: { type: mongoose.Schema.Types.ObjectId, ref: "chat", required: true },
+  sender: { type: mongoose.Schema.Types.ObjectId, ref: "customers", default: null }, // Example: "user" or "bot"
+  receiver: { type: mongoose.Schema.Types.ObjectId, ref: "users", default: null },
+  sendType: { type: String, enum: ["assistant", "user", "admin"], default: "assistant" },
+  receiverType: { type: String, enum: ["assistant", "user", "admin"], default: "user" },
   content: { type: String, required: true },
-  type: { type: String, default: "text" }, // Example: "text" or "custom"
+  attachment: [{ type: String }],
   timestamp: { type: Date, default: Date.now },
 });
 
-module.exports = mongoose.model("Message", messageSchema);
+const MessageModel = mongoose.model("Message", messageSchema);
+
+module.exports = MessageModel;

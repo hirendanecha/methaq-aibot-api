@@ -1,4 +1,5 @@
 const Chat = require("../../models/chat.model");
+const MessageModel = require("../../models/message.model");
 
 const getAgentChats = async (req, res) => {
   try {
@@ -52,18 +53,14 @@ const getSingleUserChat = async (req, res) => {
   try {
     const { chatId } = req.body;
     console.log("chatId", chatId);
-    
-    const chat = await Chat.findById(chatId).select("messages");
 
-    if (!chat) {
-      return res.status(404).json({ error: "Chat not found" });
-    }
+    const messages = await MessageModel.find({ chatId });
 
-    res.status(200).json(chat.messages);
+    res.status(200).json(messages);
   } catch (error) {
     console.error("Error fetching messages:", error);
     res.status(500).json({ error: "Internal server error" });
   }
 }
 
-module.exports = { getAgentChats, getSingleUserChat};
+module.exports = { getAgentChats, getSingleUserChat };

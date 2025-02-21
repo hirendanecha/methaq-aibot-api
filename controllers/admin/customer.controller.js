@@ -59,7 +59,7 @@ exports.createCustomer = async (req, res) => {
         }
         const newCustomer = new CustomerModel(mergedObject);
         await newCustomer.save();
-        sendSuccessResponse(res, { data: newCustomer }, 'Customer created successfully');
+        sendSuccessResponse(res, { data: newCustomer, message: 'Customer created successfully' });
     } catch (error) {
         sendErrorResponse(res, error.message);
     }
