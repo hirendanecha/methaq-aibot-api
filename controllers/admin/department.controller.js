@@ -32,6 +32,17 @@ exports.getAllDepartment = async (req, res) => {
   }
 };
 
+exports.getParticularDepartment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const department = await DepartmentModel.findById(id).lean();
+
+    return sendSuccessResponse(res, { data: department });
+  } catch (error) {
+    return sendErrorResponse(res, error.message);
+  }
+};
+
 exports.addDepartment = async (req, res) => {
   try {
     let columns = Object.keys(req.body);
@@ -52,8 +63,9 @@ exports.addDepartment = async (req, res) => {
       const url = await s3.uploadPublic(npathD, `${fileData?.filename}`, `DepartmentLogos/${month}`);
       console.log(url, "url ");
 
-      // logo = npathD.replace("public/", "");
-      // console.log(logo, "logo");
+      await files
+        .deleteFileByPath(`${npathD.replace("public/", "")}`)
+        .catch((err) => console.log(err));
 
       mergedObject.logo = url;
     };
@@ -92,11 +104,15 @@ exports.updateDepartment = async (req, res) => {
       const url = await s3.uploadPublic(npathD, `${fileData?.filename}`, `DepartmentLogos/${month}`);
       console.log(url, "url ");
 
-      mergedObject.logo = url;
-    };
+      await files
+        .deleteFileByPath(`${npathD.replace("public/", "")}`)
+        .catch((err) => console.log(err));
 
-    const department = await DepartmentModel.findById(id).lean();
-    console.log(department?.logo);
+      mergedObject.logo = url;
+
+      const department = await DepartmentModel.findById(id).lean();
+      await s3.deleteFiles([department?.logo]);
+    };
 
     const updatedDepartment = await DepartmentModel.findByIdAndUpdate(
       id,
@@ -107,10 +123,6 @@ exports.updateDepartment = async (req, res) => {
         new: true
       }
     );
-
-    await files
-      .deleteFileByPath(`${department?.logo}`)
-      .catch((err) => console.log(err));
 
     return sendSuccessResponse(res, { data: updatedDepartment });
   } catch (error) {

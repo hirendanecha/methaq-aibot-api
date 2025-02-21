@@ -52,7 +52,7 @@ const files = {
               )
             );
           }
-
+          console.log("deleted");
           resolve(`File deleted successfully: ${serverFilePath}`);
         });
       } catch (error) {

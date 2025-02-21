@@ -12,7 +12,8 @@ const { permissionAuthorization } = require("../../../middleware/authorization")
 */
 
 router.get("/", permissionAuthorization("commonPermission.department", ["read"]), departmentCtrl.getAllDepartment);
-// router.get("/:id", getAllDepartmentData);
+
+router.get("/:id/getdepartmentdetails", permissionAuthorization("commonPermission.department", ["read"]), departmentCtrl.getParticularDepartment);
 
 router.post(
   "/",
