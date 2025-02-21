@@ -13,6 +13,7 @@ socket.config = (server) => {
     },
   });
   socket.io = io;
+
   const agents = {};
   io.sockets.on("connection", (socket) => {
     // console.log("A user connected:", socket.id);
@@ -111,13 +112,13 @@ socket.config = (server) => {
         id: socket.id,
         method: "create-customer",
       });
-      const customer = await CustomerModel.create({
+      const newCustomers = await CustomerModel.create({
         name: params.name,
         email: params.email,
         phone: params.phone,
         notes: params.notes,
       });
-      const newCustomers = customer.save();
+      // const newCustomers = await customer.save();
       socket.emit("customer-created", newCustomers);
     });
 

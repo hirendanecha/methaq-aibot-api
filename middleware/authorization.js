@@ -23,7 +23,7 @@ exports.permissionAuthorization = (moduleName, permission, specialpermission = [
       }
       const [module, per] = moduleName.split(".");
 
-      const permissions = await ModuleAcessModel.findOne({ userId: req.user._id });
+      const permissions = await ModuleAcessModel.findOne({ user: req.user._id });
       if (permissions && module && per) {
         const assignedPermissions = permissions[module.trim()][per.trim()];
         const allowed = permission.every((p) => assignedPermissions[p]);
