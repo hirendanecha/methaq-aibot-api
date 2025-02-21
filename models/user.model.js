@@ -35,10 +35,6 @@ const UserSchema = new Schema(
     }],
     isActive: { type: Boolean, default: false },
     assignChats: [{ type: mongoose.Schema.Types.ObjectId, ref: "Chat" }],
-    workingHours: {
-      startTime: { type: String },
-      endTime: { type: String }
-    },
   },
   {
     timestamps: true,
