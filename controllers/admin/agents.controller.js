@@ -32,7 +32,7 @@ exports.createAgent = async (req, res) => {
             await permissions.save();
             console.log(permissions, "permissions");
 
-            return sendSuccessResponse(res, { data: populatedUser });
+            return sendSuccessResponse(res, { data: populatedUser, permission: permissions });
         } else {
             return sendErrorResponse(
                 res,
@@ -135,7 +135,7 @@ exports.updateAgents = async (req, res) => {
                 new: true,
             }
         ).lean();
-        sendSuccessResponse(res, { data: updateUser });
+        sendSuccessResponse(res, { data: updateUser, permission: updatedPermissions });
     } catch (error) {
         sendErrorResponse(res, error.message);
     }
