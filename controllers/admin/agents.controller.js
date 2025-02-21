@@ -94,8 +94,9 @@ exports.getAllAgents = async (req, res) => {
 exports.getAgent = async (req, res) => {
     try {
         const { userId } = req.params;
-        const agent = await UserModel.findById(userId).populate('department');
-        sendSuccessResponse(res, { data: agent });
+        const agent = await UserModel.findById(userId).populate('department').lean();
+        const permission = await ModuleAcessModel.findOne({ user: userId }).lean();
+        sendSuccessResponse(res, { data: { ...agent, permission } });
     } catch (error) {
         sendErrorResponse(res, error.message);
     }
