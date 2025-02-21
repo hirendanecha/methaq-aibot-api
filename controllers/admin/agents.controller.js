@@ -1,11 +1,12 @@
-const AgentModel = require("../../models/agent.model");
+const ModuleAcessModel = require("../../models/permission.model");
+const UserModel = require("../../models/user.model");
 const { getPagination, getCount, getPaginationData } = require("../../utils/fn");
 const { sendSuccessResponse, sendErrorResponse } = require("../../utils/response");
 
 exports.createAgent = async (req, res) => {
     try {
         const { _id: adminId } = req.user;
-        const { email, password, role, fullName, mobileNumber, preferredEmirates, department, workingHours } = req.body;
+        const { email, password, role, fullName, mobileNumber, preferredEmirates, department, workingHours, permission } = req.body;
 
         const adminRole = req.user.role;
 
@@ -13,9 +14,9 @@ exports.createAgent = async (req, res) => {
             return sendErrorResponse(res, "You are not authorized to perform this operation.", 403, true, true);
         }
 
-        const existingUser = await AgentModel.findOne({ email: email });
+        const existingUser = await UserModel.findOne({ email: email });
         if (!existingUser) {
-            const user = new AgentModel({
+            const user = new UserModel({
                 fullName,
                 email,
                 role,
@@ -26,9 +27,12 @@ exports.createAgent = async (req, res) => {
                 workingHours
             });
             const savedUser = await user.save();
-            const populatedUser = await savedUser.populate('department');
+            const populatedUser = await savedUser.populate('department')
+            const permissions = new ModuleAcessModel({ user: populatedUser._id, ...permission });
+            await permissions.save();
+            console.log(permissions, "permissions");
 
-            return sendSuccessResponse(res, { data: populatedUser });
+            return sendSuccessResponse(res, { data: populatedUser, permission: permissions });
         } else {
             return sendErrorResponse(
                 res,
@@ -48,7 +52,7 @@ exports.getAllAgents = async (req, res) => {
         const { page, size, search } = req.query;
         const { limit, offset } = getPagination(page, size);
         const count = await getCount(
-            AgentModel,
+            UserModel,
             {
                 role: { $nin: ["User", "Admin"] },
                 ...(search
@@ -62,7 +66,7 @@ exports.getAllAgents = async (req, res) => {
                     : {}),
             },
         );
-        const users = await AgentModel.find(
+        const users = await UserModel.find(
             {
                 role: { $nin: ["User", "Admin"] },
                 ...(search
@@ -90,8 +94,9 @@ exports.getAllAgents = async (req, res) => {
 exports.getAgent = async (req, res) => {
     try {
         const { userId } = req.params;
-        const agent = await AgentModel.findById(userId).populate('department');
-        sendSuccessResponse(res, { data: agent });
+        const agent = await UserModel.findById(userId).populate('department').lean();
+        const permission = await ModuleAcessModel.findOne({ user: userId }).lean();
+        sendSuccessResponse(res, { data: { ...agent, permission } });
     } catch (error) {
         sendErrorResponse(res, error.message);
     }
@@ -114,15 +119,24 @@ exports.updateAgents = async (req, res) => {
             return { ...result, ...currentObject };
         }, {});
 
-        const updateUser = await AgentModel.findByIdAndUpdate(
+        const updateUser = await UserModel.findByIdAndUpdate(
             userId,
             mergedObject,
             {
                 new: true
             }
         );
-
-        sendSuccessResponse(res, { data: updateUser });
+        const updatedPermissions = await ModuleAcessModel.findOneAndUpdate(
+            { user: updateUser._id },
+            {
+                ...(mergedObject.permission || {}),
+            },
+            {
+                upsert: true,
+                new: true,
+            }
+        ).lean();
+        sendSuccessResponse(res, { data: updateUser, permission: updatedPermissions });
     } catch (error) {
         sendErrorResponse(res, error.message);
     }
@@ -133,7 +147,7 @@ exports.changePassword = async (req, res) => {
     try {
         const { _id: userId } = req.user;
         const { password, newPassword } = req.body;
-        const user = await AgentModel.findById(userId).select("+password");
+        const user = await UserModel.findById(userId).select("+password");
         if (!user) {
             return sendErrorResponse(res, "We are not aware of this user.", 500, true, true);
         }
@@ -156,7 +170,7 @@ exports.deleteAgent = async (req, res) => {
             return sendErrorResponse(res, "You are not authorized to perform this operation.", 403, true, true);
         }
 
-        const deleteUser = await AgentModel.findByIdAndDelete(userId);
+        const deleteUser = await UserModel.findByIdAndDelete(userId);
         sendSuccessResponse(res, { data: "User deleted." })
     } catch (error) {
         sendErrorResponse(res, error.message);
@@ -171,7 +185,7 @@ exports.deleteAgent = async (req, res) => {
 //         const claim = await ClaimModel.findById(claimId);
 //         const preferredEmiratesOfRepair = claim?.preferredEmiratesOfRepair;
 
-//         const users = await AgentModel.find(
+//         const users = await UserModel.find(
 //             {
 //                 role: { $in: ["Agent", "Admin", "Supervisor"] },
 //                 preferredEmirates: { $in: preferredEmiratesOfRepair }
@@ -182,3 +196,27 @@ exports.deleteAgent = async (req, res) => {
 //         sendErrorResponse(res, error.message);
 //     }
 // }
+
+exports.updatePermissions = async (req, res) => {
+    try {
+        const { userId, permissions } = req.body;
+        const user = await UserModel.findById(userId);
+        if (!user) {
+            return sendErrorResponse(res, "We are not aware of this user.", 500, true, true);
+        }
+        const updatePermission = await ModuleAcessModel.findOneAndUpdate(
+            { user: user?._id },
+            {
+                ...(permissions || {}),
+            },
+            {
+                upsert: true,
+                new: true,
+            }
+        ).lean();
+        sendSuccessResponse(res, { data: updatePermission });
+
+    } catch (error) {
+        sendErrorResponse(res, error.message);
+    }
+}

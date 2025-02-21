@@ -53,7 +53,7 @@ async function fetchAndStoreDocuments({ details }) {
       },
       //   { content: details.other, title: "General Insurance - Other", source: `${detailsUrl}/other` },
     ];
-    
+
     for (const item of itemsToIndex) {
       let { content, title, source } = item;
       if (!content) continue;
@@ -73,7 +73,7 @@ async function fetchAndStoreDocuments({ details }) {
             pageContent: chunk,
             metadata: {
               departmentId: detailss?.department?._id.toString(),
-              departmentName: detailss?.department?.name ,
+              departmentName: detailss?.department?.name,
               title,
               source,
             },

@@ -4,7 +4,7 @@ const constants = require("../utils/constants");
 
 const Schema = mongoose.Schema;
 
-const AgentSchema = new Schema(
+const UserSchema = new Schema(
   {
     fullName: { type: String },
     email: {
@@ -18,9 +18,12 @@ const AgentSchema = new Schema(
     mobileNumber: {
       type: String,
       required: true,
-      unique: true,
     },
     password: { type: String, select: false },
+    isOnline: {
+      type: Boolean,
+      default: false
+    },
     role: {
       type: String,
       enum: constants.user.roles,
@@ -32,10 +35,6 @@ const AgentSchema = new Schema(
     }],
     isActive: { type: Boolean, default: false },
     assignChats: [{ type: mongoose.Schema.Types.ObjectId, ref: "Chat" }],
-    workingHours: {
-      startTime: { type: String },
-      endTime: { type: String }
-    },
   },
   {
     timestamps: true,
@@ -43,14 +42,14 @@ const AgentSchema = new Schema(
   }
 );
 
-AgentSchema.index({
+UserSchema.index({
   emiratesId: "text",
   fullName: "text",
   nationality: "text",
   licenceNo: "text",
 });
 
-AgentSchema.pre("save", function save(next) {
+UserSchema.pre("save", function save(next) {
   const user = this;
   if (!user.isModified("password")) {
     return next();
@@ -79,7 +78,7 @@ AgentSchema.pre("save", function save(next) {
 /**
  * Helper method for getting user's gravatar.
  */
-AgentSchema.methods.gravatar = function gravatar(size) {
+UserSchema.methods.gravatar = function gravatar(size) {
   if (!size) {
     size = 200;
   }
@@ -90,7 +89,7 @@ AgentSchema.methods.gravatar = function gravatar(size) {
   return `https://gravatar.com/avatar/${md5}?s=${size}&d=retro`;
 };
 
-AgentSchema.methods.comparePassword = function comparePassword(
+UserSchema.methods.comparePassword = function comparePassword(
   plainPassword,
   next
 ) {
@@ -99,6 +98,6 @@ AgentSchema.methods.comparePassword = function comparePassword(
   });
 };
 
-const AgentModel = mongoose.model("agent", AgentSchema);
+const UserModel = mongoose.model("user", UserSchema);
 
-module.exports = AgentModel;
+module.exports = UserModel;

@@ -11,6 +11,7 @@ const agentCtrl = require("../../../controllers/admin/agents.controller");
  6. Delete agent by userId
 */
 router.post("/createagent", agentCtrl.createAgent);
+router.post("/updatepermissions", agentCtrl.updatePermissions);
 router.post("/getallagents", agentCtrl.getAllAgents);
 router.get("/:userId/getagent", agentCtrl.getAgent);
 router.put("/:userId/updateagent", agentCtrl.updateAgents);

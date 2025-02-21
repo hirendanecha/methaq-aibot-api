@@ -1,5 +1,5 @@
 const Chat = require("../../models/chat.model");
-const Agent = require("../../models/agent.model");
+const User = require("../../models/user.model");
 
 // Store chat message
 const storeChat = async (req, res) => {
@@ -81,25 +81,25 @@ const updateHandshakeStatus = async (req, res) => {
       return res.status(404).json({ error: "Chat not found" });
     }
 
-     // Update handshake status and assign agent
-     chat.isHandshakeRequested = isHandshakeRequested;
-     chat.agentId = agentId;
- 
-     // Log the transfer
-     chat.transferLog.push({
-       transferredBy: "system", // Can be admin or system
-       transferredTo: agentId,
-       transferFromDepartment: chat.department,
-     });
- 
-     await chat.save();
- 
-     // Add chat ID to the assigned agent's `assignChats`
-     await Agent.findByIdAndUpdate(
-       agentId,
-       { $addToSet: { assignChats: chat._id } }, // Avoid duplicate chat IDs
-       { new: true }
-     );
+    // Update handshake status and assign agent
+    chat.isHandshakeRequested = isHandshakeRequested;
+    chat.agentId = agentId;
+
+    // Log the transfer
+    chat.transferLog.push({
+      transferredBy: "system", // Can be admin or system
+      transferredTo: agentId,
+      transferFromDepartment: chat.department,
+    });
+
+    await chat.save();
+
+    // Add chat ID to the assigned agent's `assignChats`
+    await User.findByIdAndUpdate(
+      agentId,
+      { $addToSet: { assignChats: chat._id } }, // Avoid duplicate chat IDs
+      { new: true }
+    );
 
     // await Chat.updateOne({ userId }, { $set: { isHandshakeRequested } });
     // await Chat.findOneAndUpdate(
