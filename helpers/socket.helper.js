@@ -87,6 +87,7 @@ socketObj.config = (server) => {
       socketObj.io.to(params.chatId).emit("message", mess);
       const newMessage = new MessageModel(mess)
       const final = await newMessage.save();
+      const updatedChat = await ChatModel.findOneAndUpdate({ _id: params.chatId }, { latestMessages: final?._id }, { new: true });
       if (typeof cb === "function")
         cb({
           message: final,
@@ -120,6 +121,7 @@ socketObj.config = (server) => {
       socketObj.io.to(params.chatId).emit("message", mess);
       const newMessage = new MessageModel(mess)
       const final = await newMessage.save();
+      const updatedChat = await ChatModel.findOneAndUpdate({ _id: params.chatId }, { latestMessages: final?._id }, { new: true });
       if (typeof cb === "function")
         cb({
           message: final,

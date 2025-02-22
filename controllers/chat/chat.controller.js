@@ -1,3 +1,5 @@
+const dayjs = require("dayjs");
+const s3 = require("../../helpers/s3.helper");
 const Chat = require("../../models/chat.model");
 const User = require("../../models/user.model");
 
@@ -130,4 +132,45 @@ const updateIsHumanStatus = async (req, res) => {
   }
 };
 
-module.exports = { storeChat, getChatHistory, updateHandshakeStatus, updateIsHumanStatus };
+const uploadDocument = async (req, res) => {
+  try {
+    const file = req.files;
+    console.log(req.files, "fileeee");
+    const uploadFile = req.files.file[0];
+    const path = uploadFile.path;
+    const npath = path.replaceAll("\\", "/");
+    const month = `${dayjs().year()}-${dayjs().month() + 1}`;
+    const url = await s3.uploadPublic(
+      npath,
+      `${uploadFile?.filename}`,
+      `ChatDocuments/${month}`
+    );
+    res
+      .status(200)
+      .json({ url: url, message: "Document uploaded successfully" });
+  } catch (error) {
+    console.log(error);
+    
+    return res.status(500).json({ error: "Failed to upload document" });
+  }
+};
+
+const deleteDocument = async (req, res) => {
+  try{
+    const { filePathToDelete } = req.body;
+    const deletedDoc = await s3.deleteFiles([filePathToDelete]);
+    console.log(deletedDoc,"deletedDoc");
+    return res.status(200).json({ message: "Document deleted successfully" });
+  }catch(error){
+    return res.status(500).json({ error: "Failed to delete document" });
+  }
+};
+
+module.exports = {
+  storeChat,
+  getChatHistory,
+  updateHandshakeStatus,
+  updateIsHumanStatus,
+  uploadDocument,
+  deleteDocument
+};
