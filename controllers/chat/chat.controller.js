@@ -2,6 +2,7 @@ const dayjs = require("dayjs");
 const s3 = require("../../helpers/s3.helper");
 const Chat = require("../../models/chat.model");
 const User = require("../../models/user.model");
+const { sendSuccessResponse, sendErrorResponse } = require("../../utils/response");
 
 // Store chat message
 const storeChat = async (req, res) => {
@@ -150,19 +151,38 @@ const uploadDocument = async (req, res) => {
       .json({ url: url, message: "Document uploaded successfully" });
   } catch (error) {
     console.log(error);
-    
+
     return res.status(500).json({ error: "Failed to upload document" });
   }
 };
 
 const deleteDocument = async (req, res) => {
-  try{
+  try {
     const { filePathToDelete } = req.body;
     const deletedDoc = await s3.deleteFiles([filePathToDelete]);
-    console.log(deletedDoc,"deletedDoc");
+    console.log(deletedDoc, "deletedDoc");
     return res.status(200).json({ message: "Document deleted successfully" });
-  }catch(error){
+  } catch (error) {
     return res.status(500).json({ error: "Failed to delete document" });
+  }
+};
+
+const archiveChat = async (req, res) => {
+  try {
+    const { chatId } = req.params;
+    const chat = await Chat.findById(chatId);
+
+    if (!chat) {
+      return res.status(404).json({ error: "Chat not found" });
+    };
+
+    chat.status = "archived";
+    await chat.save();
+
+    return sendSuccessResponse(res, "Chat archived successfully.");
+  } catch (error) {
+    console.error("Error archiving chat:", error);
+    return sendErrorResponse(res, "Failed to archive chat.");
   }
 };
 
@@ -172,5 +192,6 @@ module.exports = {
   updateHandshakeStatus,
   updateIsHumanStatus,
   uploadDocument,
-  deleteDocument
+  deleteDocument,
+  archiveChat
 };
