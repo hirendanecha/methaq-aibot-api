@@ -6,7 +6,7 @@ const ChatSchema = Schema(
   {
     adminId: {
       type: Schema.Types.ObjectId,
-      ref: "users",
+      ref: "user",
       default: null
     },
     customerId: {
@@ -15,7 +15,7 @@ const ChatSchema = Schema(
     },
     latestMessage: {
       type: Schema.Types.ObjectId,
-      ref: "message",
+      ref: "Message",
       default: null
     },
     isHuman: {

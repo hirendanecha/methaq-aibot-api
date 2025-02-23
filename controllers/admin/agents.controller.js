@@ -227,10 +227,10 @@ exports.getChatList = async (req, res) => {
         const { _id: userId, role } = req.user;
         let chats = [];
         if (role === "Admin" || role === "Supervisor") {
-            chats = await ChatModel.find({}).lean();
+            chats = await ChatModel.find({}).populate('adminId latestMessage').lean();
         }
         else {
-            chats = await ChatModel.find({ adminId: userId }).populate('customerId latestMessage').lean();
+            chats = await ChatModel.find({ adminId: userId }).populate('adminId latestMessage').lean();
         }
         return sendSuccessResponse(res, { data: chats });
     } catch (error) {
