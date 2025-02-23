@@ -29,4 +29,5 @@ module.exports = {
       failed: "failed",
     },
   },
+  chatStatus: ["active", "archived"],
 };

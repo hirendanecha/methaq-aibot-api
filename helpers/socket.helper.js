@@ -84,9 +84,13 @@ socketObj.config = (server) => {
       }
       console.log(mess, "sadsdfsdffd");
 
-      socketObj.io.to(params.chatId).emit("message", mess);
+      const receivers = await UserModel.find({ $or: [{ role: {$in:["Admin","Supervisor"]} },...params.receiver?{ _id: params.receiver }:{}] });
+      receivers.forEach(receiver => {
+        socketObj.io.to(receiver._id).emit("message", mess);
+      })
       const newMessage = new MessageModel(mess)
       const final = await newMessage.save();
+      const updatedChat = await ChatModel.findOneAndUpdate({ _id: params.chatId }, { latestMessages: final?._id }, { new: true });
       if (typeof cb === "function")
         cb({
           message: final,
@@ -117,13 +121,36 @@ socketObj.config = (server) => {
         receiver: params.receiver,
         receiverType: "user"
       }
-      socketObj.io.to(params.chatId).emit("message", mess);
+      const receivers = await UserModel.find({ $or: [{ role: {$in:["Admin","Supervisor"]} },{ _id: {$in:[params.receiver,params.sender]} }] });
+      console.log(receivers,"receivers")
+      receivers.forEach(receiver => {
+        socketObj.io.to(receiver._id?.toString()).emit("message", mess);
+      })
       const newMessage = new MessageModel(mess)
       const final = await newMessage.save();
+      const updatedChat = await ChatModel.findOneAndUpdate({ _id: params.chatId }, { latestMessages: final?._id }, { new: true });
       if (typeof cb === "function")
         cb({
           message: final,
         });
+    })
+
+    socket.on("transfer-chat", async (params, cb) => {
+      const { chatId, department, adminId } = params;
+      const chat = await ChatModel.findById(chatId);
+      const oldAssignee = chat.adminId;
+      if(adminId){
+        chat.adminId = adminId;
+        chat.isHuman = true;
+        chat.save();
+      }
+      else{
+        chat.adminId = null;
+        const agents = await UserModel.find({ role: "Agent", department });
+        chat.adminId = agents[0]?._id||"";
+        chat.isHuman = true;
+        chat.save();
+      }
     })
 
     socket.on('activity', (params, cb) => {
