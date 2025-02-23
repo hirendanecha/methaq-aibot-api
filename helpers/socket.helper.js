@@ -84,7 +84,7 @@ socketObj.config = (server) => {
       }
       console.log(mess, "sadsdfsdffd");
 
-      const receivers = await UserModel.find({ $or: [{ role: {$in:["Admin","Supervisor"]} },...params.receiver?{ _id: params.receiver }:{}] });
+      const receivers = await UserModel.find({ $or: [{ role: { $in: ["Admin", "Supervisor"] } }, params.receiver ? { _id: params.receiver } : {}] });
       const newMessage = new MessageModel(mess)
       const final = await (await newMessage.save()).populate('chatId');
       receivers.forEach(receiver => {
@@ -121,12 +121,12 @@ socketObj.config = (server) => {
         receiver: params.receiver,
         receiverType: "user"
       }
-      const receivers = await UserModel.find({ $or: [{ role: {$in:["Admin","Supervisor"]} },{ _id: {$in:[params.receiver,params.sender]} }] });
-      console.log(receivers,"receivers")
+      const receivers = await UserModel.find({ $or: [{ role: { $in: ["Admin", "Supervisor"] } }, { _id: { $in: [params.receiver, params.sender] } }] });
+      console.log(receivers, "receivers")
       const newMessage = new MessageModel(mess)
       const final = await (await newMessage.save()).populate("chatId");
-      console.log(final,"finalfinal");
-      
+      console.log(final, "finalfinal");
+
       receivers.forEach(receiver => {
         socketObj.io.to(receiver._id?.toString()).emit("message", final);
       })
@@ -141,15 +141,15 @@ socketObj.config = (server) => {
       const { chatId, department, adminId } = params;
       const chat = await ChatModel.findById(chatId);
       const oldAssignee = chat.adminId;
-      if(adminId){
+      if (adminId) {
         chat.adminId = adminId;
         chat.isHuman = true;
         chat.save();
       }
-      else{
+      else {
         chat.adminId = null;
         const agents = await UserModel.find({ role: "Agent", department });
-        chat.adminId = agents[0]?._id||"";
+        chat.adminId = agents[0]?._id || "";
         chat.isHuman = true;
         chat.save();
       }
