@@ -123,11 +123,13 @@ socketObj.config = (server) => {
       }
       const receivers = await UserModel.find({ $or: [{ role: {$in:["Admin","Supervisor"]} },{ _id: {$in:[params.receiver,params.sender]} }] });
       console.log(receivers,"receivers")
-      receivers.forEach(receiver => {
-        socketObj.io.to(receiver._id?.toString()).emit("message", mess);
-      })
       const newMessage = new MessageModel(mess)
-      const final = await newMessage.save();
+      const final = await (await newMessage.save()).populate("chatId");
+      console.log(final,"finalfinal");
+      
+      receivers.forEach(receiver => {
+        socketObj.io.to(receiver._id?.toString()).emit("message", final);
+      })
       const updatedChat = await ChatModel.findOneAndUpdate({ _id: params.chatId }, { latestMessages: final?._id }, { new: true });
       if (typeof cb === "function")
         cb({
