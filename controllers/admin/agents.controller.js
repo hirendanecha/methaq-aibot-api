@@ -230,7 +230,7 @@ exports.getChatList = async (req, res) => {
             chats = await ChatModel.find({}).lean();
         }
         else {
-            chats = await ChatModel.find({ adminId: userId }).lean();
+            chats = await ChatModel.find({ adminId: userId }).populate('customerId latestMessage').lean();
         }
         return sendSuccessResponse(res, { data: chats });
     } catch (error) {
