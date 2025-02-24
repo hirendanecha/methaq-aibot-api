@@ -50,7 +50,7 @@ exports.createAgent = async (req, res) => {
 
 exports.getAllAgents = async (req, res) => {
     try {
-        const { page, size, search } = req.query;
+        const { page, size, search, department } = req.query;
         const { limit, offset } = getPagination(page, size);
         const count = await getCount(
             UserModel,
@@ -70,6 +70,7 @@ exports.getAllAgents = async (req, res) => {
         const users = await UserModel.find(
             {
                 role: { $nin: ["User", "Admin"] },
+                ...department ? { department: { $in: department } } : {},
                 ...(search
                     ? {
                         $or: [
