@@ -155,6 +155,14 @@ socketObj.config = (server) => {
     socket.on("transfer-chat", async (params, cb) => {
       const { chatId, department, adminId } = typeof params === "string" ? JSON.parse(params) : params;
       const chat = await ChatModel.findById(chatId);
+      console.log(chat);
+      if (!chat) {
+        cb({
+          success: false,
+          message: "Entr Valid chat"
+        });
+        return;
+      }
       const oldAssignee = chat.adminId;
       if (adminId) {
         chat.adminId = adminId;
