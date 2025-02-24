@@ -175,7 +175,7 @@ socketObj.config = (server) => {
           const mess = {
             chatId: chatId,
             sender: null,
-            sendType: "assistant",
+            sendType: "admin",
             content: "No Agent is now available",
             attachments: [],
             timestamp: new Date(),
@@ -186,7 +186,7 @@ socketObj.config = (server) => {
           const final = await newMessage.save();
           const updatedChat = await ChatModel.findOneAndUpdate({ _id: chatId }, { latestMessage: final?._id }, { new: true }).lean();
           const receivers = await UserModel.find({ $or: [{ role: { $in: ["Admin", "Supervisor"] } }] }).lean();
-          console.log({ ...updatedChat, latestMessage: final }, "finalfinalfinalfinal");
+          console.log(chatDetails?.customerId, "finalfinalfinalfinal");
           [...receivers, chatDetails?.customerId].forEach(receiver => {
             socketObj.io.to(receiver._id?.toString()).emit("message", { ...updatedChat, latestMessage: final });
           })
@@ -198,10 +198,27 @@ socketObj.config = (server) => {
           }
         }
         else {
-          const assignedChats = await ChatModel?.find({ customerId: { $in: agents?.map((agent) => agent?._id) } })
-          // const assignedChatCounts = {}; 
-          // assignedChats?.map(())
-          chat.adminId = agents[0]?._id || "";
+          const assignedChats = await ChatModel?.find({ adminId: { $in: agents?.map((agent) => agent?._id) } })
+          const assignedChatCounts = {};
+          assignedChats?.map((chat) => {
+            assignedChatCounts[chat?.adminId?.toString()] = (assignedChatCounts[chat?.adminId?.toString()] || 0) + 1;
+          })
+          console.log(assignedChats, assignedChatCounts, "dgfdgfdg");
+
+          let finalAgent = "";
+          Object.keys(assignedChatCounts)?.map((chat) => {
+            if (!finalAgent) {
+              finalAgent = chat;
+            }
+            if (finalAgent === chat) {
+              if (assignedChatCounts[chat] > assignedChatCounts[finalAgent]) {
+                finalAgent = chat
+              }
+            }
+          })
+          console.log(finalAgent, "finalAgent");
+
+          chat.adminId = finalAgent || "";
           chat.isHuman = true;
           const updatedChat = await chat.save();
           const receivers = await UserModel.find({ $or: [{ role: { $in: ["Admin", "Supervisor"] } }, { _id: { $in: [adminId, oldAssignee] } }] });
