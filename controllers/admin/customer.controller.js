@@ -104,7 +104,7 @@ exports.updateCustomer = async (req, res) => {
             },
             {
                 new: true
-            });
+            }).lean();
         if (!customer) {
             return sendErrorResponse(res, 'Customer not found', 404);
         }
