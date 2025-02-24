@@ -6,8 +6,9 @@ const messageSchema = new mongoose.Schema({
   receiver: { type: mongoose.Schema.Types.ObjectId, ref: "users", default: null },
   sendType: { type: String, enum: ["assistant", "user", "admin"], default: "assistant" },
   receiverType: { type: String, enum: ["assistant", "user", "admin"], default: "user" },
-  content: { type: String, required: true },
-  attachment: [{ type: String }],
+  content: { type: String, default: "" },
+  attachments: [{ type: String }],
+  isSeen: { type: Boolean, default: false },
   timestamp: { type: Date, default: Date.now },
 });
 
