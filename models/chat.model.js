@@ -11,7 +11,8 @@ const ChatSchema = Schema(
     },
     department: {
       type: Schema.Types.ObjectId,
-      ref: "departments"
+      ref: "departments",
+      default: "67b459b237e1e5b6d7c06593"
     },
     customerId: {
       type: Schema.Types.ObjectId,
