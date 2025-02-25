@@ -167,25 +167,6 @@ const deleteDocument = async (req, res) => {
   }
 };
 
-const archiveChat = async (req, res) => {
-  try {
-    const { chatId } = req.params;
-    const chat = await Chat.findById(chatId);
-
-    if (!chat) {
-      return res.status(404).json({ error: "Chat not found" });
-    };
-
-    chat.status = "archived";
-    await chat.save();
-
-    return sendSuccessResponse(res, "Chat archived successfully.");
-  } catch (error) {
-    console.error("Error archiving chat:", error);
-    return sendErrorResponse(res, "Failed to archive chat.");
-  }
-};
-
 module.exports = {
   storeChat,
   getChatHistory,
@@ -193,5 +174,4 @@ module.exports = {
   updateIsHumanStatus,
   uploadDocument,
   deleteDocument,
-  archiveChat
 };

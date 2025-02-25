@@ -3,6 +3,8 @@ const ChatModel = require("../models/chat.model");
 const CustomerModel = require("../models/customer.model");
 const MessageModel = require("../models/message.model");
 const UserModel = require("../models/user.model");
+const environment = require("../utils/environment");
+const jwt = require("jsonwebtoken");
 
 let logger = console;
 const socketObj = {};
@@ -15,6 +17,34 @@ socketObj.config = (server) => {
     },
   });
   socketObj.io = io;
+
+  // io.use((socket, next) => {
+  //   try {
+  //     const authHeader = socket.handshake.headers.authorization || '';
+  //     const token = (authHeader && authHeader.split(' ')[1]);
+  //     // console.log("auth token ==>> ", token, socket.handshake);
+  //     if (!token) {
+  //       console.log("Unauthorized Access via socket");
+  //       const err = new Error("Unauthorized Access");
+  //       return next(err);
+  //     } else {
+  //       let decoded = jwt.decode(token);
+  //       jwt.verify(token, environment.jwt.secret, async (err, user) => {
+  //         if (err) {
+  //           console.log("Invalid or Expired Token in socket");
+  //           const err = new Error("Invalid or Expired Token");
+  //           return next(err);
+  //         }
+  //         socket.user = decoded;
+  //         next();
+  //       })
+  //     }
+  //   } catch (error) {
+  //     console.log("Socket Conn Error ==> ", error?.message);
+  //     const err = new Error("Invalid or Expired Token");
+  //     return next(err);
+  //   }
+  // });
 
   const agents = {};
   io.sockets.on("connection", (socket) => {
@@ -74,9 +104,28 @@ socketObj.config = (server) => {
           cust_id: updatedCus._id
         });
     });
-
+    socket.on('getchatdetails', async (params, cb) => {
+      try {
+        const { chatId } = typeof params === "string" ? JSON.parse(params) : params;
+        const chat = await ChatModel.findById(chatId).populate('adminId customerId').lean();
+        if (typeof cb === "function")
+          cb({
+            success: true,
+            chat
+          });
+      } catch (error) {
+        console.log(error);
+        if (typeof cb === "function")
+          cb({
+            success: false,
+            message: error?.message,
+          });
+      }
+    })
     socket.on("save-message", async (params) => {
       try {
+        console.log(socket.user);
+
         params = typeof params === "string" ? JSON.parse(params) : params;
         const mess = {
           chatId: params.chatId,
@@ -127,7 +176,8 @@ socketObj.config = (server) => {
     })
 
     socket.on("send-message", async (params, cb) => {
-      console.log(params, typeof params, "params");
+      console.log(params, typeof params, socket.user, "params");
+
       params = typeof params === "string" ? JSON.parse(params) : params;
       const mess = {
         chatId: params.chatId,
@@ -139,18 +189,44 @@ socketObj.config = (server) => {
         receiver: params.receiver || null,
         receiverType: "user"
       }
+      const chatDetails = await ChatModel.findById(params.chatId).lean();
       const receivers = await UserModel.find({ $or: [{ role: { $in: ["Admin", "Supervisor"] } }, { _id: { $in: [params.receiver, params.sender] } }] }).lean();
       const customers = await CustomerModel.find({ _id: { $in: [params.receiver, params.sender] } }).lean();
       console.log(receivers, "receivers")
       const newMessage = new MessageModel(mess)
       const final = await newMessage.save();
-      console.log(final, "finalfinal");
-      const updatedChat = await ChatModel.findOneAndUpdate({ _id: params.chatId }, { latestMessage: final?._id }, { new: true }).lean();
-      console.log(params.chatId, { ...updatedChat, latestMessage: final }, "updatedChatupdatedChat");
-      console.log(updatedChat, "updatedChat");
-      [...receivers, ...customers].forEach(receiver => {
-        socketObj.io.to(receiver._id?.toString()).emit("message", { ...updatedChat, latestMessage: final });
-      })
+      console.log(chatDetails?.adminId, "chatDetails?.adminId");
+      if (!chatDetails?.adminId) {
+        const authHeader = socket.handshake.headers.authorization || '';
+        const token = (authHeader && authHeader.split(' ')[1]);
+        let decoded = jwt.decode(token);
+        const adminDetails = await UserModel.findById(decoded?._id).lean();
+        console.log(decoded, "decodeddecoded");
+        const mess = {
+          chatId: params.chatId,
+          sender: null,
+          sendType: "admin",
+          content: `Chat is now assigned to ${adminDetails?.fullName}`,
+          attachments: [],
+          timestamp: new Date(),
+          receiver: chatDetails?.customerId?.toString(),
+          receiverType: "user",
+          messageType: "tooltip"
+        }
+        const newMessage = new MessageModel(mess)
+        const tooltipMess = await newMessage.save();
+        const updatedChat = await ChatModel.findOneAndUpdate({ _id: params.chatId }, { latestMessage: tooltipMess?._id, adminId: decoded?._id, isHuman: true }, { new: true }).lean();
+        [...receivers, ...customers].forEach(receiver => {
+          socketObj.io.to(receiver._id?.toString()).emit("message", { ...updatedChat, latestMessage: final });
+          socketObj.io.to(receiver._id?.toString()).emit("message", { ...updatedChat, latestMessage: tooltipMess });
+        })
+      } else {
+        const updatedChat = await ChatModel.findOneAndUpdate({ _id: params.chatId }, { latestMessage: final?._id }, { new: true }).lean();
+        [...receivers, ...customers].forEach(receiver => {
+          socketObj.io.to(receiver._id?.toString()).emit("message", { ...updatedChat, latestMessage: final });
+        })
+      }
+
       if (typeof cb === "function")
         cb({
           chat: { ...updatedChat, latestMessage: final },
@@ -171,6 +247,7 @@ socketObj.config = (server) => {
       const oldAssignee = chat.adminId;
       if (adminId) {
         const adminDetails = await UserModel.findById(adminId).lean();
+        const chatDetails = await ChatModel.findOne({ _id: chatId }).lean();
         const mess = {
           chatId: chatId,
           sender: null,
@@ -188,6 +265,7 @@ socketObj.config = (server) => {
         const receivers = await UserModel.find({ $or: [{ role: { $in: ["Admin", "Supervisor"] } }, { _id: { $in: [adminId, oldAssignee] } }] });
         receivers.forEach(receiver => {
           socketObj.io.to(receiver._id?.toString()).emit("update-chat", updatedChat);
+          socketObj.io.to(receiver._id?.toString()).emit("message", { ...updatedChat, latestMessage: final });
         })
       }
       else {
@@ -326,6 +404,48 @@ socketObj.config = (server) => {
         cb({
           message: "Chat messages seen"
         });
+    });
+
+    socket.on('archive-chat', async (params, cb) => {
+      try {
+        const { chatId } = typeof params === "string" ? JSON.parse(params) : params;
+        const chat = await ChatModel.findById(chatId).populate("adminId").lean();
+
+        if (!chat) {
+          return res.status(404).json({ error: "Chat not found" });
+        };
+
+        const mess = {
+          chatId: chatId,
+          sender: null,
+          sendType: "admin",
+          content: `Chat archived by ${chat?.adminId?.fullName}`,
+          attachments: [],
+          timestamp: new Date(),
+          receiver: chat?.customerId?.toString(),
+          receiverType: "user",
+          messageType: "tooltip"
+        }
+        const newMessage = new MessageModel(mess)
+        const final = await newMessage.save();
+        const updatedChat = await ChatModel.findOneAndUpdate({ _id: chatId }, { latestMessage: final?._id, status: "archived" }, { new: true }).lean();
+        const receivers = await UserModel.find({ $or: [{ role: { $in: ["Admin", "Supervisor"] } }, { _id: { $in: [chat?.customerId?.toString()] } }] });
+        receivers.forEach(receiver => {
+          socketObj.io.to(receiver._id?.toString()).emit("update-chat", updatedChat);
+          socketObj.io.to(receiver._id?.toString()).emit("message", { ...updatedChat, latestMessage: final });
+        })
+
+        if (typeof cb === "function")
+          cb({
+            message: "Chat archived successfully."
+          });
+      } catch (error) {
+        console.error("Error archiving chat:", error);
+        if (typeof cb === "function")
+          cb({
+            message: error.message
+          });
+      }
     })
 
 

@@ -22,7 +22,9 @@ const ChatSchema = Schema(
       type: Boolean,
       default: false
     },
-    // isArchived: { type: Boolean, default: false },
+    notes: [{
+      type: String
+    }],
     status: {
       type: String,
       enum: constants.chatStatus,
