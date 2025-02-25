@@ -9,6 +9,7 @@ const messageSchema = new mongoose.Schema({
   content: { type: String, default: "" },
   attachments: [{ type: String }],
   isSeen: { type: Boolean, default: false },
+  messageType: { type: String, enum: ['text', 'tooltip'], default: 'text' },
   timestamp: { type: Date, default: Date.now },
 });
 

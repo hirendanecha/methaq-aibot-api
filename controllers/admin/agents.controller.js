@@ -1,4 +1,6 @@
+const { default: mongoose } = require("mongoose");
 const ChatModel = require("../../models/chat.model");
+const MessageModel = require("../../models/message.model");
 const ModuleAcessModel = require("../../models/permission.model");
 const UserModel = require("../../models/user.model");
 const { getPagination, getCount, getPaginationData } = require("../../utils/fn");
@@ -228,12 +230,44 @@ exports.getChatList = async (req, res) => {
         const { _id: userId, role } = req.user;
         let chats = [];
         if (role === "Admin" || role === "Supervisor") {
-            chats = await ChatModel.find({ latestMessage: { $ne: null } }).populate('adminId latestMessage').lean();
+            chats = await ChatModel.find({ latestMessage: { $ne: null }, status: "active" }).populate('adminId latestMessage').lean();
         }
         else {
-            chats = await ChatModel.find({ adminId: userId }).populate('adminId latestMessage').lean();
+            chats = await ChatModel.find({ adminId: userId, latestMessage: { $ne: null }, status: "active" }).populate('adminId latestMessage').lean();
         }
         return sendSuccessResponse(res, { data: chats });
+    } catch (error) {
+        return sendErrorResponse(res, error.message);
+    }
+}
+
+exports.getChatDetails = async (req, res) => {
+    try {
+        const { chatId } = req.params;
+        let attachments = [];
+        const chat = await ChatModel.findById(new mongoose.Types.ObjectId(chatId)).populate('adminId customerId').lean();
+        console.log(chat, chatId, "chatchatchat");
+
+        const messages = await MessageModel.find({ chatId: chatId }).lean();
+        messages.forEach((message) => {
+            if (message?.attachments?.length > 0) {
+                attachments.push(...message.attachments);
+            }
+        })
+        return sendSuccessResponse(res, { data: { ...chat, attachments } });
+    } catch (error) {
+        return sendErrorResponse(res, error.message);
+    }
+}
+
+exports.updateNotesToChat = async (req, res) => {
+    try {
+        const { chatId } = req.params;
+        const { notes } = req.body;
+        const chat = await ChatModel.findById(chatId);
+        chat.notes = notes;
+        await chat.save();
+        return sendSuccessResponse(res, { data: chat });
     } catch (error) {
         return sendErrorResponse(res, error.message);
     }

@@ -37,8 +37,6 @@ router.post(
   uploadDocument
 );
 
-router.post("/:chatId/archive", archiveChat);
-
 router.post("/deleteDocument", deleteDocument);
 
 router.post('/getwhatsappmessages', (req, res) => {
