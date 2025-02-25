@@ -228,12 +228,13 @@ exports.updatePermissions = async (req, res) => {
 exports.getChatList = async (req, res) => {
     try {
         const { _id: userId, role } = req.user;
+        const { status = "active", department } = req.body;
         let chats = [];
         if (role === "Admin" || role === "Supervisor") {
-            chats = await ChatModel.find({ latestMessage: { $ne: null }, status: "active" }).populate('adminId latestMessage').lean();
+            chats = await ChatModel.find({ latestMessage: { $ne: null }, status: status, ...department ? { department } : {} }).populate('adminId latestMessage').lean();
         }
         else {
-            chats = await ChatModel.find({ adminId: userId, latestMessage: { $ne: null }, status: "active" }).populate('adminId latestMessage').lean();
+            chats = await ChatModel.find({ adminId: userId, latestMessage: { $ne: null }, status: status, ...department ? { department } : {} }).populate('adminId latestMessage').lean();
         }
         return sendSuccessResponse(res, { data: chats });
     } catch (error) {
