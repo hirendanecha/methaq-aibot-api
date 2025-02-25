@@ -410,7 +410,7 @@ socketObj.config = (server) => {
     socket.on('archive-chat', async (params, cb) => {
       try {
         const { chatId } = typeof params === "string" ? JSON.parse(params) : params;
-        const chat = await ChatModel.findById(chatId).populate("adminId").lean();
+        const chat = await ChatModel.findById(chatId).populate("adminId department").lean();
 
         if (!chat) {
           return res.status(404).json({ error: "Chat not found" });
@@ -420,7 +420,7 @@ socketObj.config = (server) => {
           chatId: chatId,
           sender: null,
           sendType: "admin",
-          content: `Chat archived by ${chat?.adminId?.fullName}`,
+          content: chat?.department?.messages?.chatClosingMessage || `Chat archived by ${chat?.adminId?.fullName}`,
           attachments: [],
           timestamp: new Date(),
           receiver: chat?.customerId?.toString(),
