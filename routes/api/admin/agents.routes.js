@@ -12,7 +12,7 @@ const agentCtrl = require("../../../controllers/admin/agents.controller");
 */
 router.post("/createagent", agentCtrl.createAgent);
 router.post("/updatepermissions", agentCtrl.updatePermissions);
-router.get('/getchats', agentCtrl.getChatList);
+router.post('/getchats', agentCtrl.getChatList);
 router.get('/:chatId/getchatdetails', agentCtrl.getChatDetails);
 router.post('/:chatId/updatechatnotes', agentCtrl.updateNotesToChat);
 router.post("/getallagents", agentCtrl.getAllAgents);
