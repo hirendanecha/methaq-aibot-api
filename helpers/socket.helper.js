@@ -36,9 +36,14 @@ socketObj.config = (server) => {
       socket.leave(params.userId);
     });
 
-    socket.on("joinRoom", (params) => {
+    socket.on("joinRoom", (params, cb) => {
       params = typeof params === "string" ? JSON.parse(params) : params;
       socket.join(params.cust_id);
+      if (typeof cb === "function")
+        cb({
+          room: params.cust_id,
+          message: "Room joined successfully"
+        });
       logger.info("joinroom", {
         ...params,
       })
@@ -154,8 +159,6 @@ socketObj.config = (server) => {
 
     socket.on("transfer-chat", async (params, cb) => {
       const { chatId, department, adminId } = typeof params === "string" ? JSON.parse(params) : params;
-      console.log(chatId, "chatooiiii");
-
       const chat = await ChatModel.findById(chatId);
       console.log(chat);
       if (!chat) {
@@ -167,9 +170,21 @@ socketObj.config = (server) => {
       }
       const oldAssignee = chat.adminId;
       if (adminId) {
-        chat.adminId = adminId;
-        chat.isHuman = true;
-        const updatedChat = await chat.save();
+        const adminDetails = await UserModel.findById(adminId).lean();
+        const mess = {
+          chatId: chatId,
+          sender: null,
+          sendType: "admin",
+          content: `Chat is now assigned to ${adminDetails?.fullName}`,
+          attachments: [],
+          timestamp: new Date(),
+          receiver: chatDetails?.customerId?.toString(),
+          receiverType: "user",
+          messageType: "tooltip"
+        }
+        const newMessage = new MessageModel(mess)
+        const final = await newMessage.save();
+        const updatedChat = await ChatModel.findOneAndUpdate({ _id: chatId }, { adminId: adminId, isHuman: true, latestMessage: final?._id }, { new: true }).lean();
         const receivers = await UserModel.find({ $or: [{ role: { $in: ["Admin", "Supervisor"] } }, { _id: { $in: [adminId, oldAssignee] } }] });
         receivers.forEach(receiver => {
           socketObj.io.to(receiver._id?.toString()).emit("update-chat", updatedChat);
@@ -226,12 +241,29 @@ socketObj.config = (server) => {
           })
           console.log(finalAgent, "finalAgent");
 
-          chat.adminId = finalAgent || "";
+          chat.adminId = finalAgent || agents[0]?._id;
           chat.isHuman = true;
-          const updatedChat = await chat.save();
+          const updatedChat = await (await chat.save()).populate("adminId");
+          console.log(updatedChat, "updatedChatupdatedChat");
+
+          const mess = {
+            chatId: chatId,
+            sender: null,
+            sendType: "admin",
+            content: `Chat is now assigned to ${updatedChat?.adminId?.fullName}`,
+            attachments: [],
+            timestamp: new Date(),
+            receiver: chatDetails?.customerId?.toString(),
+            receiverType: "user",
+            messageType: "tooltip"
+          }
+          const newMessage = new MessageModel(mess)
+          const final = await newMessage.save();
+          const updated = await ChatModel.findOneAndUpdate({ _id: chatId }, { latestMessage: final?._id }, { new: true }).lean();
           const receivers = await UserModel.find({ $or: [{ role: { $in: ["Admin", "Supervisor"] } }, { _id: { $in: [adminId, oldAssignee] } }] });
           receivers.forEach(receiver => {
             socketObj.io.to(receiver._id?.toString()).emit("update-chat", updatedChat);
+            socketObj.io.to(receiver._id?.toString()).emit("message", { ...updated, latestMessage: final });
           })
           if (typeof cb === "function")
             cb({
@@ -287,23 +319,6 @@ socketObj.config = (server) => {
       }
     });
 
-    socket.on("create-customer", async (params) => {
-      logger.info("create-customer", {
-        ...params,
-        address,
-        id: socket.id,
-        method: "create-customer",
-      });
-      const newCustomers = await CustomerModel.create({
-        name: params.name,
-        email: params.email,
-        phone: params.phone,
-        notes: params.notes,
-      });
-      // const newCustomers = await customer.save();
-      socket.emit("customer-created", newCustomers);
-    });
-
     socket.on("seen-messages", async (params) => {
       const { chatId } = typeof params === "string" ? JSON.parse(params) : params;
       const updateMessages = await MessageModel.updateMany({ chatId: chatId }, { isSeen: true })
@@ -312,7 +327,6 @@ socketObj.config = (server) => {
           message: "Chat messages seen"
         });
     })
-
 
 
     socket.on("disconnect", () => {
