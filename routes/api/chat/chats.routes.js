@@ -41,4 +41,13 @@ router.post("/:chatId/archive", archiveChat);
 
 router.post("/deleteDocument", deleteDocument);
 
+router.post('/getwhatsappmessages', (req, res) => {
+  console.log(req, req.body, "details");
+
+  res.status(200).json({
+    message: "success",
+    data: "http://localhost:3000/api/public/whatsapp"
+  })
+})
+
 module.exports = router;
