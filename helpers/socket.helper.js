@@ -154,6 +154,8 @@ socketObj.config = (server) => {
 
     socket.on("transfer-chat", async (params, cb) => {
       const { chatId, department, adminId } = typeof params === "string" ? JSON.parse(params) : params;
+      console.log(chatId, "chatooiiii");
+
       const chat = await ChatModel.findById(chatId);
       console.log(chat);
       if (!chat) {
@@ -218,10 +220,8 @@ socketObj.config = (server) => {
             if (!finalAgent) {
               finalAgent = chat;
             }
-            if (finalAgent === chat) {
-              if (assignedChatCounts[chat] > assignedChatCounts[finalAgent]) {
-                finalAgent = chat
-              }
+            if (assignedChatCounts[chat] < assignedChatCounts[finalAgent]) {
+              finalAgent = chat
             }
           })
           console.log(finalAgent, "finalAgent");
