@@ -22,7 +22,7 @@ exports.getAllCustomers = async (req, res) => {
         const customers = await CustomerModel.find(
             condition,
             {},
-        ).skip(offset).limit(limit).sort({ createdAt: -1 });
+        ).skip(offset).limit(limit).sort({ createdAt: -1 }).lean();
         return sendSuccessResponse(
             res,
             getPaginationData({ count, docs: customers }, page, limit),
@@ -72,7 +72,7 @@ exports.getCustomer = async (req, res) => {
         if (!mongoose.Types.ObjectId.isValid(customerId)) {
             return sendErrorResponse(res, 'Invalid customer ID Provided', 400);
         }
-        const customer = await CustomerModel.findById(customerId);
+        const customer = await CustomerModel.findById(customerId).lean();
         if (!customer) {
             return sendErrorResponse(res, 'Customer not found', 404);
         }
@@ -104,7 +104,7 @@ exports.updateCustomer = async (req, res) => {
             },
             {
                 new: true
-            });
+            }).lean();
         if (!customer) {
             return sendErrorResponse(res, 'Customer not found', 404);
         }
