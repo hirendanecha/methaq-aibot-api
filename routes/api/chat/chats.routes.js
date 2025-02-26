@@ -3,6 +3,7 @@ const router = express.Router();
 const { storeChat, getChatHistory, updateHandshakeStatus, updateIsHumanStatus, uploadDocument, deleteDocument } = require("../../../controllers/chat/chat.controller");
 const { getAgentChats, getSingleUserChat } = require("../../../controllers/chat/agentChats.controller");
 const { fileUpload } = require("../../../middleware/file-upload");
+const environment = require("../../../utils/environment");
 
 // Route to store chat
 router.post("/store-chat", storeChat);
@@ -39,13 +40,30 @@ router.post(
 
 router.post("/deleteDocument", deleteDocument);
 
-router.post('/getwhatsappmessages', (req, res) => {
-  console.log(req, req.body, "details");
+// router.post('/getwhatsappmessages', (req, res) => {
+//   console.log(req, req.body, "details");
 
-  res.status(200).json({
-    message: "success",
-    data: "http://localhost:3000/api/public/whatsapp"
-  })
+//   res.status(200).json({
+//     message: "success",
+//     data: "http://localhost:3000/api/public/whatsapp"
+//   })
+// })
+router.get('/getwhatsappmessages', (req, res) => {
+  const mode = req.query['hub.mode'];
+  const challenge = req.query['hub.challenge'];
+  const token = req.query['hub.verify_token'];
+
+  const verificationToken = environment.whatsaap.whatVt
+
+  if (!mode || !token) {
+    return res.status(400).send('Error verifying token');
+  }
+
+  if (mode === 'subscribe' && token === verificationToken) {
+    return res.send(challenge);
+  }
+
+  return res.status(400).send('Invalid verification request');
 })
 
 module.exports = router;
