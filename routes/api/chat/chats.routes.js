@@ -228,17 +228,17 @@ router.post("/getwhatsappmessages", async (req, res) => {
 
       const results = await vectorStore.similaritySearch(userInput, 5);
       let context = results.map((r) => r.pageContent).join("\n\n");
-      let chatDddd = user?._id ? await ChatModel.findOne({ customerId: user._id }).lean() : null;
-      if (!chatDddd?.isHuman) {
-        await sendWhatsAppMessage(
-          // Call sendWhatsAppMessage
-          messageSender,
-          context,
-          messageID,
-          displayPhoneNumber,
-          userInput
-        );
-      }
+      // let chatDddd = user?._id ? await ChatModel.findOne({ customerId: user._id }).lean() : null;
+      // if (!chatDddd?.isHuman) {
+      await sendWhatsAppMessage(
+        // Call sendWhatsAppMessage
+        messageSender,
+        context,
+        messageID,
+        displayPhoneNumber,
+        userInput
+      );
+      // }
       break;
 
     case "image":
