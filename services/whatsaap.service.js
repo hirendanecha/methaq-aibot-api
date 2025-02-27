@@ -35,7 +35,8 @@ const sendWhatsAppMessage = async (
   context,
   messageID,
   displayPhoneNumber,
-  userInput
+  userInput,
+  isHumanReal
 ) => {
   // console.log("Message Sender:", userInput, messageSender,
     
@@ -43,7 +44,10 @@ const sendWhatsAppMessage = async (
   //   displayPhoneNumber,
   //   userInput);
 
-  const isHuman = await isHumanChatRequest(userInput);
+  console.log(isHumanReal,"isHumanReal");
+  
+
+  const isHuman = isHumanReal ? true : await isHumanChatRequest(userInput);
   if (isHuman) {
     const data = JSON.stringify({
       messaging_product: "whatsapp",
@@ -55,7 +59,7 @@ const sendWhatsAppMessage = async (
       type: "text",
       text: {
         preview_url: false,
-        body: "Hey, wait! We are working on the Human Interaction feature.",
+        body: userInput,
       },
     });
     await axios.post(url, data, {

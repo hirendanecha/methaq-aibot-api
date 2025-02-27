@@ -111,7 +111,7 @@ router.post("/getwhatsappmessages", async (req, res) => {
   const profileName = contacts?.[0]?.profile?.name;
 
   const user = await CustomerModel.findOne({ phone: messageSender });
-
+  let chatDddd = await ChatModel.findOne({ customerId: user._id }).lean();
   if (!user) {
     const customer = new CustomerModel({
       name: profileName,
@@ -231,15 +231,16 @@ router.post("/getwhatsappmessages", async (req, res) => {
 
 
 
-
-      await sendWhatsAppMessage(
-        // Call sendWhatsAppMessage
-        messageSender,
-        context,
-        messageID,
-        displayPhoneNumber,
-        userInput
-      );
+      if(!chatDddd?.isHuman){
+        await sendWhatsAppMessage(
+          // Call sendWhatsAppMessage
+          messageSender,
+          context,
+          messageID,
+          displayPhoneNumber,
+          userInput
+        );
+      }
       break;
 
     case "image":
