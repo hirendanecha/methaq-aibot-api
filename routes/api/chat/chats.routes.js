@@ -23,6 +23,7 @@ const {
 const { PineconeStore } = require("@langchain/pinecone");
 const { Pinecone } = require("@pinecone-database/pinecone");
 const CustomerModel = require("../../../models/customer.model");
+const ChatModel = require("../../../models/chat.model");
 
 const pinecone = new Pinecone({ apiKey: environment.pinecone.apiKey });
 // Route to store chat
@@ -110,6 +111,11 @@ router.post("/getwhatsappmessages", async (req, res) => {
       phone: profileNumber,
     });
     const updatedCus = await customer.save();
+
+    const chat = new ChatModel({
+      customerId: updatedCus._id,
+    })
+    const updatedChat = await chat.save();
     console.log(updatedCus);
   }
 
