@@ -1,6 +1,7 @@
 const { generateAIResponse } = require("./openai/openai.service");
 const environment = require("../utils/environment");
 const axios = require("axios");
+const { isHumanChatRequest } = require("./openai/tool/transferChat");
 
 url = `https://graph.facebook.com/${process.env.WHATSAPP_CLOUD_API_VERSION}/${process.env.WHATSAPP_CLOUD_API_PHONE_NUMBER_ID}/messages`;
 
@@ -33,30 +34,54 @@ const sendWhatsAppMessage = async (
   displayPhoneNumber,
   userInput
 ) => {
- 
-    console.log("Message Sender:", userInput);
-  const response = await generateAIResponse(context,userInput);
+  console.log("Message Sender:", userInput);
 
-  const data = JSON.stringify({
-    messaging_product: "whatsapp",
-    recipient_type: "individual",
-    to: messageSender,
-    context: {
-      message_id: messageID,
-    },
-    type: "text",
-    text: {
-      preview_url: false,
-      body: response,
-    },
-  });
-  await axios.post(url, data, {
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${environment.whatsaap.whatAuthT}`,
-    },
-  });
-  await markMessageAsRead(messageID);
+  const isHuman = await isHumanChatRequest(userInput);
+  if (isHuman) {
+    const data = JSON.stringify({
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to: messageSender,
+      context: {
+        message_id: messageID,
+      },
+      type: "text",
+      text: {
+        preview_url: false,
+        body: "Hey, wait! We are working on the Human Interaction feature.",
+      },
+    });
+    await axios.post(url, data, {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${environment.whatsaap.whatAuthT}`,
+      },
+    });
+    await markMessageAsRead(messageID);
+  } else {
+    const response = await generateAIResponse(context, userInput);
+
+    const data = JSON.stringify({
+      messaging_product: "whatsapp",
+      recipient_type: "individual",
+      to: messageSender,
+      // context: {
+      //   message_id: messageID,
+      // },
+      type: "text",
+      text: {
+        preview_url: false,
+        body: response,
+      },
+    });
+    await axios.post(url, data, {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${environment.whatsaap.whatAuthT}`,
+      },
+    });
+    await markMessageAsRead(messageID);
+  }
 };
 
 // const getMediaUrl = async (mediaID) => {
