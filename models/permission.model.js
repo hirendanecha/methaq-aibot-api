@@ -56,6 +56,8 @@ const ModuleAcessSchema = new Schema(
         },
         commonPermission: {
             department: permissionSchema,
+            archiveChat: { ...createPermissionSchema, ...readPermissionSchema },
+            agent: permissionSchema,
             chatTransfer: updatePermissionSchema,
             customer: permissionSchema,
         },
