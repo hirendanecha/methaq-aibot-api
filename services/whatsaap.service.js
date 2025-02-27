@@ -28,13 +28,14 @@ const markMessageAsRead = async (messageID) => {
 
 const sendWhatsAppMessage = async (
   messageSender,
-  userInput,
+  context,
   messageID,
-  displayPhoneNumber
+  displayPhoneNumber,
+  userInput
 ) => {
  
     console.log("Message Sender:", userInput);
-  const response = await generateAIResponse(userInput);
+  const response = await generateAIResponse(context,userInput);
 
   const data = JSON.stringify({
     messaging_product: "whatsapp",

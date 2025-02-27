@@ -1,4 +1,5 @@
 const express = require("express");
+const { OpenAIEmbeddings } = require("@langchain/openai");
 const router = express.Router();
 const {
   storeChat,
@@ -14,8 +15,16 @@ const {
 } = require("../../../controllers/chat/agentChats.controller");
 const { fileUpload } = require("../../../middleware/file-upload");
 const environment = require("../../../utils/environment");
-const { markMessageAsRead, sendWhatsAppMessage } = require("../../../services/whatsaap.service");
+const {
+  markMessageAsRead,
+  sendWhatsAppMessage,
+} = require("../../../services/whatsaap.service");
 
+const { PineconeStore } = require("@langchain/pinecone");
+const { Pinecone } = require("@pinecone-database/pinecone");
+const CustomerModel = require("../../../models/customer.model");
+
+const pinecone = new Pinecone({ apiKey: environment.pinecone.apiKey });
 // Route to store chat
 router.post("/store-chat", storeChat);
 
@@ -79,27 +88,55 @@ router.get("/getwhatsappmessages", (req, res) => {
 
 router.post("/getwhatsappmessages", async (req, res) => {
   // Added async
-  const { messages, metadata } = req.body.entry?.[0]?.changes?.[0].value ?? {}; 
-  const displayPhoneNumber = metadata?.phone_number_id; 
-  // const phoneNumberId = value.metadata?.phone_number_id;
- 
+  const { messages, metadata, contacts } =
+    req.body.entry?.[0]?.changes?.[0].value ?? {};
+  const displayPhoneNumber = metadata?.phone_number_id;
+  const phoneNumberId = metadata?.display_phone_number;
+
   if (!messages) return res.status(400).send("No messages found"); // Added response for no messages
   const message = messages[0];
   const messageSender = message.from;
   const messageID = message.id;
+  const messaging_product = "whatsaap";
+  const profileName = contacts?.[0]?.profile?.name;
+  const profileNumber = contacts?.[0]?.wa_id;
 
-  // await markMessageAsRead(messageID);
+  const user = await CustomerModel.findOne({ phone: profileNumber });
+  console.log(user,profileNumber,"user");
+  
+  if (!user) {
+    const customer = new CustomerModel({
+      name: profileName,
+      phone: profileNumber,
+    });
+    const updatedCus = await customer.save();
+    console.log(updatedCus);
+  }
 
   switch (message.type) {
     case "text":
-      const text = message.text.body;
-    
+      const userInput = message.text.body;
 
-      await sendWhatsAppMessage( // Call sendWhatsAppMessage
+      const embeddings = new OpenAIEmbeddings({
+        openAIApiKey: process.env.OPENAI_API_KEY,
+      });
+      const index = pinecone.Index(environment.pinecone.indexName);
+      const vectorStore = await PineconeStore.fromExistingIndex(embeddings, {
+        //@ts-ignore
+        pineconeIndex: index,
+      });
+
+      const results = await vectorStore.similaritySearch(userInput, 5);
+      let context = results.map((r) => r.pageContent).join("\n\n");
+      // console.log("Similarity Search Context:", context); // Log the context for debugging
+
+      await sendWhatsAppMessage(
+        // Call sendWhatsAppMessage
         messageSender,
-        text,
+        context,
         messageID,
-        displayPhoneNumber
+        displayPhoneNumber,
+        userInput
       );
       break;
   }

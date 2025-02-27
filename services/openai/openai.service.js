@@ -44,11 +44,28 @@ This ensures a smooth, informative, and structured user experience.
 ---
 🚀 **You are now ready to assist users with all Methaq Insurance-related queries professionally and contextually.**`;
 
-async function generateAIResponse(userInput) {
+function buildDynamicPrompt(agent, context, userInput) {
+  return `
+${agent}
+
+### 📌 Context:
+${context}
+
+### ❓ User Query:
+${userInput}
+
+`;
+}
+
+async function generateAIResponse(context, userInput) {
   try {
+    const prompt = buildDynamicPrompt(systemPrompt,context, userInput);
     const response = await openai.chat.completions.create({
-      messages: [{ role: "system", content: systemPrompt }, { role: "user", content: userInput }],
-      model: process.env.OPENAI_MODEL || "gpt-4-1106-preview",
+      messages: [
+        { role: "system", content: prompt },
+        { role: "user", content: userInput },
+      ],
+      model: process.env.OPENAI_MODEL || "gpt-4o-mini",
     });
 
     return response.choices[0].message.content;
