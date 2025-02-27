@@ -109,18 +109,13 @@ router.post("/getwhatsappmessages", async (req, res) => {
   const messageID = message.id;
   const messaging_product = "whatsaap";
   const profileName = contacts?.[0]?.profile?.name;
-  const profileNumber = contacts?.[0]?.wa_id;
 
-  const receivers = await UserModel.find({
-    $or: [{ role: { $in: ["Admin", "Supervisor"] } }],
-  }).lean();
-
-  const user = await CustomerModel.findOne({ phone: profileNumber });
+  const user = await CustomerModel.findOne({ phone: messageSender });
 
   if (!user) {
     const customer = new CustomerModel({
       name: profileName,
-      phone: profileNumber,
+      phone: messageSender,
     });
 
     const updatedCus = await customer.save();
@@ -131,6 +126,7 @@ router.post("/getwhatsappmessages", async (req, res) => {
 
     const chat = new ChatModel({
       customerId: updatedCus._id,
+      source:"whatsapp"
     });
     const newChat = await chat.save();
 
@@ -157,11 +153,15 @@ router.post("/getwhatsappmessages", async (req, res) => {
       { latestMessage: final?._id },
       { new: true }
     ).lean();
+    const receivers = await UserModel.find({
+      $or: [{ role: { $in: ["Admin", "Supervisor"] } }],
+    }).lean();
     [...receivers].forEach((receiver) => {
       socketObj.io
         .to(receiver._id?.toString())
         .emit("message", { ...updatedChat, latestMessage: final });
     });
+
   } else {
     let existingChat = await ChatModel.findOne({ customerId: user._id }).lean();
 
@@ -197,7 +197,12 @@ router.post("/getwhatsappmessages", async (req, res) => {
       { latestMessage: final?._id },
       { new: true }
     ).lean();
+    console.log(receivers,updatedChat,"sdsdfgsdf");
 
+    const receivers = await UserModel.find({
+      $or: [{ role: { $in: ["Admin", "Supervisor"] } },{_id:updatedChat?.adminId}],
+    }).lean();
+    
     [...receivers].forEach((receiver) => {
       socketObj.io
         .to(receiver._id?.toString())
@@ -223,6 +228,9 @@ router.post("/getwhatsappmessages", async (req, res) => {
       const results = await vectorStore.similaritySearch(userInput, 5);
       let context = results.map((r) => r.pageContent).join("\n\n");
       // console.log("Similarity Search Context:", context); // Log the context for debugging
+
+
+
 
       await sendWhatsAppMessage(
         // Call sendWhatsAppMessage

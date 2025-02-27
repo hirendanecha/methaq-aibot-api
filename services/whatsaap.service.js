@@ -37,11 +37,11 @@ const sendWhatsAppMessage = async (
   displayPhoneNumber,
   userInput
 ) => {
-  console.log("Message Sender:", userInput, messageSender,
+  // console.log("Message Sender:", userInput, messageSender,
     
-    messageID,
-    displayPhoneNumber,
-    userInput);
+  //   messageID,
+  //   displayPhoneNumber,
+  //   userInput);
 
   const isHuman = await isHumanChatRequest(userInput);
   if (isHuman) {

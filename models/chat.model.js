@@ -30,6 +30,11 @@ const ChatSchema = Schema(
     notes: [{
       type: String
     }],
+    source:{
+      type:String,
+      enum:["whatsapp","bot"],
+      default:"bot"
+    },
     status: {
       type: String,
       enum: constants.chatStatus,

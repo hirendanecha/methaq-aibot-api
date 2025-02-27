@@ -189,7 +189,7 @@ socketObj.config = (server) => {
         receiver: params.receiver || null,
         receiverType: "user"
       }
-      const chatDetails = await ChatModel.findById(params.chatId).lean();
+      const chatDetails = await ChatModel.findById(params.chatId).populate('customerId').lean();
       const receivers = await UserModel.find({ $or: [{ role: { $in: ["Admin", "Supervisor"] } }, { _id: { $in: [params.receiver, params.sender] } }] }).lean();
       const customers = await CustomerModel.find({ _id: { $in: [params.receiver, params.sender] } }).lean();
       console.log(receivers, "receivers")
@@ -220,11 +220,23 @@ socketObj.config = (server) => {
           socketObj.io.to(receiver._id?.toString()).emit("message", { ...updatedChat, latestMessage: final });
           socketObj.io.to(receiver._id?.toString()).emit("message", { ...updatedChat, latestMessage: tooltipMess });
         })
+
+        if(chatDetails?.source==='whatsapp'){
+          console.log("zvdg",final?.content,chatDetails?.customerId?.phone);
+          
+          sendWhatsAppMessage(chatDetails?.customerId?.phone,undefined,undefined,undefined,final?.content)
+        }
       } else {
-        const updatedChat = await ChatModel.findOneAndUpdate({ _id: params.chatId }, { latestMessage: final?._id }, { new: true }).lean();
+       
+        const updatedChat = await(await ChatModel.findOneAndUpdate({ _id: params.chatId }, { latestMessage: final?._id }, { new: true })).populate('customerId').lean();
         [...receivers, ...customers].forEach(receiver => {
           socketObj.io.to(receiver._id?.toString()).emit("message", { ...updatedChat, latestMessage: final });
         })
+
+        if(updatedChat?.source==='whatsapp'){
+          console.log("zvdgsdfsdf",final?.content,chatDetails?.customerId?.phone);
+          sendWhatsAppMessage(updatedChat?.customerId?.phone,undefined,undefined,undefined,final?.content)
+        }
       }
 
       if (typeof cb === "function")
