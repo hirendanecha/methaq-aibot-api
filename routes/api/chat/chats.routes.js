@@ -18,6 +18,7 @@ const environment = require("../../../utils/environment");
 const {
   markMessageAsRead,
   sendWhatsAppMessage,
+  sendWhatsAppMessageFromalMessage,
 } = require("../../../services/whatsaap.service");
 
 const { PineconeStore } = require("@langchain/pinecone");
@@ -199,6 +200,8 @@ router.post("/getwhatsappmessages", async (req, res) => {
     });
   }
 
+  console.log(messages, message.image.id, "type");
+
   switch (message.type) {
     case "text":
       const userInput = message.text.body;
@@ -223,6 +226,19 @@ router.post("/getwhatsappmessages", async (req, res) => {
         messageID,
         displayPhoneNumber,
         userInput
+      );
+      break;
+
+    case "video":
+    case "location":
+    case "unsupported":
+    case "contacts":
+      const formalMessage =
+        "We are sorry, but we cannot process this type of content.";
+      await sendWhatsAppMessageFromalMessage(
+        messageSender,
+        messageID,
+        formalMessage
       );
       break;
   }
