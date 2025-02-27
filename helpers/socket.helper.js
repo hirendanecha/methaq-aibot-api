@@ -229,14 +229,15 @@ socketObj.config = (server) => {
         }
       } else {
 
-        const updatedChat = await (await ChatModel.findOneAndUpdate({ _id: params.chatId }, { latestMessage: final?._id }, { new: true })).populate('customerId');
+        const updatedChat = await ChatModel.findOneAndUpdate({ _id: params.chatId }, { latestMessage: final?._id }, { new: true });
+        const chat = await ChatModel.findById(updatedChat?._id).populate('customerId').lean();
         [...receivers, ...customers].forEach(receiver => {
           socketObj.io.to(receiver._id?.toString()).emit("message", { ...updatedChat, latestMessage: final });
         })
 
         if (updatedChat?.source === 'whatsapp') {
           console.log("zvdgsdfsdf", final?.content, chatDetails?.customerId?.phone);
-          sendWhatsAppMessage(updatedChat?.customerId?.phone, undefined, undefined, undefined, final?.content, updatedChat?.isHuman)
+          sendWhatsAppMessage(chat?.customerId?.phone, undefined, undefined, undefined, final?.content, updatedChat?.isHuman)
         }
       }
 
