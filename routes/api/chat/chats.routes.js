@@ -112,8 +112,8 @@ router.post("/getwhatsappmessages", async (req, res) => {
   const profileName = contacts?.[0]?.profile?.name;
 
   const user = await CustomerModel.findOne({ phone: messageSender });
-  console.log(user,"fdsfsdfgdfg");
-  
+  console.log(user, "fdsfsdfgdfg");
+
   if (!user) {
     const customer = new CustomerModel({
       name: profileName,
@@ -128,7 +128,7 @@ router.post("/getwhatsappmessages", async (req, res) => {
 
     const chat = new ChatModel({
       customerId: updatedCus._id,
-      source:"whatsapp"
+      source: "whatsapp"
     });
     const newChat = await chat.save();
 
@@ -201,9 +201,9 @@ router.post("/getwhatsappmessages", async (req, res) => {
     ).lean();
 
     const receivers = await UserModel.find({
-      $or: [{ role: { $in: ["Admin", "Supervisor"] } },{_id:updatedChat?.adminId}],
+      $or: [{ role: { $in: ["Admin", "Supervisor"] } }, { _id: updatedChat?.adminId }],
     }).lean();
-    
+
     [...receivers].forEach((receiver) => {
       socketObj.io
         .to(receiver._id?.toString())
@@ -231,36 +231,36 @@ router.post("/getwhatsappmessages", async (req, res) => {
       // console.log("Similarity Search Context:", context); // Log the context for debugging
 
 
-      let chatDddd = user?._id?await ChatModel.findOne({ customerId: user._id }).lean():null;
-      const response = await generateAIResponse(context, userInput);
-      const mess = {
-        chatId: chatDddd._id,
-        sender: null,
-        sendType: "assistant",
-        content: response,
-        attachments: [],
-        timestamp: new Date(),
-        receiver: chatDddd?.adminId||"",
-        receiverType: "admin",
-      };
-  
-      const newMessage = new MessageModel(mess);
-      const final = await newMessage.save();
-  
-      const updatedChat = await ChatModel.findOneAndUpdate(
-        { _id: chatDddd._id },
-        { latestMessage: final?._id },
-        { new: true }
-      ).lean();
-      const receivers = await UserModel.find({
-        $or: [{ role: { $in: ["Admin", "Supervisor"] } }],
-      }).lean();
-      [...receivers].forEach((receiver) => {
-        socketObj.io
-          .to(receiver._id?.toString())
-          .emit("message", { ...updatedChat, latestMessage: final });
-      });
-      if(!chatDddd?.isHuman){
+      // let chatDddd = user?._id ? await ChatModel.findOne({ customerId: user._id }).lean() : null;
+      // const response = await generateAIResponse(context, userInput);
+      // const mess = {
+      //   chatId: chatDddd._id,
+      //   sender: null,
+      //   sendType: "assistant",
+      //   content: response,
+      //   attachments: [],
+      //   timestamp: new Date(),
+      //   receiver: chatDddd?.adminId || null,
+      //   receiverType: "admin",
+      // };
+
+      // const newMessage = new MessageModel(mess);
+      // const final = await newMessage.save();
+
+      // const updatedChat = await ChatModel.findOneAndUpdate(
+      //   { _id: chatDddd._id },
+      //   { latestMessage: final?._id },
+      //   { new: true }
+      // ).lean();
+      // const receivers = await UserModel.find({
+      //   $or: [{ role: { $in: ["Admin", "Supervisor"] } }],
+      // }).lean();
+      // [...receivers].forEach((receiver) => {
+      //   socketObj.io
+      //     .to(receiver._id?.toString())
+      //     .emit("message", { ...updatedChat, latestMessage: final });
+      // });
+      if (!chatDddd?.isHuman) {
         await sendWhatsAppMessage(
           // Call sendWhatsAppMessage
           messageSender,
