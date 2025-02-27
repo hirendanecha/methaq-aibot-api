@@ -167,18 +167,18 @@ router.post("/getwhatsappmessages", async (req, res) => {
   } else {
     let existingChat = await ChatModel.findOne({ customerId: user._id }).lean();
 
-    if (!existingChat) {
-      const chat = new ChatModel({
-        customerId: user._id,
-      });
-      existingChat = await chat.save();
+    // if (!existingChat) {
+    //   const chat = new ChatModel({
+    //     customerId: user._id,
+    //   });
+    //   existingChat = await chat.save();
 
-      if (!existingChat._id) {
-        throw new Error(
-          "Error while creating a new chat for the existing user!"
-        );
-      }
-    }
+    //   if (!existingChat._id) {
+    //     throw new Error(
+    //       "Error while creating a new chat for the existing user!"
+    //     );
+    //   }
+    // }
 
     const mess = {
       chatId: existingChat._id,
