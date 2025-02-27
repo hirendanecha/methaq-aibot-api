@@ -217,6 +217,8 @@ socketObj.config = (server) => {
         const newMessage = new MessageModel(mess)
         const tooltipMess = await newMessage.save();
         const updatedChat = await ChatModel.findOneAndUpdate({ _id: params.chatId }, { latestMessage: tooltipMess?._id, adminId: decoded?._id, isHuman: true }, { new: true }).lean();
+        console.log(updatedChat, "updatedChatupdatedChat");
+
         [...receivers, ...customers].forEach(receiver => {
           socketObj.io.to(receiver._id?.toString()).emit("message", { ...updatedChat, latestMessage: final });
           socketObj.io.to(receiver._id?.toString()).emit("message", { ...updatedChat, latestMessage: tooltipMess });
@@ -229,7 +231,10 @@ socketObj.config = (server) => {
         }
       } else {
 
-        const updatedChat = await ChatModel.findOneAndUpdate({ _id: params.chatId }, { latestMessage: final?._id }, { new: true });
+        const updatedChat = await ChatModel.findOneAndUpdate({ _id: params.chatId }, { latestMessage: final?._id }, { new: true }).lean();
+
+        console.log(updatedChat, "updatedChatupdatedChatupdatedChat");
+
         const chat = await ChatModel.findById(updatedChat?._id).populate('customerId').lean();
         [...receivers, ...customers].forEach(receiver => {
           socketObj.io.to(receiver._id?.toString()).emit("message", { ...updatedChat, latestMessage: final });
