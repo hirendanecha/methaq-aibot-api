@@ -18,6 +18,7 @@ const environment = require("../../../utils/environment");
 const {
   markMessageAsRead,
   sendWhatsAppMessage,
+  sendWhatsAppMessageFromalMessage,
 } = require("../../../services/whatsaap.service");
 
 const { PineconeStore } = require("@langchain/pinecone");
@@ -103,8 +104,8 @@ router.post("/getwhatsappmessages", async (req, res) => {
   const profileNumber = contacts?.[0]?.wa_id;
 
   const user = await CustomerModel.findOne({ phone: profileNumber });
-  console.log(user,profileNumber,"user");
-  
+  // console.log(user,profileNumber,"user");
+
   if (!user) {
     const customer = new CustomerModel({
       name: profileName,
@@ -114,10 +115,12 @@ router.post("/getwhatsappmessages", async (req, res) => {
 
     const chat = new ChatModel({
       customerId: updatedCus._id,
-    })
+    });
     const updatedChat = await chat.save();
-    console.log(updatedCus);
+    //console.log(updatedCus);
   }
+
+  console.log(messages, message.image.id, "type");
 
   switch (message.type) {
     case "text":
@@ -143,6 +146,19 @@ router.post("/getwhatsappmessages", async (req, res) => {
         messageID,
         displayPhoneNumber,
         userInput
+      );
+      break;
+
+    case "video":
+    case "location":
+    case "unsupported":
+    case "contacts":
+      const formalMessage =
+        "We are sorry, but we cannot process this type of content.";
+      await sendWhatsAppMessageFromalMessage(
+        messageSender,
+        messageID,
+        formalMessage
       );
       break;
   }

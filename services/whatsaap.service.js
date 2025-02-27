@@ -84,6 +84,35 @@ const sendWhatsAppMessage = async (
   }
 };
 
+const sendWhatsAppMessageFromalMessage = async (
+  messageSender,
+  messageID,
+  formalMessage
+) => {
+
+
+  const data = JSON.stringify({
+    messaging_product: "whatsapp",
+    recipient_type: "individual",
+    to: messageSender,
+    // context: {
+    //   message_id: messageID,
+    // },
+    type: "text",
+    text: {
+      preview_url: false,
+      body:formalMessage,
+    },
+  });
+  await axios.post(url, data, {
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${environment.whatsaap.whatAuthT}`,
+    },
+  });
+  await markMessageAsRead(messageID);
+};
+
 // const getMediaUrl = async (mediaID) => {
 //   const mediaUrl = `https://graph.facebook.com/${process.env.WHATSAPP_CLOUD_API_VERSION}/${mediaID}`;
 //   try {
@@ -208,6 +237,7 @@ const sendWhatsAppMessage = async (
 // Exporting functions using CommonJS syntax
 module.exports = {
   sendWhatsAppMessage,
+  sendWhatsAppMessageFromalMessage,
   //   getMediaUrl,
   //   downloadMedia,
   //   sendImageByUrl,
