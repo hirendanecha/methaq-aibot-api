@@ -135,7 +135,7 @@ socketObj.config = (server) => {
           content: params.content,
           attachments: params.attachments,
           timestamp: params?.timestamp || new Date(),
-          receiver: params.receiver || null,
+          receiver: params?.receiver || null,
           receiverType: params.receiverType
         }
         console.log(mess, "sadsdfsdffd");
@@ -222,21 +222,21 @@ socketObj.config = (server) => {
           socketObj.io.to(receiver._id?.toString()).emit("message", { ...updatedChat, latestMessage: tooltipMess });
         })
 
-        if(chatDetails?.source==='whatsapp'){
-          console.log("zvdg",final?.content,chatDetails?.customerId?.phone);
-          
-          sendWhatsAppMessage(chatDetails?.customerId?.phone,undefined,undefined,undefined,final?.content,updatedChat?.isHuman)
+        if (chatDetails?.source === 'whatsapp') {
+          console.log("zvdg", final?.content, chatDetails?.customerId?.phone);
+
+          sendWhatsAppMessage(chatDetails?.customerId?.phone, undefined, undefined, undefined, final?.content, updatedChat?.isHuman)
         }
       } else {
-       
-        const updatedChat = await(await ChatModel.findOneAndUpdate({ _id: params.chatId }, { latestMessage: final?._id }, { new: true })).populate('customerId');
+
+        const updatedChat = await (await ChatModel.findOneAndUpdate({ _id: params.chatId }, { latestMessage: final?._id }, { new: true })).populate('customerId');
         [...receivers, ...customers].forEach(receiver => {
           socketObj.io.to(receiver._id?.toString()).emit("message", { ...updatedChat, latestMessage: final });
         })
 
-        if(updatedChat?.source==='whatsapp'){
-          console.log("zvdgsdfsdf",final?.content,chatDetails?.customerId?.phone);
-          sendWhatsAppMessage(updatedChat?.customerId?.phone,undefined,undefined,undefined,final?.content,updatedChat?.isHuman)
+        if (updatedChat?.source === 'whatsapp') {
+          console.log("zvdgsdfsdf", final?.content, chatDetails?.customerId?.phone);
+          sendWhatsAppMessage(updatedChat?.customerId?.phone, undefined, undefined, undefined, final?.content, updatedChat?.isHuman)
         }
       }
 

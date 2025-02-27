@@ -228,38 +228,6 @@ router.post("/getwhatsappmessages", async (req, res) => {
 
       const results = await vectorStore.similaritySearch(userInput, 5);
       let context = results.map((r) => r.pageContent).join("\n\n");
-      // console.log("Similarity Search Context:", context); // Log the context for debugging
-
-
-      // let chatDddd = user?._id ? await ChatModel.findOne({ customerId: user._id }).lean() : null;
-      // const response = await generateAIResponse(context, userInput);
-      // const mess = {
-      //   chatId: chatDddd._id,
-      //   sender: null,
-      //   sendType: "assistant",
-      //   content: response,
-      //   attachments: [],
-      //   timestamp: new Date(),
-      //   receiver: chatDddd?.adminId || null,
-      //   receiverType: "admin",
-      // };
-
-      // const newMessage = new MessageModel(mess);
-      // const final = await newMessage.save();
-
-      // const updatedChat = await ChatModel.findOneAndUpdate(
-      //   { _id: chatDddd._id },
-      //   { latestMessage: final?._id },
-      //   { new: true }
-      // ).lean();
-      // const receivers = await UserModel.find({
-      //   $or: [{ role: { $in: ["Admin", "Supervisor"] } }],
-      // }).lean();
-      // [...receivers].forEach((receiver) => {
-      //   socketObj.io
-      //     .to(receiver._id?.toString())
-      //     .emit("message", { ...updatedChat, latestMessage: final });
-      // });
       if (!chatDddd?.isHuman) {
         await sendWhatsAppMessage(
           // Call sendWhatsAppMessage
