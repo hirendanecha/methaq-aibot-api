@@ -3,6 +3,7 @@ const ChatModel = require("../models/chat.model");
 const CustomerModel = require("../models/customer.model");
 const MessageModel = require("../models/message.model");
 const UserModel = require("../models/user.model");
+const { sendWhatsAppMessage } = require("../services/whatsaap.service");
 const environment = require("../utils/environment");
 const jwt = require("jsonwebtoken");
 
@@ -189,7 +190,7 @@ socketObj.config = (server) => {
         receiver: params.receiver || null,
         receiverType: "user"
       }
-      const chatDetails = await ChatModel.findById(params.chatId).lean();
+      const chatDetails = await ChatModel.findById(params.chatId).populate('customerId');
       const receivers = await UserModel.find({ $or: [{ role: { $in: ["Admin", "Supervisor"] } }, { _id: { $in: [params.receiver, params.sender] } }] }).lean();
       const customers = await CustomerModel.find({ _id: { $in: [params.receiver, params.sender] } }).lean();
       console.log(receivers, "receivers")
@@ -209,7 +210,7 @@ socketObj.config = (server) => {
           content: `Chat is now assigned to ${adminDetails?.fullName}`,
           attachments: [],
           timestamp: new Date(),
-          receiver: chatDetails?.customerId?.toString(),
+          receiver: chatDetails?.customerId?._id?.toString(),
           receiverType: "user",
           messageType: "tooltip"
         }
@@ -220,11 +221,23 @@ socketObj.config = (server) => {
           socketObj.io.to(receiver._id?.toString()).emit("message", { ...updatedChat, latestMessage: final });
           socketObj.io.to(receiver._id?.toString()).emit("message", { ...updatedChat, latestMessage: tooltipMess });
         })
+
+        if(chatDetails?.source==='whatsapp'){
+          console.log("zvdg",final?.content,chatDetails?.customerId?.phone);
+          
+          sendWhatsAppMessage(chatDetails?.customerId?.phone,undefined,undefined,undefined,final?.content,updatedChat?.isHuman)
+        }
       } else {
-        const updatedChat = await ChatModel.findOneAndUpdate({ _id: params.chatId }, { latestMessage: final?._id }, { new: true }).lean();
+       
+        const updatedChat = await(await ChatModel.findOneAndUpdate({ _id: params.chatId }, { latestMessage: final?._id }, { new: true })).populate('customerId');
         [...receivers, ...customers].forEach(receiver => {
           socketObj.io.to(receiver._id?.toString()).emit("message", { ...updatedChat, latestMessage: final });
         })
+
+        if(updatedChat?.source==='whatsapp'){
+          console.log("zvdgsdfsdf",final?.content,chatDetails?.customerId?.phone);
+          sendWhatsAppMessage(updatedChat?.customerId?.phone,undefined,undefined,undefined,final?.content,updatedChat?.isHuman)
+        }
       }
 
       if (typeof cb === "function")

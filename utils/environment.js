@@ -40,4 +40,8 @@ module.exports = {
         iamUserSecret: process.env.IAM_USER_SECRET,
         region: process.env.S3_REGION,
     },
+    whatsaap:{
+        whatVt:process.env.WHATSAPP_CLOUD_API_WEBHOOK_VERIFICATION_TOKEN,
+        whatAuthT:process.env.WHATSAPP_CLOUD_API_ACCESS_TOKEN
+    }
 };
