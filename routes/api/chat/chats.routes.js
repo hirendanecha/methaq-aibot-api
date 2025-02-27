@@ -27,6 +27,7 @@ const CustomerModel = require("../../../models/customer.model");
 const ChatModel = require("../../../models/chat.model");
 const MessageModel = require("../../../models/message.model");
 const socketObj = require("../../../helpers/socket.helper");
+const UserModel = require("../../../models/user.model");
 
 const pinecone = new Pinecone({ apiKey: environment.pinecone.apiKey });
 // Route to store chat
@@ -135,9 +136,9 @@ router.post("/getwhatsappmessages", async (req, res) => {
 
     const mess = {
       chatId: newChat.chatId,
-      sender: messageSender,
+      sender: updatedCus?._id,
       sendType: "user",
-      content: message.text,
+      content: message.text?.body,
       attachments: [],
       timestamp: message.timestamp || new Date(),
       receiver: null,
@@ -175,9 +176,9 @@ router.post("/getwhatsappmessages", async (req, res) => {
 
     const mess = {
       chatId: existingChat._id,
-      sender: messageSender,
+      sender: user?._id,
       sendType: "user",
-      content: message.text,
+      content: message.text?.body,
       attachments: [],
       timestamp: message.timestamp || new Date(),
       receiver: null,
@@ -200,7 +201,7 @@ router.post("/getwhatsappmessages", async (req, res) => {
     });
   }
 
-  console.log(messages, message.image.id, "type");
+  // console.log(messages, message.image.id, "type");
 
   switch (message.type) {
     case "text":
@@ -227,6 +228,30 @@ router.post("/getwhatsappmessages", async (req, res) => {
         displayPhoneNumber,
         userInput
       );
+      break;
+
+    case "image":
+      const url = `https://graph.facebook.com/${process.env.WHATSAPP_CLOUD_API_VERSION}/${message.image.id}`;
+
+      // Ensure the images directory exists
+
+      try {
+        // Download and save the image
+        const response = await axios({
+          method: "get",
+          url: url,
+          responseType: "arraybuffer",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${process.env.WHATSAPP_CLOUD_API_ACCESS_TOKEN}`, // Add your token here
+          },
+        });
+
+        console.log(response.data.url);
+      } catch (error) {
+        console.error("Error downloading the image:", error.message); // Log the error message
+      }
+
       break;
 
     case "video":
