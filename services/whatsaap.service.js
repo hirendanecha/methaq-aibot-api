@@ -2,6 +2,9 @@ const { generateAIResponse } = require("./openai/openai.service");
 const environment = require("../utils/environment");
 const axios = require("axios");
 const { isHumanChatRequest } = require("./openai/tool/transferChat");
+const s3 = require("../helpers/s3.helper");
+const path = require("path");
+const { existsSync, mkdirSync, writeFileSync } = require("fs");
 
 url = `https://graph.facebook.com/${process.env.WHATSAPP_CLOUD_API_VERSION}/${process.env.WHATSAPP_CLOUD_API_PHONE_NUMBER_ID}/messages`;
 
@@ -34,7 +37,11 @@ const sendWhatsAppMessage = async (
   displayPhoneNumber,
   userInput
 ) => {
-  console.log("Message Sender:", userInput);
+  console.log("Message Sender:", userInput, messageSender,
+    
+    messageID,
+    displayPhoneNumber,
+    userInput);
 
   const isHuman = await isHumanChatRequest(userInput);
   if (isHuman) {
@@ -42,9 +49,9 @@ const sendWhatsAppMessage = async (
       messaging_product: "whatsapp",
       recipient_type: "individual",
       to: messageSender,
-      context: {
-        message_id: messageID,
-      },
+      // context: {
+      //   message_id: messageID,
+      // },
       type: "text",
       text: {
         preview_url: false,
@@ -112,47 +119,65 @@ const sendWhatsAppMessageFromalMessage = async (
   });
   await markMessageAsRead(messageID);
 };
+async function getMediaUrl(mediaID) {
+  const url = `https://graph.facebook.com/${process.env.WHATSAPP_CLOUD_API_VERSION}/${mediaID}`;
+  try {
+    const response = await axios.get(url, { headers: { Authorization: `Bearer ${process.env.WHATSAPP_CLOUD_API_ACCESS_TOKEN}` } });
+    return { status: 'success', data: response.data.url };
+  } catch (e) {
+    console.error('Error fetching url', e);
+    return { status: 'error', data: 'Error fetching Media Url' };
+  }
+}
+async function downloadMedia(fileID) {
+  const config = {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${process.env.WHATSAPP_CLOUD_API_ACCESS_TOKEN}`,
+    },
+    responseType: 'arraybuffer',
+  };
 
-// const getMediaUrl = async (mediaID) => {
-//   const mediaUrl = `https://graph.facebook.com/${process.env.WHATSAPP_CLOUD_API_VERSION}/${mediaID}`;
-//   try {
-//     const response = await axios.get(mediaUrl, config);
-//     return { status: "success", data: response.data.url };
-//   } catch (e) {
-//     console.error("Error fetching url", e);
-//     return { status: "error", data: "Error fetching Media Url" };
-//   }
-// };
+  try {
+    const urlResult = await getMediaUrl(fileID);
+    if (urlResult.status === 'error') {
+      throw new Error('Failed to get media url');
+    }
 
-// const downloadMedia = async (fileID) => {
-//   const media = await getMediaUrl(fileID);
-//   if (media.status === "error") {
-//     throw new Error("Failed to get media url");
-//   }
+    const response = await axios.get(urlResult.data, config);
+    const fileType = response?.headers['content-type'];
+    console.log('File Type:', fileType); // Log file type for debugging
 
-//   try {
-//     const response = await axios.get(media.data, {
-//       headers: config.headers,
-//       responseType: "arraybuffer",
-//     });
+    const fileExtension = fileType?.split('/')[1];
+    console.log('File Extension:', fileExtension); // Log file extension for debugging
 
-//     const fileType = response.headers["content-type"];
-//     const fileExtension = fileType.split("/")[1];
-//     const fileName = `${fileID}.${fileExtension}`;
+    if (!fileExtension) {
+      throw new Error('File extension could not be determined');
+    }
 
-//     const folderName = process.env.AUDIO_FILES_FOLDER;
-//     const folderPath = path.join(process.cwd(), folderName);
-//     const filePath = path.join(folderPath, fileName);
+    const fileName = `${fileID}.${fileExtension}`;
+    const folderName = 'images'; // Set the folder name to 'images'
 
-//     if (!existsSync(folderPath)) mkdirSync(folderPath);
-//     writeFileSync(filePath, response.data);
+  
 
-//     return { status: "success", data: filePath };
-//   } catch (e) {
-//     console.error("Error fetching url", e);
-//     return { status: "error", data: "Error fetching Media Url" };
-//   }
-// };
+    const folderPath = path.join(process.cwd(), folderName);
+    const filePath = path.join(folderPath, fileName);
+
+    // Check if the images folder exists, if not create it
+    if (!existsSync(folderPath)) {
+      mkdirSync(folderPath);
+    }
+
+    writeFileSync(filePath, response.data);
+    const month = new Date().toLocaleString('default', { month: 'long' });
+    const url = await s3.uploadPublic(filePath, `${fileName}`, `WhatsappImages/${month}`);
+    console.log(url, "ppppp");
+    return { status: 'success', data: filePath };
+  } catch (e) {
+    console.error('Error downloading media', e);
+    return { status: 'error', data: 'Error downloading Media' };
+  }
+}
 
 // const sendImageByUrl = async (messageSender, fileName, messageID) => {
 //   const imageUrl = `${process.env.SERVER_URL}/${fileName}`;
@@ -238,6 +263,8 @@ const sendWhatsAppMessageFromalMessage = async (
 module.exports = {
   sendWhatsAppMessage,
   sendWhatsAppMessageFromalMessage,
+  downloadMedia,
+  markMessageAsRead
   //   getMediaUrl,
   //   downloadMedia,
   //   sendImageByUrl,

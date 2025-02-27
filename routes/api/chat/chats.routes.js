@@ -15,10 +15,12 @@ const {
 } = require("../../../controllers/chat/agentChats.controller");
 const { fileUpload } = require("../../../middleware/file-upload");
 const environment = require("../../../utils/environment");
+const axios = require("axios");
 const {
   markMessageAsRead,
   sendWhatsAppMessage,
   sendWhatsAppMessageFromalMessage,
+  downloadMedia,
 } = require("../../../services/whatsaap.service");
 
 const { PineconeStore } = require("@langchain/pinecone");
@@ -28,7 +30,9 @@ const ChatModel = require("../../../models/chat.model");
 const MessageModel = require("../../../models/message.model");
 const socketObj = require("../../../helpers/socket.helper");
 const UserModel = require("../../../models/user.model");
-
+const path = require("path");
+const { existsSync, mkdirSync, writeFileSync } = require("fs");
+const s3 = require("../../../helpers/s3.helper");
 const pinecone = new Pinecone({ apiKey: environment.pinecone.apiKey });
 // Route to store chat
 router.post("/store-chat", storeChat);
@@ -99,6 +103,7 @@ router.post("/getwhatsappmessages", async (req, res) => {
   const phoneNumberId = metadata?.display_phone_number;
 
   if (!messages) return res.status(400).send("No messages found"); // Added response for no messages
+
   const message = messages[0];
   const messageSender = message.from;
   const messageID = message.id;
@@ -111,7 +116,6 @@ router.post("/getwhatsappmessages", async (req, res) => {
   }).lean();
 
   const user = await CustomerModel.findOne({ phone: profileNumber });
-  console.log(user, profileNumber, "user");
 
   if (!user) {
     const customer = new CustomerModel({
@@ -135,7 +139,7 @@ router.post("/getwhatsappmessages", async (req, res) => {
     }
 
     const mess = {
-      chatId: newChat.chatId,
+      chatId: newChat._id,
       sender: updatedCus?._id,
       sendType: "user",
       content: message.text?.body,
@@ -231,25 +235,16 @@ router.post("/getwhatsappmessages", async (req, res) => {
       break;
 
     case "image":
-      const url = `https://graph.facebook.com/${process.env.WHATSAPP_CLOUD_API_VERSION}/${message.image.id}`;
+      const mediaID = message.image.id; // Get the media ID from the message
 
-      // Ensure the images directory exists
+      // Call the downloadMedia function to handle the image download
+      const downloadResult = await downloadMedia(mediaID);
+      await markMessageAsRead(messageID);
 
-      try {
-        // Download and save the image
-        const response = await axios({
-          method: "get",
-          url: url,
-          responseType: "arraybuffer",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${process.env.WHATSAPP_CLOUD_API_ACCESS_TOKEN}`, // Add your token here
-          },
-        });
-
-        console.log(response.data.url);
-      } catch (error) {
-        console.error("Error downloading the image:", error.message); // Log the error message
+      if (downloadResult.status === "success") {
+        console.log("Image downloaded successfully:", downloadResult.data);
+      } else {
+        console.error("Error downloading the image:", downloadResult.data);
       }
 
       break;
