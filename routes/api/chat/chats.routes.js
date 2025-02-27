@@ -24,6 +24,8 @@ const { PineconeStore } = require("@langchain/pinecone");
 const { Pinecone } = require("@pinecone-database/pinecone");
 const CustomerModel = require("../../../models/customer.model");
 const ChatModel = require("../../../models/chat.model");
+const MessageModel = require("../../../models/message.model");
+const socketObj = require("../../../helpers/socket.helper");
 
 const pinecone = new Pinecone({ apiKey: environment.pinecone.apiKey });
 // Route to store chat
@@ -102,21 +104,99 @@ router.post("/getwhatsappmessages", async (req, res) => {
   const profileName = contacts?.[0]?.profile?.name;
   const profileNumber = contacts?.[0]?.wa_id;
 
+  const receivers = await UserModel.find({
+    $or: [{ role: { $in: ["Admin", "Supervisor"] } }],
+  }).lean();
+
   const user = await CustomerModel.findOne({ phone: profileNumber });
-  console.log(user,profileNumber,"user");
-  
+  console.log(user, profileNumber, "user");
+
   if (!user) {
     const customer = new CustomerModel({
       name: profileName,
       phone: profileNumber,
     });
+
     const updatedCus = await customer.save();
+
+    if (!updatedCus._id) {
+      throw new Error("Error while adding new user!");
+    }
 
     const chat = new ChatModel({
       customerId: updatedCus._id,
-    })
-    const updatedChat = await chat.save();
-    console.log(updatedCus);
+    });
+    const newChat = await chat.save();
+
+    if (!newChat._id) {
+      throw new Error("Error while creating new chat!");
+    }
+
+    const mess = {
+      chatId: newChat.chatId,
+      sender: messageSender,
+      sendType: "user",
+      content: message.text,
+      attachments: [],
+      timestamp: message.timestamp || new Date(),
+      receiver: null,
+      receiverType: "admin",
+    };
+
+    const newMessage = new MessageModel(mess);
+    const final = await newMessage.save();
+
+    const updatedChat = await ChatModel.findOneAndUpdate(
+      { _id: newChat.chatId },
+      { latestMessage: final?._id },
+      { new: true }
+    ).lean();
+    [...receivers].forEach((receiver) => {
+      socketObj.io
+        .to(receiver._id?.toString())
+        .emit("message", { ...updatedChat, latestMessage: final });
+    });
+  } else {
+    let existingChat = await ChatModel.findOne({ customerId: user._id }).lean();
+
+    if (!existingChat) {
+      const chat = new ChatModel({
+        customerId: user._id,
+      });
+      existingChat = await chat.save();
+
+      if (!existingChat._id) {
+        throw new Error(
+          "Error while creating a new chat for the existing user!"
+        );
+      }
+    }
+
+    const mess = {
+      chatId: existingChat._id,
+      sender: messageSender,
+      sendType: "user",
+      content: message.text,
+      attachments: [],
+      timestamp: message.timestamp || new Date(),
+      receiver: null,
+      receiverType: "admin",
+    };
+
+    const newMessage = new MessageModel(mess);
+    const final = await newMessage.save();
+
+    const updatedChat = await ChatModel.findOneAndUpdate(
+      { _id: existingChat._id },
+      { latestMessage: final?._id },
+      { new: true }
+    ).lean();
+
+    [...receivers].forEach((receiver) => {
+      socketObj.io
+        .to(receiver._id?.toString())
+        .emit("message", { ...updatedChat, latestMessage: final });
+    });
   }
 
   switch (message.type) {
