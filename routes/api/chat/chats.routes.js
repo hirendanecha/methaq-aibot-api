@@ -21,6 +21,7 @@ const {
   sendWhatsAppMessage,
   sendWhatsAppMessageFromalMessage,
   downloadMedia,
+  sendImageByUrl,
 } = require("../../../services/whatsaap.service");
 
 const { PineconeStore } = require("@langchain/pinecone");
@@ -35,6 +36,7 @@ const { existsSync, mkdirSync, writeFileSync } = require("fs");
 const s3 = require("../../../helpers/s3.helper");
 const { generateAIResponse } = require("../../../services/openai/openai.service");
 const { isHumanChatRequest } = require("../../../services/openai/tool/transferChat");
+const { isDocumentRequest } = require("../../../services/openai/tool/docProcessing");
 const pinecone = new Pinecone({ apiKey: environment.pinecone.apiKey });
 // Route to store chat
 router.post("/store-chat", storeChat);
@@ -115,8 +117,8 @@ router.post("/getwhatsappmessages", async (req, res) => {
   // console.log(messages, message.image.id, "type");
   const finalMessage = {
     content: "",
-    attachment: []
-  }
+    attachment: [],
+  };
 
   const user = await CustomerModel.findOne({ phone: messageSender });
   console.log(user, "fdsfsdfgdfg");
@@ -135,7 +137,7 @@ router.post("/getwhatsappmessages", async (req, res) => {
 
     const chat = new ChatModel({
       customerId: updatedCus._id,
-      source: "whatsapp"
+      source: "whatsapp",
     });
     const newChat = await chat.save();
 
@@ -150,7 +152,7 @@ router.post("/getwhatsappmessages", async (req, res) => {
       if (mediaID) {
         const downloadResult = await downloadMedia(mediaID);
         console.log(downloadResult, "downloadResult");
-        attachment.push(downloadResult.data);
+        attachment.push(downloadResult.data.url);
         await markMessageAsRead(messageID);
 
         if (downloadResult.status === "success") {
@@ -159,6 +161,39 @@ router.post("/getwhatsappmessages", async (req, res) => {
           console.error("Error downloading the image:", downloadResult.data);
         }
       }
+
+      if (message.type === "image") {
+        const mediaID = message.image.id; // Get the media ID from the message
+
+        // Call the downloadMedia function to handle the image download
+        const downloadResult = await downloadMedia(mediaID);
+        // console.log("downloadResult", downloadResult);
+        const { url, extractedText } = downloadResult.data;
+
+        // sendImageByUrl(messageSender,"hhsh",messageID,url);
+        // sendDocByUrl(messageSender,"hhsh",messageID,url);
+        console.log("Starting image analysis...", extractedText);
+        const userInputmessage = await isDocumentRequest(extractedText);
+        await sendWhatsAppMessage(
+          // Call sendWhatsAppMessage
+          messageSender,
+          undefined,
+          messageID,
+          displayPhoneNumber,
+          userInputmessage
+        );
+        console.log("Image analysis completed.", userInputmessage);
+
+        console.log("Marking message as read...");
+        //await markMessageAsRead(messageID);
+        console.log("Message marked as read.");
+        if (downloadResult.status === "success") {
+          console.log("Image downloaded successfully:");
+        } else {
+          console.error("Error downloading the image:");
+        }
+      }
+      //here call  url
     }
 
     const mess = {
@@ -179,7 +214,9 @@ router.post("/getwhatsappmessages", async (req, res) => {
       { _id: newChat._id },
       { latestMessage: final?._id },
       { new: true }
-    ).populate("customerId").lean();
+    )
+      .populate("customerId")
+      .lean();
     console.log(updatedChat, "updatedChatfgdgfgdhh");
 
     const receivers = await UserModel.find({
@@ -190,7 +227,6 @@ router.post("/getwhatsappmessages", async (req, res) => {
         .to(receiver._id?.toString())
         .emit("message", { ...updatedChat, latestMessage: final });
     });
-
   } else {
     let existingChat = await ChatModel.findOne({ customerId: user?._id }).lean();
     if (!existingChat) {
@@ -208,13 +244,47 @@ router.post("/getwhatsappmessages", async (req, res) => {
       if (mediaID) {
         const downloadResult = await downloadMedia(mediaID);
         console.log(downloadResult, "downloadResult");
-        attachment.push(downloadResult.data);
+        attachment.push(downloadResult.data.url);
         await markMessageAsRead(messageID);
 
         if (downloadResult.status === "success") {
           console.log("Image downloaded successfully:", downloadResult.data);
         } else {
           console.error("Error downloading the image:", downloadResult.data);
+        }
+      }
+
+      //here
+
+      if (message.type === "image") {
+        const mediaID = message.image.id; // Get the media ID from the message
+
+        // Call the downloadMedia function to handle the image download
+        const downloadResult = await downloadMedia(mediaID);
+        // console.log("downloadResult", downloadResult);
+        const { url, extractedText } = downloadResult.data;
+
+        // sendImageByUrl(messageSender,"hhsh",messageID,url);
+        // sendDocByUrl(messageSender,"hhsh",messageID,url);
+        console.log("Starting image analysis...", extractedText);
+        const userInputmessage = await isDocumentRequest(extractedText);
+        await sendWhatsAppMessage(
+          // Call sendWhatsAppMessage
+          messageSender,
+          undefined,
+          messageID,
+          displayPhoneNumber,
+          userInputmessage
+        );
+        console.log("Image analysis completed.", userInputmessage);
+
+        console.log("Marking message as read...");
+        //await markMessageAsRead(messageID);
+        console.log("Message marked as read.");
+        if (downloadResult.status === "success") {
+          console.log("Image downloaded successfully:");
+        } else {
+          console.error("Error downloading the image:");
         }
       }
     }
@@ -246,10 +316,15 @@ router.post("/getwhatsappmessages", async (req, res) => {
       { _id: existingChat._id },
       { latestMessage: final?._id, isHuman: isHumantrasfer },
       { new: true }
-    ).populate("customerId").lean();
+    )
+      .populate("customerId")
+      .lean();
 
     const receivers = await UserModel.find({
-      $or: [{ role: { $in: ["Admin", "Supervisor"] } }, { _id: updatedChat?.adminId }],
+      $or: [
+        { role: { $in: ["Admin", "Supervisor"] } },
+        { _id: updatedChat?.adminId },
+      ],
     }).lean();
 
     [...receivers].forEach((receiver) => {
@@ -264,7 +339,9 @@ router.post("/getwhatsappmessages", async (req, res) => {
       const user = await CustomerModel.findOne({ phone: messageSender });
       console.log(user, "gdfgdfgfg");
 
-      let chatDddd = user?._id ? await ChatModel.findOne({ customerId: user._id }).lean() : null;
+      let chatDddd = user?._id
+        ? await ChatModel.findOne({ customerId: user._id }).lean()
+        : null;
       if (!chatDddd?.isHuman) {
         const userInput = message.text.body;
 
@@ -297,15 +374,22 @@ router.post("/getwhatsappmessages", async (req, res) => {
           { _id: chatDddd._id },
           { latestMessage: final?._id },
           { new: true }
-        ).populate("customerId").lean();
+        )
+          .populate("customerId")
+          .lean();
         const receivers = await UserModel.find({
-          $or: [{ role: { $in: ["Admin", "Supervisor"] } }, { _id: updatedChat?.adminId }],
+          $or: [
+            { role: { $in: ["Admin", "Supervisor"] } },
+            { _id: updatedChat?.adminId },
+          ],
         }).lean();
         [...receivers].forEach((receiver) => {
           socketObj.io
             .to(receiver._id?.toString())
             .emit("message", { ...updatedChat, latestMessage: final });
         });
+
+        // await sendImageByUrl(messageSender, "hhsh", messageID, response);
         await sendWhatsAppMessage(
           // Call sendWhatsAppMessage
           messageSender,
@@ -322,14 +406,30 @@ router.post("/getwhatsappmessages", async (req, res) => {
 
     //   // Call the downloadMedia function to handle the image download
     //   const downloadResult = await downloadMedia(mediaID);
-    //   console.log(downloadResult, "downloadResult");
+    //   // console.log("downloadResult", downloadResult);
+    //   const { url, extractedText } = downloadResult.data;
 
-    //   await markMessageAsRead(messageID);
+    //   // sendImageByUrl(messageSender,"hhsh",messageID,url);
+    //   // sendDocByUrl(messageSender,"hhsh",messageID,url);
+    //   console.log("Starting image analysis...", extractedText);
+    //   const userInputmessage = await isDocumentRequest(extractedText);
+    //   await sendWhatsAppMessage(
+    //     // Call sendWhatsAppMessage
+    //     messageSender,
+    //     undefined,
+    //     messageID,
+    //     displayPhoneNumber,
+    //     userInputmessage
+    //   );
+    //   console.log("Image analysis completed.", userInputmessage);
 
+    //   console.log("Marking message as read...");
+    //   //await markMessageAsRead(messageID);
+    //   console.log("Message marked as read.");
     //   if (downloadResult.status === "success") {
-    //     console.log("Image downloaded successfully:", downloadResult.data);
+    //     console.log("Image downloaded successfully:");
     //   } else {
-    //     console.error("Error downloading the image:", downloadResult.data);
+    //     console.error("Error downloading the image:");
     //   }
 
     //   break;

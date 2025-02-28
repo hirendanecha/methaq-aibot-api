@@ -1,45 +1,98 @@
 const { ChatOpenAI } = require("@langchain/openai");
 
-async function isHumanChatRequest(message) {
-    const lowerCaseMessage = message.trim().toLowerCase().split(/\s+/).join(" ");
-  
-    const openai = new ChatOpenAI({
-      openAIApiKey: process.env.OPENAI_API_KEY,
-      modelName: "gpt-4o-mini", // Or gpt-3.5-turbo, gpt-4-0314, or your preferred model.
-      temperature: 0.0, // Set temperature low for more deterministic results.
-      timeout: 15000,
-      maxRetries: 3,
-      // cache: true, // Consider carefully if you want caching; it can lead to stale results.
-    });
-  
-    const prompt = `
-      You are a chatbot assistant. Your task is to determine if a user's message indicates a desire to speak with a human agent.
-      
-      First, translate the following message to English if it is not already in English.
-      
-      Then, analyze the translated message and respond with ONLY "true" or "false" (lowercase, no quotes) depending on whether the message suggests the user wants human assistance. Do not provide any other text or explanation.
-      
-      Message: ${lowerCaseMessage}
-      
-      Respond with only "true" or "false".
-      `;
-    try {
-      const response = await openai.invoke([{ role: "user", content: prompt }]);
-  
-      const trimmedResponse = response.content;
-  
-      if (trimmedResponse === "true") {
-        return true;
-      } else if (trimmedResponse === "false") {
-        return false;
-      } else {
-        console.error("Unexpected response from OpenAI:", trimmedResponse);
-        return false; // Default to false if the response is unclear.
-      }
-    } catch (error) {
-      console.error("Error invoking OpenAI:", error);
-      return false; // Default to false in case of an error.
+async function isDocumentRequest(message) {
+  // Determine if the message is an object (e.g., file mapping) or a string.
+  let inputText = "";
+  if (typeof message === "object" && message !== null) {
+    const keys = Object.keys(message);
+    if (keys.length > 0) {
+      // Use the first file's text
+      inputText = message[keys[0]];
     }
+  } else if (typeof message === "string") {
+    inputText = message;
+  } else {
+    console.error("Unsupported message format");
+    return false;
   }
-  
-  module.exports = { isHumanChatRequest };
+
+  console.log("Processing message:", inputText);
+
+  const openai = new ChatOpenAI({
+    openAIApiKey: process.env.OPENAI_API_KEY,
+    modelName: "gpt-4o-mini", // Or gpt-3.5-turbo, gpt-4-0314, etc.
+    temperature: 0.0, // Deterministic results.
+    timeout: 15000,
+    maxRetries: 3,
+  });
+
+  const prompt = `
+You are an expert document processing and classification AI. Your task is to analyze the provided text and determine if it relates to a Car document (front or back), an Emirates ID (front or back), or a Driving License (front or back).
+
+**Document Keywords:**
+
+* Car Front: ["Owner", "Nationality", "Vehicle License", "UNITED ARAB EMIRATES"]
+* Car Back: ["Model", "Origin", "Veh. Type", "G. V. W.", "Chassis No"]
+* Emirates Front: ["Resident Identity Card", "Name", "Nationality"]
+* Emirates Back: ["Issuing Place", "Card Number", "Occupation", "Sex", "Card Number"]
+* Driving Front: ["Driving License", "Drivir License"]
+* Driving Back: ["Traffic Code No"]
+
+**Document Keyword Groups for Overall Document Identification:**
+
+* Driving Document: ["Driving License", "Drivir License", "License No.", "Traffic Code No"]
+* Car Document: ["Owner", "Nationality", "Vehicle", "Model", "Origin", "Veh. Type", "G. V. W.", "Chassis No"]
+* Emirates Document: ["Resident Identity Card", "Name", "Nationality", "Issuing Place", "Card Number", "Occupation"]
+
+**State Management:**
+
+Maintain a state dictionary to track the presence of front and back documents:
+{
+  car: { front: false, back: false },
+  emirates: { front: false, back: false },
+  driving: { front: false, back: false }
+}
+
+**Processing Instructions:**
+
+1. **Document Type Identification:**
+   - Check if the provided text contains keywords from any of the "Document Keyword Groups".
+   - If no keyword groups are found, reply: "Not a valid document. Can you please upload a valid document like Car, Emirates and Driving?" and output the state as {}.
+2. **Front/Back Identification:**
+   - If a document type is identified, check if the text contains keywords from the specific front or back keyword lists.
+   - Update the corresponding state dictionary (car, emirates, or driving) based on whether front or back keywords are found.
+3. **Response Generation:**
+   - If a front document is identified and the back is not, respond with a key–value pair formatted message. For example:
+     
+     "You uploaded [Document Type] front card.
+      Your card details:
+         Owner: <extracted detail if available>
+         [Other key details if available]
+      Can you upload back details?"
+     
+   - If both front and back are identified, reply "Both front and back of [Document Type] are uploaded." along with any extracted details.
+   - If a back document is uploaded before a front document, reply "Please upload the front document of [Document Type] first."
+   - Always output the current state dictionary after each response.
+
+**Example Text (Input):**
+
+${inputText}
+
+**Output:**
+
+[The AI's response in the required key–value pair format and the updated state dictionary.]
+`;
+
+  try {
+    const response = await openai.invoke([{ role: "user", content: prompt }]);
+    const trimmedResponse = response.content;
+    const responseWithoutState = trimmedResponse.split("Current state:")[0].trim();
+    console.log("AI response:", trimmedResponse);
+    return responseWithoutState;
+  } catch (error) {
+    console.error("Error invoking OpenAI:", error);
+    return false;
+  }
+}
+
+module.exports = { isDocumentRequest };
