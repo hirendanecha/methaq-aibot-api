@@ -62,15 +62,11 @@ Maintain a state dictionary to track the presence of front and back documents:
    - If a document type is identified, check if the text contains keywords from the specific front or back keyword lists.
    - Update the corresponding state dictionary (car, emirates, or driving) based on whether front or back keywords are found.
 3. **Response Generation:**
-   - If a front document is identified and the back is not, respond with a key–value pair formatted message. For example:
+   - If a front document is identified and the back is not, respond with a message like:
      
-     "You uploaded [Document Type] front card.
-      Your card details:
-         Owner: <extracted detail if available>
-         [Other key details if available]
-      Can you upload back details?"
+     "You uploaded [Document Type] front card. Can you upload back details?"
      
-   - If both front and back are identified, reply "Both front and back of [Document Type] are uploaded." along with any extracted details.
+   - If both front and back are identified, reply "Both front and back of [Document Type] are uploaded."
    - If a back document is uploaded before a front document, reply "Please upload the front document of [Document Type] first."
    - Always output the current state dictionary after each response.
 
@@ -80,7 +76,7 @@ ${inputText}
 
 **Output:**
 
-[The AI's response in the required key–value pair format and the updated state dictionary.]
+[The AI's response and the updated state dictionary.]
 `;
 
   try {
