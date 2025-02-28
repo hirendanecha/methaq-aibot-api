@@ -191,7 +191,7 @@ router.post("/getwhatsappmessages", async (req, res) => {
     });
 
   } else {
-    let existingChat = await ChatModel.findOne({ customerId: user._id }).lean();
+    let existingChat = await ChatModel.findOne({ customerId: user?._id }).lean();
     if (!existingChat) {
       return;
     }
@@ -230,10 +230,15 @@ router.post("/getwhatsappmessages", async (req, res) => {
 
     const newMessage = new MessageModel(mess);
     const final = await newMessage.save();
+    let isHumantrasfer = false;
+    if (!existingChat?.isHuman) {
+      isHumantrasfer = await isHumanChatRequest(final?._id);
+    }
+    console.log(isHumantrasfer, "isHumantrasferisHumantrasfer");
 
     const updatedChat = await ChatModel.findOneAndUpdate(
       { _id: existingChat._id },
-      { latestMessage: final?._id },
+      { latestMessage: final?._id, isHuman: isHumantrasfer },
       { new: true }
     ).populate("customerId").lean();
 
@@ -249,24 +254,25 @@ router.post("/getwhatsappmessages", async (req, res) => {
   }
   switch (message.type) {
     case "text":
-      const userInput = message.text.body;
 
-      const embeddings = new OpenAIEmbeddings({
-        openAIApiKey: process.env.OPENAI_API_KEY,
-      });
-      const index = pinecone.Index(environment.pinecone.indexName);
-      const vectorStore = await PineconeStore.fromExistingIndex(embeddings, {
-        //@ts-ignore
-        pineconeIndex: index,
-      });
-
-      const results = await vectorStore.similaritySearch(userInput, 5);
-      let context = results.map((r) => r.pageContent).join("\n\n");
       const user = await CustomerModel.findOne({ phone: messageSender });
       console.log(user, "gdfgdfgfg");
 
       let chatDddd = user?._id ? await ChatModel.findOne({ customerId: user._id }).lean() : null;
       if (!chatDddd?.isHuman) {
+        const userInput = message.text.body;
+
+        const embeddings = new OpenAIEmbeddings({
+          openAIApiKey: process.env.OPENAI_API_KEY,
+        });
+        const index = pinecone.Index(environment.pinecone.indexName);
+        const vectorStore = await PineconeStore.fromExistingIndex(embeddings, {
+          //@ts-ignore
+          pineconeIndex: index,
+        });
+
+        const results = await vectorStore.similaritySearch(userInput, 5);
+        let context = results.map((r) => r.pageContent).join("\n\n");
         const response = await generateAIResponse(context, userInput);
         console.log(response, "messageSendermessageSender");
         const mess = {
