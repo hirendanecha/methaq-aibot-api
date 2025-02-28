@@ -143,7 +143,7 @@ socketObj.config = (server) => {
         const receivers = await UserModel.find({ $or: [{ role: { $in: ["Admin", "Supervisor"] } }, params.receiver ? { _id: params.receiver } : {}] });
         const newMessage = new MessageModel(mess)
         const final = await newMessage.save();
-        const updatedChat = await ChatModel.findOneAndUpdate({ _id: params.chatId }, { latestMessage: final?._id }, { new: true }).lean();
+        const updatedChat = await ChatModel.findOneAndUpdate({ _id: params.chatId }, { latestMessage: final?._id }, { new: true }).populate('customerId').lean();
         console.log(updatedChat, params.chatId, "updatedChatupdatedChat");
 
         receivers.forEach(receiver => {
