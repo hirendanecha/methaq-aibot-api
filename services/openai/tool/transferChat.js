@@ -1,7 +1,8 @@
 const { ChatOpenAI } = require("@langchain/openai");
 
 async function isHumanChatRequest(message) {
-  const lowerCaseMessage = message.trim().toLowerCase().split(/\s+/).join(" ");
+
+  const lowerCaseMessage = typeof message === 'string' ? message.trim().toLowerCase().split(/\s+/).join(" ") : "";
 
   const openai = new ChatOpenAI({
     openAIApiKey: process.env.OPENAI_API_KEY,

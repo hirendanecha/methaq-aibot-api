@@ -148,10 +148,10 @@ router.post("/getwhatsappmessages", async (req, res) => {
     let extractedTextMess = "";
     if (message.type === "image" || message.type === "document") {
       const mediaID = message.image?.id || message.document?.id; // Get the media ID from the message
-
+      const downloadResult = await downloadMedia(mediaID);
       // Call the downloadMedia function to handle the image download
       if (mediaID) {
-        const downloadResult = await downloadMedia(mediaID);
+       
         console.log(downloadResult, "downloadResult");
         attachment.push(downloadResult.data.url);
         await markMessageAsRead(messageID);
@@ -163,11 +163,11 @@ router.post("/getwhatsappmessages", async (req, res) => {
         }
       }
 
-      if (message.type === "image") {
-        const mediaID = message.image.id; // Get the media ID from the message
+      // if (message.type === "image") {
+        // const mediaID = message.image.id; // Get the media ID from the message
 
         // Call the downloadMedia function to handle the image download
-        const downloadResult = await downloadMedia(mediaID);
+        // const downloadResult = await downloadMedia(mediaID);
         // console.log("downloadResult", downloadResult);
         const { url, extractedText } = downloadResult.data;
 
@@ -194,7 +194,7 @@ router.post("/getwhatsappmessages", async (req, res) => {
         } else {
           console.error("Error downloading the image:");
         }
-      }
+      // }
       //here call  url
     }
     if (extractedTextMess) {
@@ -259,10 +259,10 @@ router.post("/getwhatsappmessages", async (req, res) => {
       console.log(message, "messagedsddfg");
 
       const mediaID = message.image?.id || message.document?.id; // Get the media ID from the message
-
+      const downloadResult = await downloadMedia(mediaID);
       // Call the downloadMedia function to handle the image download
       if (mediaID) {
-        const downloadResult = await downloadMedia(mediaID);
+     
         console.log(downloadResult, "downloadResult");
         attachment.push(downloadResult.data.url);
         await markMessageAsRead(messageID);
@@ -272,15 +272,17 @@ router.post("/getwhatsappmessages", async (req, res) => {
         } else {
           console.error("Error downloading the image:", downloadResult.data);
         }
+
+
       }
 
       //here
 
-      if (message.type === "image") {
-        const mediaID = message.image.id; // Get the media ID from the message
+      // if (message.type === "image") {
+        //const mediaID = message.image.id; // Get the media ID from the message
 
         // Call the downloadMedia function to handle the image download
-        const downloadResult = await downloadMedia(mediaID);
+        // const downloadResult = await downloadMedia(mediaID);
         // console.log("downloadResult", downloadResult);
         const { url, extractedText } = downloadResult.data;
 
@@ -307,7 +309,7 @@ router.post("/getwhatsappmessages", async (req, res) => {
         } else {
           console.error("Error downloading the image:");
         }
-      }
+      // }
     }
 
     if (extractedTextMess) {
