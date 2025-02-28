@@ -231,10 +231,10 @@ exports.getChatList = async (req, res) => {
         const { status = "active", department } = req.body;
         let chats = [];
         if (role === "Admin" || role === "Supervisor") {
-            chats = await ChatModel.find({ latestMessage: { $ne: null }, status: status, ...department ? { department } : {} }).populate('adminId latestMessage').lean();
+            chats = await ChatModel.find({ latestMessage: { $ne: null }, status: status, ...department ? { department } : {} }).populate('adminId latestMessage customerId').lean();
         }
         else {
-            chats = await ChatModel.find({ adminId: userId, latestMessage: { $ne: null }, status: status, ...department ? { department } : {} }).populate('adminId latestMessage').lean();
+            chats = await ChatModel.find({ adminId: userId, latestMessage: { $ne: null }, status: status, ...department ? { department } : {} }).populate('adminId latestMessage customerId').lean();
         }
         return sendSuccessResponse(res, { data: chats });
     } catch (error) {

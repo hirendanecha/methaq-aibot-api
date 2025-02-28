@@ -38,14 +38,9 @@ const sendWhatsAppMessage = async (
   userInput,
   isHumanReal
 ) => {
-  // console.log("Message Sender:", userInput, messageSender,
-    
-  //   messageID,
-  //   displayPhoneNumber,
-  //   userInput);
 
-  console.log(isHumanReal,"isHumanReal");
-  
+  console.log(isHumanReal, "isHumanReal");
+
 
   const isHuman = isHumanReal ? true : await isHumanChatRequest(userInput);
   if (isHuman) {
@@ -70,7 +65,7 @@ const sendWhatsAppMessage = async (
     });
     await markMessageAsRead(messageID);
   } else {
-    const response = await generateAIResponse(context, userInput);
+    // const response = await generateAIResponse(context, userInput);
 
     const data = JSON.stringify({
       messaging_product: "whatsapp",
@@ -82,7 +77,7 @@ const sendWhatsAppMessage = async (
       type: "text",
       text: {
         preview_url: false,
-        body: response,
+        body: userInput,
       },
     });
     await axios.post(url, data, {
@@ -112,7 +107,7 @@ const sendWhatsAppMessageFromalMessage = async (
     type: "text",
     text: {
       preview_url: false,
-      body:formalMessage,
+      body: formalMessage,
     },
   });
   await axios.post(url, data, {
@@ -162,7 +157,7 @@ async function downloadMedia(fileID) {
     const fileName = `${fileID}.${fileExtension}`;
     const folderName = 'images'; // Set the folder name to 'images'
 
-  
+
 
     const folderPath = path.join(process.cwd(), folderName);
     const filePath = path.join(folderPath, fileName);
@@ -176,7 +171,7 @@ async function downloadMedia(fileID) {
     const month = new Date().toLocaleString('default', { month: 'long' });
     const url = await s3.uploadPublic(filePath, `${fileName}`, `WhatsappImages/${month}`);
     console.log(url, "ppppp");
-    return { status: 'success', data: filePath };
+    return { status: 'success', data: url };
   } catch (e) {
     console.error('Error downloading media', e);
     return { status: 'error', data: 'Error downloading Media' };

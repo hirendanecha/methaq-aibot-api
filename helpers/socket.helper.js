@@ -190,7 +190,7 @@ socketObj.config = (server) => {
         receiver: params.receiver || null,
         receiverType: "user"
       }
-      const chatDetails = await ChatModel.findById(params.chatId).populate('customerId');
+      const chatDetails = await ChatModel.findById(params.chatId).populate('customerId').lean();
       const receivers = await UserModel.find({ $or: [{ role: { $in: ["Admin", "Supervisor"] } }, { _id: { $in: [params.receiver, params.sender] } }] }).lean();
       const customers = await CustomerModel.find({ _id: { $in: [params.receiver, params.sender] } }).lean();
       console.log(receivers, "receivers")
@@ -216,7 +216,7 @@ socketObj.config = (server) => {
         }
         const newMessage = new MessageModel(mess)
         const tooltipMess = await newMessage.save();
-        const updatedChat = await ChatModel.findOneAndUpdate({ _id: params.chatId }, { latestMessage: tooltipMess?._id, adminId: decoded?._id, isHuman: true }, { new: true }).lean();
+        const updatedChat = await ChatModel.findOneAndUpdate({ _id: params.chatId }, { latestMessage: tooltipMess?._id, adminId: decoded?._id, isHuman: true }, { new: true }).populate('customerId').lean();
         console.log(updatedChat, "updatedChatupdatedChat");
 
         [...receivers, ...customers].forEach(receiver => {
@@ -231,18 +231,16 @@ socketObj.config = (server) => {
         }
       } else {
 
-        const updatedChat = await ChatModel.findOneAndUpdate({ _id: params.chatId }, { latestMessage: final?._id }, { new: true }).lean();
+        const updatedChat = await ChatModel.findOneAndUpdate({ _id: params.chatId }, { latestMessage: final?._id }, { new: true }).populate('customerId').lean();
 
-        console.log(updatedChat, "updatedChatupdatedChatupdatedChat");
-
-        const chat = await ChatModel.findById(updatedChat?._id).populate('customerId').lean();
+        console.log(updatedChat, "Prayank");
         [...receivers, ...customers].forEach(receiver => {
           socketObj.io.to(receiver._id?.toString()).emit("message", { ...updatedChat, latestMessage: final });
         })
 
         if (updatedChat?.source === 'whatsapp') {
           console.log("zvdgsdfsdf", final?.content, chatDetails?.customerId?.phone);
-          sendWhatsAppMessage(chat?.customerId?.phone, undefined, undefined, undefined, final?.content, updatedChat?.isHuman)
+          sendWhatsAppMessage(updatedChat?.customerId?.phone, undefined, undefined, undefined, final?.content, updatedChat?.isHuman)
         }
       }
 
