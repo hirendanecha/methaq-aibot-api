@@ -232,9 +232,14 @@ router.post("/getwhatsappmessages", async (req, res) => {
     const newMessage = new MessageModel(mess);
     const final = await newMessage.save();
     let isHumantrasfer = existingChat?.isHuman;
+    console.log(isHumantrasfer, "isHumantrasfer123");
+
     if (!existingChat?.isHuman && final?.content) {
+      console.log(await isHumanChatRequest(final?.content), "Prayank1");
+
       isHumantrasfer = await isHumanChatRequest(final?.content);
     }
+    console.log(isHumantrasfer, "isHumantrasfer456");
     console.log(isHumantrasfer, "isHumantrasferisHumantrasfer");
 
     const updatedChat = await ChatModel.findOneAndUpdate(
