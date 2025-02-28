@@ -145,6 +145,7 @@ router.post("/getwhatsappmessages", async (req, res) => {
       throw new Error("Error while creating new chat!");
     }
     const attachment = [];
+    let extractedTextMess = "";
     if (message.type === "image" || message.type === "document") {
       const mediaID = message.image?.id || message.document?.id; // Get the media ID from the message
 
@@ -174,6 +175,7 @@ router.post("/getwhatsappmessages", async (req, res) => {
         // sendDocByUrl(messageSender,"hhsh",messageID,url);
         console.log("Starting image analysis...", extractedText);
         const userInputmessage = await isDocumentRequest(extractedText);
+        extractedTextMess = userInputmessage;
         await sendWhatsAppMessage(
           // Call sendWhatsAppMessage
           messageSender,
@@ -195,7 +197,20 @@ router.post("/getwhatsappmessages", async (req, res) => {
       }
       //here call  url
     }
-
+    if (extractedTextMess) {
+      const mess = {
+        chatId: newChat._id,
+        sender: null,
+        sendType: "assistant",
+        content: extractedTextMess,
+        attachments: [],
+        timestamp: new Date(),
+        receiver: newChat?.customerId?.toString(),
+        receiverType: "user",
+      };
+      const messss = new MessageModel(mess);
+      extractedTextMess = await messss.save();
+    }
     const mess = {
       chatId: newChat._id,
       sender: updatedCus?._id,
@@ -212,7 +227,7 @@ router.post("/getwhatsappmessages", async (req, res) => {
 
     const updatedChat = await ChatModel.findOneAndUpdate(
       { _id: newChat._id },
-      { latestMessage: final?._id },
+      { latestMessage: extractedTextMess ? extractedTextMess?._id : final?._id },
       { new: true }
     )
       .populate("customerId")
@@ -220,12 +235,16 @@ router.post("/getwhatsappmessages", async (req, res) => {
     console.log(updatedChat, "updatedChatfgdgfgdhh");
 
     const receivers = await UserModel.find({
-      $or: [{ role: { $in: ["Admin", "Supervisor"] } }],
+      $or: [{ role: { $in: ["Admin", "Supervisor"] } }, { _id: updatedChat?.customerId }],
     }).lean();
     [...receivers].forEach((receiver) => {
       socketObj.io
         .to(receiver._id?.toString())
         .emit("message", { ...updatedChat, latestMessage: final });
+      extractedTextMess && socketObj.io
+        .to(receiver._id?.toString())
+        .emit("message", { ...updatedChat, latestMessage: extractedTextMess });
+
     });
   } else {
     let existingChat = await ChatModel.findOne({ customerId: user?._id }).lean();
@@ -233,6 +252,7 @@ router.post("/getwhatsappmessages", async (req, res) => {
       return;
     }
     const attachment = [];
+    let extractedTextMess = "";
     console.log(message.type, "(message.type(message.type");
 
     if (message.type === "image" || message.type === "document") {
@@ -268,6 +288,7 @@ router.post("/getwhatsappmessages", async (req, res) => {
         // sendDocByUrl(messageSender,"hhsh",messageID,url);
         console.log("Starting image analysis...", extractedText);
         const userInputmessage = await isDocumentRequest(extractedText);
+        extractedTextMess = userInputmessage;
         await sendWhatsAppMessage(
           // Call sendWhatsAppMessage
           messageSender,
@@ -287,6 +308,21 @@ router.post("/getwhatsappmessages", async (req, res) => {
           console.error("Error downloading the image:");
         }
       }
+    }
+
+    if (extractedTextMess) {
+      const mess = {
+        chatId: existingChat._id,
+        sender: null,
+        sendType: "assistant",
+        content: extractedTextMess,
+        attachments: [],
+        timestamp: new Date(),
+        receiver: existingChat?.customerId?.toString(),
+        receiverType: "user",
+      };
+      const messss = new MessageModel(mess);
+      extractedTextMess = await messss.save();
     }
     const mess = {
       chatId: existingChat?._id,
@@ -331,6 +367,9 @@ router.post("/getwhatsappmessages", async (req, res) => {
       socketObj.io
         .to(receiver._id?.toString())
         .emit("message", { ...updatedChat, latestMessage: final });
+      extractedTextMess && socketObj.io
+        .to(receiver._id?.toString())
+        .emit("message", { ...updatedChat, latestMessage: extractedTextMess });
     });
   }
   switch (message.type) {
