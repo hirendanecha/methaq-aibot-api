@@ -21,7 +21,7 @@ const {
   sendWhatsAppMessage,
   sendWhatsAppMessageFromalMessage,
   downloadMedia,
-  // sendImageByUrl,
+  sendImageByUrl,
 } = require("../../../services/whatsaap.service");
 
 const { PineconeStore } = require("@langchain/pinecone");
@@ -148,11 +148,7 @@ router.post("/getwhatsappmessages", async (req, res) => {
     let extractedTextMess = "";
     if (message.type === "image" || message.type === "document") {
       const mediaID = message.image?.id || message.document?.id; // Get the media ID from the message
-      console.log(mediaID, "mediaIDmediaID");
-
       const downloadResult = await downloadMedia(mediaID);
-      console.log(downloadResult, "downloadResultdownloadResultdfsdf");
-
       // Call the downloadMedia function to handle the image download
       if (mediaID) {
 
@@ -201,6 +197,7 @@ router.post("/getwhatsappmessages", async (req, res) => {
       // }
       //here call  url
     }
+
     const mess = {
       chatId: newChat._id,
       sender: updatedCus?._id,
@@ -214,7 +211,6 @@ router.post("/getwhatsappmessages", async (req, res) => {
 
     const newMessage = new MessageModel(mess);
     const final = await newMessage.save();
-
     if (extractedTextMess) {
       const mess = {
         chatId: newChat._id,
@@ -229,7 +225,6 @@ router.post("/getwhatsappmessages", async (req, res) => {
       const messss = new MessageModel(mess);
       extractedTextMess = await messss.save();
     }
-
     const updatedChat = await ChatModel.findOneAndUpdate(
       { _id: newChat._id },
       { latestMessage: extractedTextMess ? extractedTextMess?._id : final?._id },
@@ -316,6 +311,8 @@ router.post("/getwhatsappmessages", async (req, res) => {
       }
       // }
     }
+
+
     const mess = {
       chatId: existingChat?._id,
       sender: user?._id,
@@ -368,6 +365,7 @@ router.post("/getwhatsappmessages", async (req, res) => {
         { _id: updatedChat?.adminId },
       ],
     }).lean();
+    console.log(extractedTextMess, "extractedTextMess");
 
     [...receivers].forEach((receiver) => {
       socketObj.io
