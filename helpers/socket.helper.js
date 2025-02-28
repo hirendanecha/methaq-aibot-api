@@ -226,14 +226,8 @@ socketObj.config = (server) => {
 
         if (chatDetails?.source === 'whatsapp') {
           console.log("zvdg", final?.content, chatDetails?.customerId?.phone);
-          if (final?.attachments?.length > 0) {
-            console.log(final?.attachments[0], "final?.attachments[0]");
 
-            const mediaType = final?.attachments[0];
-          }
-          else {
-            sendWhatsAppMessage(chatDetails?.customerId?.phone, undefined, undefined, undefined, final?.content, updatedChat?.isHuman)
-          }
+          sendWhatsAppMessage(chatDetails?.customerId?.phone, undefined, undefined, undefined, final?.content, updatedChat?.isHuman)
         }
       } else {
 

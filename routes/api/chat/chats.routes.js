@@ -151,7 +151,7 @@ router.post("/getwhatsappmessages", async (req, res) => {
       const downloadResult = await downloadMedia(mediaID);
       // Call the downloadMedia function to handle the image download
       if (mediaID) {
-       
+
         console.log(downloadResult, "downloadResult");
         attachment.push(downloadResult.data.url);
         await markMessageAsRead(messageID);
@@ -164,52 +164,38 @@ router.post("/getwhatsappmessages", async (req, res) => {
       }
 
       // if (message.type === "image") {
-        // const mediaID = message.image.id; // Get the media ID from the message
+      // const mediaID = message.image.id; // Get the media ID from the message
 
-        // Call the downloadMedia function to handle the image download
-        // const downloadResult = await downloadMedia(mediaID);
-        // console.log("downloadResult", downloadResult);
-        const { url, extractedText } = downloadResult.data;
+      // Call the downloadMedia function to handle the image download
+      // const downloadResult = await downloadMedia(mediaID);
+      // console.log("downloadResult", downloadResult);
+      const { url, extractedText } = downloadResult.data;
 
-        // sendImageByUrl(messageSender,"hhsh",messageID,url);
-        // sendDocByUrl(messageSender,"hhsh",messageID,url);
-        console.log("Starting image analysis...", extractedText);
-        const userInputmessage = await isDocumentRequest(extractedText);
-        extractedTextMess = userInputmessage;
-        await sendWhatsAppMessage(
-          // Call sendWhatsAppMessage
-          messageSender,
-          undefined,
-          messageID,
-          displayPhoneNumber,
-          userInputmessage
-        );
-        console.log("Image analysis completed.", userInputmessage);
+      // sendImageByUrl(messageSender,"hhsh",messageID,url);
+      // sendDocByUrl(messageSender,"hhsh",messageID,url);
+      console.log("Starting image analysis...", extractedText);
+      const userInputmessage = await isDocumentRequest(extractedText);
+      extractedTextMess = userInputmessage;
+      await sendWhatsAppMessage(
+        // Call sendWhatsAppMessage
+        messageSender,
+        undefined,
+        messageID,
+        displayPhoneNumber,
+        userInputmessage
+      );
+      console.log("Image analysis completed.", userInputmessage);
 
-        console.log("Marking message as read...");
-        //await markMessageAsRead(messageID);
-        console.log("Message marked as read.");
-        if (downloadResult.status === "success") {
-          console.log("Image downloaded successfully:");
-        } else {
-          console.error("Error downloading the image:");
-        }
+      console.log("Marking message as read...");
+      //await markMessageAsRead(messageID);
+      console.log("Message marked as read.");
+      if (downloadResult.status === "success") {
+        console.log("Image downloaded successfully:");
+      } else {
+        console.error("Error downloading the image:");
+      }
       // }
       //here call  url
-    }
-    if (extractedTextMess) {
-      const mess = {
-        chatId: newChat._id,
-        sender: null,
-        sendType: "assistant",
-        content: extractedTextMess,
-        attachments: [],
-        timestamp: new Date(),
-        receiver: newChat?.customerId?.toString(),
-        receiverType: "user",
-      };
-      const messss = new MessageModel(mess);
-      extractedTextMess = await messss.save();
     }
     const mess = {
       chatId: newChat._id,
@@ -224,6 +210,21 @@ router.post("/getwhatsappmessages", async (req, res) => {
 
     const newMessage = new MessageModel(mess);
     const final = await newMessage.save();
+
+    if (extractedTextMess) {
+      const mess = {
+        chatId: newChat._id,
+        sender: null,
+        sendType: "assistant",
+        content: extractedTextMess,
+        attachments: [],
+        timestamp: new Date(),
+        receiver: newChat?.customerId?.toString(),
+        receiverType: "user",
+      };
+      const messss = new MessageModel(mess);
+      extractedTextMess = await messss.save();
+    }
 
     const updatedChat = await ChatModel.findOneAndUpdate(
       { _id: newChat._id },
@@ -262,7 +263,7 @@ router.post("/getwhatsappmessages", async (req, res) => {
       const downloadResult = await downloadMedia(mediaID);
       // Call the downloadMedia function to handle the image download
       if (mediaID) {
-     
+
         console.log(downloadResult, "downloadResult");
         attachment.push(downloadResult.data.url);
         await markMessageAsRead(messageID);
@@ -279,52 +280,37 @@ router.post("/getwhatsappmessages", async (req, res) => {
       //here
 
       // if (message.type === "image") {
-        //const mediaID = message.image.id; // Get the media ID from the message
+      //const mediaID = message.image.id; // Get the media ID from the message
 
-        // Call the downloadMedia function to handle the image download
-        // const downloadResult = await downloadMedia(mediaID);
-        // console.log("downloadResult", downloadResult);
-        const { url, extractedText } = downloadResult.data;
+      // Call the downloadMedia function to handle the image download
+      // const downloadResult = await downloadMedia(mediaID);
+      // console.log("downloadResult", downloadResult);
+      const { url, extractedText } = downloadResult.data;
 
-        // sendImageByUrl(messageSender,"hhsh",messageID,url);
-        // sendDocByUrl(messageSender,"hhsh",messageID,url);
-        console.log("Starting image analysis...", extractedText);
-        const userInputmessage = await isDocumentRequest(extractedText);
-        extractedTextMess = userInputmessage;
-        await sendWhatsAppMessage(
-          // Call sendWhatsAppMessage
-          messageSender,
-          undefined,
-          messageID,
-          displayPhoneNumber,
-          userInputmessage
-        );
-        console.log("Image analysis completed.", userInputmessage);
+      // sendImageByUrl(messageSender,"hhsh",messageID,url);
+      // sendDocByUrl(messageSender,"hhsh",messageID,url);
+      console.log("Starting image analysis...", extractedText);
+      const userInputmessage = await isDocumentRequest(extractedText);
+      extractedTextMess = userInputmessage;
+      await sendWhatsAppMessage(
+        // Call sendWhatsAppMessage
+        messageSender,
+        undefined,
+        messageID,
+        displayPhoneNumber,
+        userInputmessage
+      );
+      console.log("Image analysis completed.", userInputmessage);
 
-        console.log("Marking message as read...");
-        //await markMessageAsRead(messageID);
-        console.log("Message marked as read.");
-        if (downloadResult.status === "success") {
-          console.log("Image downloaded successfully:");
-        } else {
-          console.error("Error downloading the image:");
-        }
+      console.log("Marking message as read...");
+      //await markMessageAsRead(messageID);
+      console.log("Message marked as read.");
+      if (downloadResult.status === "success") {
+        console.log("Image downloaded successfully:");
+      } else {
+        console.error("Error downloading the image:");
+      }
       // }
-    }
-
-    if (extractedTextMess) {
-      const mess = {
-        chatId: existingChat._id,
-        sender: null,
-        sendType: "assistant",
-        content: extractedTextMess,
-        attachments: [],
-        timestamp: new Date(),
-        receiver: existingChat?.customerId?.toString(),
-        receiverType: "user",
-      };
-      const messss = new MessageModel(mess);
-      extractedTextMess = await messss.save();
     }
     const mess = {
       chatId: existingChat?._id,
@@ -339,6 +325,20 @@ router.post("/getwhatsappmessages", async (req, res) => {
 
     const newMessage = new MessageModel(mess);
     const final = await newMessage.save();
+    if (extractedTextMess) {
+      const mess = {
+        chatId: existingChat._id,
+        sender: null,
+        sendType: "assistant",
+        content: extractedTextMess,
+        attachments: [],
+        timestamp: new Date(),
+        receiver: existingChat?.customerId?.toString(),
+        receiverType: "user",
+      };
+      const messss = new MessageModel(mess);
+      extractedTextMess = await messss.save();
+    }
     let isHumantrasfer = existingChat?.isHuman;
     console.log(isHumantrasfer, "isHumantrasfer123");
 
