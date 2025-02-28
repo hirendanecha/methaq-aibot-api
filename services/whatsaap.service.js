@@ -46,10 +46,13 @@ const sendWhatsAppMessage = async (
 ) => {
   console.log(userInput, "isHumanReal");
 
-  const isHuman = await isHumanChatRequest(userInput);
+  // console.log(isHumanReal, "isHumanReal");
 
-  console.log(isHuman, "isHuman");
-  if (isHuman) {
+
+  // const isHuman = isHumanReal ? true : await isHumanChatRequest(userInput);
+  // console.log(isHuman, "isHuman");
+
+  if (isHumanReal) {
     const data = JSON.stringify({
       messaging_product: "whatsapp",
       recipient_type: "individual",
@@ -203,37 +206,44 @@ async function downloadMedia(fileID) {
       `WhatsappImages/${month}`
     );
     console.log(url, "ppppp");
-    return { status: "success", data: {url,extractedText} };
+    return { status: "success", data: { url, extractedText } };
   } catch (e) {
     console.error("Error downloading media", e);
     return { status: "error", data: "Error downloading Media" };
   }
 }
 
-// const sendImageByUrl = async (messageSender, fileName, messageID) => {
-//   const imageUrl = `${process.env.SERVER_URL}/${fileName}`;
+// exports.sendImageByUrl = async (messageSender, fileName, messageID, imageUrl) => {
+//   const config = {
+//     headers: {
+//       'Content-Type': 'application/json',
+//       Authorization: `Bearer ${process.env.WHATSAPP_CLOUD_API_ACCESS_TOKEN}`,
+//     }
+//   };
+
+
+//   console.log("Sending image to:", messageSender);
+//   console.log("Image URL:", imageUrl);
+
 //   const data = JSON.stringify({
 //     messaging_product: "whatsapp",
 //     recipient_type: "individual",
 //     to: messageSender,
-//     context: { message_id: messageID },
+//     // context: { message_id: messageID },
 //     type: "image",
-//     image: { link: imageUrl },
+//     image: {
+//       link: "https://headsupfortails.com/cdn/shop/files/250gpuppyFront_323e88d4-b432-4d2a-a4cd-60ad98181c9d.jpg?v=1739042541"
+//     },
 //   });
 
+//   //const url = `https://graph.facebook.com/${process.env.WHATSAPP_CLOUD_API_VERSION}/${process.env.WHATSAPP_CLOUD_API_PHONE_NUMBER_ID}/messages`; // Corrected line
+
 //   try {
-//     const response = axios.post(url, data, config).pipe(
-//       map((res) => res.data),
-//       catchError((error) => {
-//         console.error(error);
-//         throw new BadRequestException("Error Posting To WhatsApp Cloud API");
-//       })
-//     );
-//     return `Image sent successfully, response: ${await lastValueFrom(
-//       response
-//     )}`;
+//     const response = await axios.post(url, data, config);
+//     console.log("Response data:", response.data);
+//     return `Image sent successfully, response: ${response.data}`;
 //   } catch (error) {
-//     console.error(error);
+//     console.error("Error sending image:", error.response ? error.response.data : error.message);
 //     return "Axle broke!! Error Sending Image!!";
 //   }
 // };
@@ -292,44 +302,46 @@ async function downloadMedia(fileID) {
 
 // Exporting functions using CommonJS syntax
 
-const sendImageByUrl = async (messageSender, fileName, messageID, imageUrl) => {
-  const config = {
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${process.env.WHATSAPP_CLOUD_API_ACCESS_TOKEN}`,
-  }};
+// const sendImageByUrl = async (messageSender, fileName, messageID, imageUrl) => {
+//   const config = {
+//     headers: {
+//       'Content-Type': 'application/json',
+//       Authorization: `Bearer ${process.env.WHATSAPP_CLOUD_API_ACCESS_TOKEN}`,
+//     }
+//   };
 
 
-  console.log("Sending image to:", messageSender);
-  console.log("Image URL:", imageUrl);
+//   console.log("Sending image to:", messageSender);
+//   console.log("Image URL:", imageUrl);
 
-  const data = JSON.stringify({
-    messaging_product: "whatsapp",
-    recipient_type: "individual",
-    to:"919537222236",
-   // context: { message_id: messageID },
-    type: "image",
-    image: { 
-      link: "https://headsupfortails.com/cdn/shop/files/250gpuppyFront_323e88d4-b432-4d2a-a4cd-60ad98181c9d.jpg?v=1739042541" },
-  });
+//   const data = JSON.stringify({
+//     messaging_product: "whatsapp",
+//     recipient_type: "individual",
+//     to: "919537222236",
+//     // context: { message_id: messageID },
+//     type: "image",
+//     image: {
+//       link: "https://headsupfortails.com/cdn/shop/files/250gpuppyFront_323e88d4-b432-4d2a-a4cd-60ad98181c9d.jpg?v=1739042541"
+//     },
+//   });
 
-  //const url = `https://graph.facebook.com/${process.env.WHATSAPP_CLOUD_API_VERSION}/${process.env.WHATSAPP_CLOUD_API_PHONE_NUMBER_ID}/messages`; // Corrected line
+//   //const url = `https://graph.facebook.com/${process.env.WHATSAPP_CLOUD_API_VERSION}/${process.env.WHATSAPP_CLOUD_API_PHONE_NUMBER_ID}/messages`; // Corrected line
 
-  try {
-    const response = await axios.post(url, data, config);
-    console.log("Response data:", response.data);
-    return `Image sent successfully, response: ${response.data}`;
-  } catch (error) {
-    console.error("Error sending image:", error.response ? error.response.data : error.message);
-    return "Axle broke!! Error Sending Image!!";
-  }
-};
+//   try {
+//     const response = await axios.post(url, data, config);
+//     console.log("Response data:", response.data);
+//     return `Image sent successfully, response: ${response.data}`;
+//   } catch (error) {
+//     console.error("Error sending image:", error.response ? error.response.data : error.message);
+//     return "Axle broke!! Error Sending Image!!";
+//   }
+// };
 module.exports = {
   sendWhatsAppMessage,
   sendWhatsAppMessageFromalMessage,
   downloadMedia,
   markMessageAsRead,
-  sendImageByUrl
+  // sendImageByUrl
   //   getMediaUrl,
   //   downloadMedia,
   //   sendImageByUrl,

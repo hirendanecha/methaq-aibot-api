@@ -21,7 +21,7 @@ const {
   sendWhatsAppMessage,
   sendWhatsAppMessageFromalMessage,
   downloadMedia,
-  sendImageByUrl,
+  // sendImageByUrl,
 } = require("../../../services/whatsaap.service");
 
 const { PineconeStore } = require("@langchain/pinecone");
@@ -148,7 +148,11 @@ router.post("/getwhatsappmessages", async (req, res) => {
     let extractedTextMess = "";
     if (message.type === "image" || message.type === "document") {
       const mediaID = message.image?.id || message.document?.id; // Get the media ID from the message
+      console.log(mediaID, "mediaIDmediaID");
+
       const downloadResult = await downloadMedia(mediaID);
+      console.log(downloadResult, "downloadResultdownloadResultdfsdf");
+
       // Call the downloadMedia function to handle the image download
       if (mediaID) {
 
