@@ -231,8 +231,8 @@ router.post("/getwhatsappmessages", async (req, res) => {
 
     const newMessage = new MessageModel(mess);
     const final = await newMessage.save();
-    let isHumantrasfer = false;
-    if (!existingChat?.isHuman) {
+    let isHumantrasfer = existingChat?.isHuman;
+    if (!existingChat?.isHuman && final?.content) {
       isHumantrasfer = await isHumanChatRequest(final?.content);
     }
     console.log(isHumantrasfer, "isHumantrasferisHumantrasfer");
