@@ -66,7 +66,7 @@ Maintain a state dictionary to track the presence of front and back documents:
      
      "You uploaded [Document Type] front card.
       Your card details:
-         Owner: <extracted detail if available>
+         Owner: nameee
          [Other key details if available]
       Can you upload back details?"
      
