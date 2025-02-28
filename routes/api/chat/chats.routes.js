@@ -34,6 +34,7 @@ const path = require("path");
 const { existsSync, mkdirSync, writeFileSync } = require("fs");
 const s3 = require("../../../helpers/s3.helper");
 const { generateAIResponse } = require("../../../services/openai/openai.service");
+const { isHumanChatRequest } = require("../../../services/openai/tool/transferChat");
 const pinecone = new Pinecone({ apiKey: environment.pinecone.apiKey });
 // Route to store chat
 router.post("/store-chat", storeChat);
@@ -232,7 +233,7 @@ router.post("/getwhatsappmessages", async (req, res) => {
     const final = await newMessage.save();
     let isHumantrasfer = false;
     if (!existingChat?.isHuman) {
-      isHumantrasfer = await isHumanChatRequest(final?._id);
+      isHumantrasfer = await isHumanChatRequest(final?.content);
     }
     console.log(isHumantrasfer, "isHumantrasferisHumantrasfer");
 
