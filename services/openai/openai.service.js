@@ -4,6 +4,7 @@ const { OpenAIEmbeddings } = require("@langchain/openai");
 const { PineconeStore } = require("@langchain/pinecone");
 const { Pinecone } = require("@pinecone-database/pinecone");
 const environment = require("../../utils/environment");
+const ChatModel = require("../../models/chat.model");
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
@@ -88,7 +89,7 @@ async function detectDepartment(message, departments) {
   };
 }
 
-async function generateAIResponse(context, userInput) {
+async function generateAIResponse(context, userInput,chatDetails) {
   try {
 
     const departmentsData = await fetchDepartmentsAndPrompts();
@@ -97,6 +98,11 @@ async function generateAIResponse(context, userInput) {
       userInput,
       departmentsData.data
     );
+    const updatedChat = await ChatModel.findOneAndUpdate(
+      { _id: chatDetails._id },
+      { department: detectedDepartment._id },
+      { new: true }
+    )
     const promptTemplate =
       detectedDepartment.prompts[0]?.prompt
     const prompt = buildDynamicPrompt(promptTemplate, context, userInput);
