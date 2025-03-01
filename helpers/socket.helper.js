@@ -165,6 +165,32 @@ socketObj.config = (server) => {
       }
     });
 
+    socket.on("transfer-bot", async (params, cb) => {
+      params = typeof params === "string" ? JSON.parse(params) : params;
+      const chatDetails = await ChatModel.findById(params.chatId).populate('customerId').lean();
+      console.log(chatDetails?.customerId,"chatDetails?.customerId");
+      
+      const mess = {
+        chatId: chatDetails?._id,
+        sender: null,
+        sendType: "admin",
+        content: 'Chat is transferred to BOT',
+        attachments: [],
+        timestamp: new Date(),
+        receiver: chatDetails?.customerId?._id?.toString(),
+        receiverType: "user",
+        messageType: "tooltip"
+      }
+      const newMessage = new MessageModel(mess)
+      const final = await newMessage.save();
+      const updatedChat = await ChatModel.findOneAndUpdate({ _id: chatDetails?._id }, { latestMessage: final?._id,isHuman: false,adminId: null }, { new: true }).lean();
+      const receivers = await UserModel.find({ $or: [{ role: { $in: ["Admin", "Supervisor"] } }, { _id: { $in: [chatDetails?.customerId?._id?.toString()] } }] });
+      receivers.forEach(receiver => {
+        socketObj.io.to(receiver._id?.toString()).emit("update-chat", updatedChat);
+        socketObj.io.to(receiver._id?.toString()).emit("message", { ...updatedChat, latestMessage: final });
+      })
+    })
+
     socket.on("get-messages", async (params, cb) => {
       params = typeof params === "string" ? JSON.parse(params) : params;
       const messages = await MessageModel.find({ chatId: params.chatId }).sort({ timestamp: 1 });

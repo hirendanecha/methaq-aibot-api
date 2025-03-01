@@ -44,7 +44,7 @@ const sendWhatsAppMessage = async (
   userInput,
   isHumanReal
 ) => {
-  console.log(userInput, "isHumanReal");
+  //console.log(userInput, "isHumanReal");
 
   // console.log(isHumanReal, "isHumanReal");
 
@@ -336,11 +336,183 @@ async function downloadMedia(fileID) {
 //     return "Axle broke!! Error Sending Image!!";
 //   }
 // };
+
+async function fetchDepartmentsAndPrompts() {
+  try {
+    const response = await fetch(
+      "https://methaq-aibot-api.opash.in/api/public/department/departments-with-prompt"
+    );
+    if (!response.ok) {
+      throw new Error("Failed to fetch departments and prompts");
+    }
+    return response.json();
+  } catch (error) {
+    console.error("Error fetching departments and prompts:", error);
+    throw error;
+  }
+}
+// const sendInteractiveMessage = async (messageSender) => {
+//   const config = {
+//     headers: {
+//       'Content-Type': 'application/json',
+//       Authorization: `Bearer ${process.env.WHATSAPP_CLOUD_API_ACCESS_TOKEN}`,
+//   }};
+
+//   const departmentsData = await fetchDepartmentsAndPrompts();
+//   // const interactivePayload = {
+//   //   type: "button",
+//   //   body: {
+//   //     text: "*Chat with AI Bot?*\n\nWould you like to interact with our intelligent AI bot?", // Bold text and improved spacing
+//   //   },
+//   //   action: {
+//   //     buttons: [
+//   //       {
+//   //         type: "reply",
+//   //         reply: {
+//   //           id: "ai_bot_yes",
+//   //           title: "Yes",
+//   //         },
+//   //       },
+//   //       {
+//   //         type: "reply",
+//   //         reply: {
+//   //           id: "ai_bot_no",
+//   //           title: "No",
+//   //         },
+//   //       },
+//   //     ],
+//   //   },
+//   // };
+    
+
+//   const dummyDepartments = [
+//     {
+//       _id: "dummy_1",
+//       name: "Dummy Department 1",
+//     },
+//     {
+//       _id: "dummy_2",
+//       name: "Dummy Department 2",
+//     },
+//     {
+//       _id: "dummy_3",
+//       name: "Dummy Department 3",
+//     },
+//     {
+//       _id: "dummy_4",
+//       name: "Dummy Department 4",
+//     },
+//     {
+//       _id: "dummy_5",
+//       name: "Dummy Department 5",
+//     },
+//   ];
+//   const combinedDepartments = [...departmentsData.data, ...dummyDepartments];
+//   const interactivePayload = {
+//     type: "button",
+//     body: {
+//       text: "Hello! 👋 How can I assist you today with your insurance needs? If you have any questions about our policies or services, feel free to ask!", // Bold text and improved spacing
+//     },
+//     action: {
+//       buttons: combinedDepartments.map(department => ({
+//         type: "reply",
+//         reply: {
+//           id: department._id, // Set _id as reply.id
+//           title: department.name, // Set name as title
+//         },
+//       })),
+//     },
+//   };
+
+//   const data = JSON.stringify({
+//     messaging_product: "whatsapp",
+//     recipient_type: "individual",
+//     to: messageSender,
+//     type: "interactive",
+//     interactive: interactivePayload,
+//   });
+
+//   //const url = `https://graph.facebook.com/${process.env.WHATSAPP_CLOUD_API_VERSION}/${process.env.WHATSAPP_CLOUD_API_PHONE_NUMBER_ID}/messages`; // Corrected line
+
+//   try {
+//     const response = await axios.post(url, data, config);
+//     console.log("Response data:", response.data);
+//     return `Image sent successfully, response: ${response.data}`;
+//   } catch (error) {
+//     console.error("Error sending image:", error.response ? error.response.data : error.message);
+//     return "Axle broke!! Error Sending Image!!";
+//   }
+// };
+const sendInteractiveMessage = async (messageSender,messageID) => {
+  const config = {
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${process.env.WHATSAPP_CLOUD_API_ACCESS_TOKEN}`,
+    },
+  };
+
+  const departmentsData = await fetchDepartmentsAndPrompts(); // Assuming this fetches data correctly
+  const dummyDepartments = [
+    { _id: "dummy_1", name: "Dummy Department 1" },
+    { _id: "dummy_2", name: "Dummy Department 2" },
+    { _id: "dummy_3", name: "Dummy Department 3" },
+    { _id: "dummy_4", name: "Dummy Department 4" },
+    { _id: "dummy_5", name: "Dummy Department 5" },
+  ];
+  const combinedDepartments = [...departmentsData.data];
+
+  const interactivePayload = {
+    type: "list",
+    header: {
+      type: "text",
+      text: "Insurance Options", // Header for the list
+    },
+    body: {
+      text: "Hello! 👋 How can I assist you today with your insurance needs? Please select a department:",
+    },
+    action: {
+      button: "Select Department", // Button text to open the list
+      sections: [
+        {
+          title: "Departments", // Section title
+          rows: combinedDepartments.map((department) => ({
+            id: department._id,
+            title: department.name,
+            description: `let's discuss about ${department.name}`, // Optional description
+          })),
+        },
+      ],
+    },
+  };
+
+  const data = JSON.stringify({
+    messaging_product: "whatsapp",
+    recipient_type: "individual",
+    to: messageSender,
+    type: "interactive",
+    interactive: interactivePayload,
+  });
+
+  try {
+    const response = await axios.post(
+      url,
+      data,
+      config
+    );
+    console.log("Interactive list message sent:", response.data);
+    await markMessageAsRead(messageID);
+    return response.data; // Return the response data
+  } catch (error) {
+    console.error("Error sending interactive list message:", error);
+    throw error; // Rethrow the error to be handled by the caller
+  }
+};
 module.exports = {
   sendWhatsAppMessage,
   sendWhatsAppMessageFromalMessage,
   downloadMedia,
   markMessageAsRead,
+  sendInteractiveMessage
   // sendImageByUrl
   //   getMediaUrl,
   //   downloadMedia,

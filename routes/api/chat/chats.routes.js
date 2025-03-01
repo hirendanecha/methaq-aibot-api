@@ -22,6 +22,7 @@ const {
   sendWhatsAppMessageFromalMessage,
   downloadMedia,
   sendImageByUrl,
+  sendInteractiveMessage
 } = require("../../../services/whatsaap.service");
 
 const { PineconeStore } = require("@langchain/pinecone");
@@ -121,8 +122,7 @@ router.post("/getwhatsappmessages", async (req, res) => {
   };
 
   const user = await CustomerModel.findOne({ phone: messageSender });
-  console.log(user, "fdsfsdfgdfg");
-
+ 
   if (!user) {
     const customer = new CustomerModel({
       name: profileName,
@@ -130,131 +130,157 @@ router.post("/getwhatsappmessages", async (req, res) => {
     });
 
     const updatedCus = await customer.save();
-
+    
     if (!updatedCus._id) {
       throw new Error("Error while adding new user!");
     }
-
+    
     const chat = new ChatModel({
       customerId: updatedCus._id,
       source: "whatsapp",
     });
     const newChat = await chat.save();
+    sendInteractiveMessage(messageSender,messageID);
 
-    if (!newChat._id) {
-      throw new Error("Error while creating new chat!");
-    }
-    const attachment = [];
-    let extractedTextMess = "";
-    if (message.type === "image" || message.type === "document") {
-      const mediaID = message.image?.id || message.document?.id; // Get the media ID from the message
-      const downloadResult = await downloadMedia(mediaID);
-      // Call the downloadMedia function to handle the image download
-      if (mediaID) {
+    // if (!newChat._id) {
+    //   throw new Error("Error while creating new chat!");
+    // }
+    // const attachment = [];
+    // let extractedTextMess = "";
+    // if (message.type === "image" || message.type === "document") {
+    //   const mediaID = message.image?.id || message.document?.id; // Get the media ID from the message
+    //   const downloadResult = await downloadMedia(mediaID);
+    //   // Call the downloadMedia function to handle the image download
+    //   if (mediaID) {
 
-        console.log(downloadResult, "downloadResult");
-        attachment.push(downloadResult.data.url);
-        await markMessageAsRead(messageID);
+    //     console.log(downloadResult, "downloadResult");
+    //     attachment.push(downloadResult.data.url);
+    //     await markMessageAsRead(messageID);
 
-        if (downloadResult.status === "success") {
-          console.log("Image downloaded successfully:", downloadResult.data);
-        } else {
-          console.error("Error downloading the image:", downloadResult.data);
-        }
-      }
+    //     if (downloadResult.status === "success") {
+    //       console.log("Image downloaded successfully:", downloadResult.data);
+    //     } else {
+    //       console.error("Error downloading the image:", downloadResult.data);
+    //     }
+    //   }
 
-      // if (message.type === "image") {
-      // const mediaID = message.image.id; // Get the media ID from the message
+    //   // if (message.type === "image") {
+    //   // const mediaID = message.image.id; // Get the media ID from the message
 
-      // Call the downloadMedia function to handle the image download
-      // const downloadResult = await downloadMedia(mediaID);
-      // console.log("downloadResult", downloadResult);
-      const { url, extractedText } = downloadResult.data;
+    //   // Call the downloadMedia function to handle the image download
+    //   // const downloadResult = await downloadMedia(mediaID);
+    //   // console.log("downloadResult", downloadResult);
+    //   const { url, extractedText } = downloadResult.data;
 
-      // sendImageByUrl(messageSender,"hhsh",messageID,url);
-      // sendDocByUrl(messageSender,"hhsh",messageID,url);
-      console.log("Starting image analysis...", extractedText);
-      const userInputmessage = await isDocumentRequest(extractedText);
-      extractedTextMess = userInputmessage;
-      await sendWhatsAppMessage(
-        // Call sendWhatsAppMessage
-        messageSender,
-        undefined,
-        messageID,
-        displayPhoneNumber,
-        userInputmessage
-      );
-      console.log("Image analysis completed.", userInputmessage);
+    //   // sendImageByUrl(messageSender,"hhsh",messageID,url);
+    //   // sendDocByUrl(messageSender,"hhsh",messageID,url);
+    //   console.log("Starting image analysis...", extractedText);
+    //   const userInputmessage = await isDocumentRequest(extractedText);
+    //   extractedTextMess = userInputmessage;
+    //   await sendWhatsAppMessage(
+    //     // Call sendWhatsAppMessage
+    //     messageSender,
+    //     undefined,
+    //     messageID,
+    //     displayPhoneNumber,
+    //     userInputmessage
+    //   );
+    //   console.log("Image analysis completed.", userInputmessage);
 
-      console.log("Marking message as read...");
-      //await markMessageAsRead(messageID);
-      console.log("Message marked as read.");
-      if (downloadResult.status === "success") {
-        console.log("Image downloaded successfully:");
-      } else {
-        console.error("Error downloading the image:");
-      }
-      // }
-      //here call  url
-    }
+    //   console.log("Marking message as read...");
+    //   //await markMessageAsRead(messageID);
+    //   console.log("Message marked as read.");
+    //   if (downloadResult.status === "success") {
+    //     console.log("Image downloaded successfully:");
+    //   } else {
+    //     console.error("Error downloading the image:");
+    //   }
+    //   // }
+    //   //here call  url
+    // }
+    // console.log(message, "messagesdfsfd");
+    // const mess = {
+    //   chatId: newChat._id,
+    //   sender: updatedCus?._id,
+    //   sendType: "user",
+    //   content: message.text?.body,
+    //   attachments: attachment,
+    //   timestamp: new Date(),
+    //   receiver: null,
+    //   receiverType: "admin",
+    // };
 
-    const mess = {
-      chatId: newChat._id,
-      sender: updatedCus?._id,
-      sendType: "user",
-      content: message.text?.body,
-      attachments: attachment,
-      timestamp: new Date(),
-      receiver: null,
-      receiverType: "admin",
-    };
+    // const newMessage = new MessageModel(mess);
+    // const final = await newMessage.save();
+    // if (extractedTextMess) {
+    //   const mess = {
+    //     chatId: newChat._id,
+    //     sender: null,
+    //     sendType: "assistant",
+    //     content: extractedTextMess,
+    //     attachments: [],
+    //     timestamp: new Date(),
+    //     receiver: newChat?.customerId?.toString(),
+    //     receiverType: "user",
+    //   };
+    //   const messss = new MessageModel(mess);
+    //   extractedTextMess = await messss.save();
+    // }
+    // const updatedChat = await ChatModel.findOneAndUpdate(
+    //   { _id: newChat._id },
+    //   { latestMessage: extractedTextMess ? extractedTextMess?._id : final?._id },
+    //   { new: true }
+    // )
+    //   .populate("customerId")
+    //   .lean();
+    // console.log(updatedChat, "updatedChatfgdgfgdhh");
 
-    const newMessage = new MessageModel(mess);
-    const final = await newMessage.save();
-    if (extractedTextMess) {
-      const mess = {
-        chatId: newChat._id,
-        sender: null,
-        sendType: "assistant",
-        content: extractedTextMess,
-        attachments: [],
-        timestamp: new Date(),
-        receiver: newChat?.customerId?.toString(),
-        receiverType: "user",
-      };
-      const messss = new MessageModel(mess);
-      extractedTextMess = await messss.save();
-    }
-    const updatedChat = await ChatModel.findOneAndUpdate(
-      { _id: newChat._id },
-      { latestMessage: extractedTextMess ? extractedTextMess?._id : final?._id },
-      { new: true }
-    )
-      .populate("customerId")
-      .lean();
-    console.log(updatedChat, "updatedChatfgdgfgdhh");
+    // const receivers = await UserModel.find({
+    //   $or: [{ role: { $in: ["Admin", "Supervisor"] } }],
+    // }).lean();
+    // [...receivers].forEach((receiver) => {
+    //   socketObj.io
+    //     .to(receiver._id?.toString())
+    //     .emit("message", { ...updatedChat, latestMessage: final });
+    //   extractedTextMess && socketObj.io
+    //     .to(receiver._id?.toString())
+    //     .emit("message", { ...updatedChat, latestMessage: extractedTextMess });
 
-    const receivers = await UserModel.find({
-      $or: [{ role: { $in: ["Admin", "Supervisor"] } }, { _id: updatedChat?.customerId }],
-    }).lean();
-    [...receivers].forEach((receiver) => {
-      socketObj.io
-        .to(receiver._id?.toString())
-        .emit("message", { ...updatedChat, latestMessage: final });
-      extractedTextMess && socketObj.io
-        .to(receiver._id?.toString())
-        .emit("message", { ...updatedChat, latestMessage: extractedTextMess });
-
-    });
+    // });
   } else {
-    let existingChat = await ChatModel.findOne({ customerId: user?._id }).lean();
+    let existingChat = await ChatModel.findOne({ customerId: user?._id })?.populate("department");
     if (!existingChat) {
       return;
     }
+
+    console.log(existingChat?.department?.workingHours?.startTime,"existingChatexistingChat");
+    
+    if(existingChat?.department?.workingHours?.startTime){
+      const currentHour = Number(
+        new Date()
+          .toLocaleString("en-US", { timeZone: "Asia/Kolkata", hour: "2-digit", hour12: false })
+      );
+     // const chatStartTime = new Date(existingChat?.department?.workingHours?.startTime);
+      //const chatEndTime = new Date(existingChat?.department?.workingHours?.endTime);
+      const startHour = parseInt(existingChat?.department?.workingHours?.startTime.split(":")[0]);
+      const endHour = parseInt(existingChat?.department?.workingHours?.endTime.split(":")[0]);
+      if (currentHour < startHour || currentHour > endHour) {
+        //return "We are currently offline";
+
+       return await sendWhatsAppMessage(
+          // Call sendWhatsAppMessage
+          messageSender,
+          undefined,
+          undefined,
+          undefined,
+          existingChat?.department?.messages?.afterHoursResponse
+        );
+      }
+    }
     const attachment = [];
     let extractedTextMess = "";
-    console.log(message.type, "(message.type(message.type");
-
+    
+    
     if (message.type === "image" || message.type === "document") {
       console.log(message, "messagedsddfg");
 
@@ -288,7 +314,7 @@ router.post("/getwhatsappmessages", async (req, res) => {
 
       // sendImageByUrl(messageSender,"hhsh",messageID,url);
       // sendDocByUrl(messageSender,"hhsh",messageID,url);
-      console.log("Starting image analysis...", extractedText);
+     // console.log("Starting image analysis...", extractedText);
       const userInputmessage = await isDocumentRequest(extractedText);
       extractedTextMess = userInputmessage;
       await sendWhatsAppMessage(
@@ -299,11 +325,11 @@ router.post("/getwhatsappmessages", async (req, res) => {
         displayPhoneNumber,
         userInputmessage
       );
-      console.log("Image analysis completed.", userInputmessage);
+      //console.log("Image analysis completed.", userInputmessage);
 
-      console.log("Marking message as read...");
+      //console.log("Marking message as read...");
       //await markMessageAsRead(messageID);
-      console.log("Message marked as read.");
+      //console.log("Message marked as read.");
       if (downloadResult.status === "success") {
         console.log("Image downloaded successfully:");
       } else {
@@ -311,13 +337,15 @@ router.post("/getwhatsappmessages", async (req, res) => {
       }
       // }
     }
-
+    console.log(message,"messagemessage");
+    
+    
 
     const mess = {
       chatId: existingChat?._id,
       sender: user?._id,
       sendType: "user",
-      content: message.text?.body,
+      content: message.text?.body||message?.interactive?.list_reply?.title,
       attachments: attachment,
       timestamp: new Date(),
       receiver: null,
@@ -358,6 +386,38 @@ router.post("/getwhatsappmessages", async (req, res) => {
     )
       .populate("customerId")
       .lean();
+      let selectionMess = null;
+      if(message?.type === "interactive"){
+        const department = message?.interactive?.list_reply?.id;
+        const updateChat = await ChatModel.findOneAndUpdate(
+          { _id: existingChat._id },
+          { department },
+          { new: true }
+        )
+        console.log(updateChat,"updateChatshubb");
+        const mess = {
+          chatId: existingChat?._id,
+          sender: null,
+          sendType: "assistant",
+          content: `How can I help you about ${message?.interactive?.list_reply?.title}`,
+          attachments: [],
+          timestamp: new Date(),
+          receiver: updateChat?.customerId?.toString(),
+          receiverType: "user",
+        };
+    
+        const newMessage = new MessageModel(mess);
+        const final = await newMessage.save();
+        selectionMess = final;
+        await sendWhatsAppMessage(
+          // Call sendWhatsAppMessage
+          messageSender,
+          undefined,
+          undefined,
+          undefined,
+          `How can I help you about ${message?.interactive?.list_reply?.title}`
+        );
+      }
 
     const receivers = await UserModel.find({
       $or: [
@@ -374,122 +434,128 @@ router.post("/getwhatsappmessages", async (req, res) => {
       extractedTextMess && socketObj.io
         .to(receiver._id?.toString())
         .emit("message", { ...updatedChat, latestMessage: extractedTextMess });
+      selectionMess && socketObj.io
+        .to(receiver._id?.toString())
+        .emit("message", { ...updatedChat, latestMessage: selectionMess });
     });
-  }
-  switch (message.type) {
-    case "text":
 
-      const user = await CustomerModel.findOne({ phone: messageSender });
-      console.log(user, "gdfgdfgfg");
-
-      let chatDddd = user?._id
-        ? await ChatModel.findOne({ customerId: user._id }).lean()
-        : null;
-      if (!chatDddd?.isHuman) {
-        const userInput = message.text.body;
-
-        const embeddings = new OpenAIEmbeddings({
-          openAIApiKey: process.env.OPENAI_API_KEY,
-        });
-        const index = pinecone.Index(environment.pinecone.indexName);
-        const vectorStore = await PineconeStore.fromExistingIndex(embeddings, {
-          //@ts-ignore
-          pineconeIndex: index,
-        });
-
-        const results = await vectorStore.similaritySearch(userInput, 5);
-        let context = results.map((r) => r.pageContent).join("\n\n");
-        const response = await generateAIResponse(context, userInput);
-        console.log(response, "messageSendermessageSender");
-        const mess = {
-          chatId: chatDddd._id,
-          sender: chatDddd?.customerId?.toString(),
-          sendType: "assistant",
-          content: response,
-          attachments: [],
-          timestamp: new Date(),
-          receiver: null,
-          receiverType: "user",
-        };
-        const newMessage = new MessageModel(mess);
-        const final = await newMessage.save();
-        const updatedChat = await ChatModel.findOneAndUpdate(
-          { _id: chatDddd._id },
-          { latestMessage: final?._id },
-          { new: true }
-        )
-          .populate("customerId")
-          .lean();
-        const receivers = await UserModel.find({
-          $or: [
-            { role: { $in: ["Admin", "Supervisor"] } },
-            { _id: updatedChat?.adminId },
-          ],
-        }).lean();
-        [...receivers].forEach((receiver) => {
-          socketObj.io
-            .to(receiver._id?.toString())
-            .emit("message", { ...updatedChat, latestMessage: final });
-        });
-
-        // await sendImageByUrl(messageSender, "hhsh", messageID, response);
-        await sendWhatsAppMessage(
-          // Call sendWhatsAppMessage
+    switch (message.type) {
+      case "text":
+  
+        const user = await CustomerModel.findOne({ phone: messageSender });
+        //console.log(user, "gdfgdfgfg");
+      
+  
+        let chatDddd = user?._id
+          ? await ChatModel.findOne({ customerId: user._id }).lean()
+          : null;
+        if (!chatDddd?.isHuman) {
+          const userInput = message.text.body;
+  
+          const embeddings = new OpenAIEmbeddings({
+            openAIApiKey: process.env.OPENAI_API_KEY,
+          });
+          const index = pinecone.Index(environment.pinecone.indexName);
+          const vectorStore = await PineconeStore.fromExistingIndex(embeddings, {
+            //@ts-ignore
+            pineconeIndex: index,
+          });
+  
+          const results = await vectorStore.similaritySearch(userInput, 5);
+          let context = results.map((r) => r.pageContent).join("\n\n");
+          const response = await generateAIResponse(context, userInput,chatDddd);
+          console.log(response, "messageSendermessageSender");
+          const mess = {
+            chatId: chatDddd._id,
+            sender: chatDddd?.customerId?.toString(),
+            sendType: "assistant",
+            content: response,
+            attachments: [],
+            timestamp: new Date(),
+            receiver: null,
+            receiverType: "user",
+          };
+          const newMessage = new MessageModel(mess);
+          const final = await newMessage.save();
+          const updatedChat = await ChatModel.findOneAndUpdate(
+            { _id: chatDddd._id },
+            { latestMessage: final?._id },
+            { new: true }
+          )
+            .populate("customerId")
+            .lean();
+          const receivers = await UserModel.find({
+            $or: [
+              { role: { $in: ["Admin", "Supervisor"] } },
+              { _id: updatedChat?.adminId },
+            ],
+          }).lean();
+          [...receivers].forEach((receiver) => {
+            socketObj.io
+              .to(receiver._id?.toString())
+              .emit("message", { ...updatedChat, latestMessage: final });
+          });
+  
+          // await sendImageByUrl(messageSender, "hhsh", messageID, response);
+          await sendWhatsAppMessage(
+            // Call sendWhatsAppMessage
+            messageSender,
+            context,
+            messageID,
+            displayPhoneNumber,
+            response
+          );
+        }
+        break;
+  
+      // case "image":
+      //   const mediaID = message.image.id; // Get the media ID from the message
+  
+      //   // Call the downloadMedia function to handle the image download
+      //   const downloadResult = await downloadMedia(mediaID);
+      //   // console.log("downloadResult", downloadResult);
+      //   const { url, extractedText } = downloadResult.data;
+  
+      //   // sendImageByUrl(messageSender,"hhsh",messageID,url);
+      //   // sendDocByUrl(messageSender,"hhsh",messageID,url);
+      //   console.log("Starting image analysis...", extractedText);
+      //   const userInputmessage = await isDocumentRequest(extractedText);
+      //   await sendWhatsAppMessage(
+      //     // Call sendWhatsAppMessage
+      //     messageSender,
+      //     undefined,
+      //     messageID,
+      //     displayPhoneNumber,
+      //     userInputmessage
+      //   );
+      //   console.log("Image analysis completed.", userInputmessage);
+  
+      //   console.log("Marking message as read...");
+      //   //await markMessageAsRead(messageID);
+      //   console.log("Message marked as read.");
+      //   if (downloadResult.status === "success") {
+      //     console.log("Image downloaded successfully:");
+      //   } else {
+      //     console.error("Error downloading the image:");
+      //   }
+  
+      //   break;
+  
+      case "video":
+      case "location":
+      case "unsupported":
+      case "contacts":
+        const formalMessage =
+          "We are sorry, but we cannot process this type of content.";
+        await sendWhatsAppMessageFromalMessage(
           messageSender,
-          context,
           messageID,
-          displayPhoneNumber,
-          response
+          formalMessage
         );
-      }
-      break;
-
-    // case "image":
-    //   const mediaID = message.image.id; // Get the media ID from the message
-
-    //   // Call the downloadMedia function to handle the image download
-    //   const downloadResult = await downloadMedia(mediaID);
-    //   // console.log("downloadResult", downloadResult);
-    //   const { url, extractedText } = downloadResult.data;
-
-    //   // sendImageByUrl(messageSender,"hhsh",messageID,url);
-    //   // sendDocByUrl(messageSender,"hhsh",messageID,url);
-    //   console.log("Starting image analysis...", extractedText);
-    //   const userInputmessage = await isDocumentRequest(extractedText);
-    //   await sendWhatsAppMessage(
-    //     // Call sendWhatsAppMessage
-    //     messageSender,
-    //     undefined,
-    //     messageID,
-    //     displayPhoneNumber,
-    //     userInputmessage
-    //   );
-    //   console.log("Image analysis completed.", userInputmessage);
-
-    //   console.log("Marking message as read...");
-    //   //await markMessageAsRead(messageID);
-    //   console.log("Message marked as read.");
-    //   if (downloadResult.status === "success") {
-    //     console.log("Image downloaded successfully:");
-    //   } else {
-    //     console.error("Error downloading the image:");
-    //   }
-
-    //   break;
-
-    case "video":
-    case "location":
-    case "unsupported":
-    case "contacts":
-      const formalMessage =
-        "We are sorry, but we cannot process this type of content.";
-      await sendWhatsAppMessageFromalMessage(
-        messageSender,
-        messageID,
-        formalMessage
-      );
-      break;
+        break;
+    }
   }
+  
 
   return res.status(200).send("Message processed"); // Added response for successful processing
 });
