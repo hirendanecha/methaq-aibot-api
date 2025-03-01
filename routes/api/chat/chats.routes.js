@@ -266,14 +266,44 @@ router.post("/getwhatsappmessages", async (req, res) => {
       const endHour = parseInt(existingChat?.department?.workingHours?.endTime.split(":")[0]);
       if (currentHour < startHour || currentHour > endHour) {
         //return "We are currently offline";
+        const mess = {
+          chatId: existingChat?._id,
+          sender: null,
+          sendType: "assistant",
+          content: existingChat?.messages?.afterHoursResponse,
+          attachments: [],
+          timestamp: new Date(),
+          receiver: existingChat?.customerId?.toString(),
+          receiverType: "user",
+        };
+    
+        const newMessage = new MessageModel(mess);
+        const final = await newMessage.save();
+        const updatedChat = await ChatModel.findOneAndUpdate(
+          { _id: existingChat._id },
+          { latestMessage: final?._id },
+          { new: true }
+        );
+        const receivers = await UserModel.find({
+          $or: [
+            { role: { $in: ["Admin", "Supervisor"] } },
+            { _id: updatedChat?.adminId },
+          ],
+        }).lean();
+        
+        [...receivers].forEach((receiver) => {
+          socketObj.io
+            .to(receiver._id?.toString())
+            .emit("message", { ...updatedChat, latestMessage: final });
+        });
 
        return await sendWhatsAppMessage(
           // Call sendWhatsAppMessage
           messageSender,
           undefined,
-          messageID,
-          displayPhoneNumber,
-          "We are currently offline"
+          undefined,
+          undefined,
+          existingChat?.department?.messages?.afterHoursResponse
         );
       }
     }
