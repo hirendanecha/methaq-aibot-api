@@ -22,6 +22,7 @@ const {
   sendWhatsAppMessageFromalMessage,
   downloadMedia,
   sendImageByUrl,
+  sendInteractiveMessage
 } = require("../../../services/whatsaap.service");
 
 const { PineconeStore } = require("@langchain/pinecone");
@@ -121,8 +122,7 @@ router.post("/getwhatsappmessages", async (req, res) => {
   };
 
   const user = await CustomerModel.findOne({ phone: messageSender });
-  console.log(user, "fdsfsdfgdfg");
-
+ 
   if (!user) {
     const customer = new CustomerModel({
       name: profileName,
@@ -130,6 +130,7 @@ router.post("/getwhatsappmessages", async (req, res) => {
     });
 
     const updatedCus = await customer.save();
+    sendInteractiveMessage(messageSender,messageID);
 
     if (!updatedCus._id) {
       throw new Error("Error while adding new user!");
@@ -288,7 +289,7 @@ router.post("/getwhatsappmessages", async (req, res) => {
 
       // sendImageByUrl(messageSender,"hhsh",messageID,url);
       // sendDocByUrl(messageSender,"hhsh",messageID,url);
-      console.log("Starting image analysis...", extractedText);
+     // console.log("Starting image analysis...", extractedText);
       const userInputmessage = await isDocumentRequest(extractedText);
       extractedTextMess = userInputmessage;
       await sendWhatsAppMessage(
@@ -299,11 +300,11 @@ router.post("/getwhatsappmessages", async (req, res) => {
         displayPhoneNumber,
         userInputmessage
       );
-      console.log("Image analysis completed.", userInputmessage);
+      //console.log("Image analysis completed.", userInputmessage);
 
-      console.log("Marking message as read...");
+      //console.log("Marking message as read...");
       //await markMessageAsRead(messageID);
-      console.log("Message marked as read.");
+      //console.log("Message marked as read.");
       if (downloadResult.status === "success") {
         console.log("Image downloaded successfully:");
       } else {
@@ -380,7 +381,8 @@ router.post("/getwhatsappmessages", async (req, res) => {
     case "text":
 
       const user = await CustomerModel.findOne({ phone: messageSender });
-      console.log(user, "gdfgdfgfg");
+      //console.log(user, "gdfgdfgfg");
+    
 
       let chatDddd = user?._id
         ? await ChatModel.findOne({ customerId: user._id }).lean()
