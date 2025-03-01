@@ -253,14 +253,28 @@ router.post("/getwhatsappmessages", async (req, res) => {
       return;
     }
 
-    console.log(existingChat,"existingChatexistingChat");
+    console.log(existingChat?.department?.workingHours?.startTime,"existingChatexistingChat");
     
-    if(existingChat?.workingHours?.startTime){
-      const currentTime = new Date();
-      const chatStartTime = new Date(existingChat?.workingHours?.startTime);
-      const chatEndTime = new Date(existingChat?.workingHours?.endTime);
-      if (currentTime < chatStartTime || currentTime > chatEndTime) {
-        return;
+    if(existingChat?.department?.workingHours?.startTime){
+      const currentHour = Number(
+        new Date()
+          .toLocaleString("en-US", { timeZone: "Asia/Kolkata", hour: "2-digit", hour12: false })
+      );
+     // const chatStartTime = new Date(existingChat?.department?.workingHours?.startTime);
+      //const chatEndTime = new Date(existingChat?.department?.workingHours?.endTime);
+      const startHour = parseInt(existingChat?.department?.workingHours?.startTime.split(":")[0]);
+      const endHour = parseInt(existingChat?.department?.workingHours?.endTime.split(":")[0]);
+      if (currentHour < startHour || currentHour > endHour) {
+        //return "We are currently offline";
+
+       return await sendWhatsAppMessage(
+          // Call sendWhatsAppMessage
+          messageSender,
+          undefined,
+          messageID,
+          displayPhoneNumber,
+          "We are currently offline"
+        );
       }
     }
     const attachment = [];
