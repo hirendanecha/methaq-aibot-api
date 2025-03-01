@@ -248,10 +248,13 @@ router.post("/getwhatsappmessages", async (req, res) => {
 
     // });
   } else {
-    let existingChat = await ChatModel.findOne({ customerId: user?._id }).lean();
+    let existingChat = await ChatModel.findOne({ customerId: user?._id })?.populate("department");
     if (!existingChat) {
       return;
     }
+
+    console.log(existingChat,"existingChatexistingChat");
+    
     if(existingChat?.workingHours?.startTime){
       const currentTime = new Date();
       const chatStartTime = new Date(existingChat?.workingHours?.startTime);
@@ -320,22 +323,15 @@ router.post("/getwhatsappmessages", async (req, res) => {
       }
       // }
     }
-    if(message?.type === "interactive"){
-      const department = message?.interactive?.list_reply?.id;
-      const updateChat = await ChatModel.findOneAndUpdate(
-        { _id: existingChat._id },
-        { department },
-        { new: true }
-      )
-      console.log(updateChat,"updateChatshubb");
-      
-    }
+    console.log(message,"messagemessage");
+    
+    
 
     const mess = {
       chatId: existingChat?._id,
       sender: user?._id,
       sendType: "user",
-      content: message.text?.body,
+      content: message.text?.body||message?.interactive?.list_reply?.title,
       attachments: attachment,
       timestamp: new Date(),
       receiver: null,
@@ -376,6 +372,38 @@ router.post("/getwhatsappmessages", async (req, res) => {
     )
       .populate("customerId")
       .lean();
+      let selectionMess = null;
+      if(message?.type === "interactive"){
+        const department = message?.interactive?.list_reply?.id;
+        const updateChat = await ChatModel.findOneAndUpdate(
+          { _id: existingChat._id },
+          { department },
+          { new: true }
+        )
+        console.log(updateChat,"updateChatshubb");
+        const mess = {
+          chatId: existingChat?._id,
+          sender: null,
+          sendType: "assistant",
+          content: `How can I help you about ${message?.interactive?.list_reply?.title}`,
+          attachments: [],
+          timestamp: new Date(),
+          receiver: updateChat?.customerId?.toString(),
+          receiverType: "user",
+        };
+    
+        const newMessage = new MessageModel(mess);
+        const final = await newMessage.save();
+        selectionMess = final;
+        await sendWhatsAppMessage(
+          // Call sendWhatsAppMessage
+          messageSender,
+          undefined,
+          undefined,
+          undefined,
+          `How can I help you about ${message?.interactive?.list_reply?.title}`
+        );
+      }
 
     const receivers = await UserModel.find({
       $or: [
@@ -392,6 +420,9 @@ router.post("/getwhatsappmessages", async (req, res) => {
       extractedTextMess && socketObj.io
         .to(receiver._id?.toString())
         .emit("message", { ...updatedChat, latestMessage: extractedTextMess });
+      selectionMess && socketObj.io
+        .to(receiver._id?.toString())
+        .emit("message", { ...updatedChat, latestMessage: selectionMess });
     });
 
     switch (message.type) {
