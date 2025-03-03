@@ -36,17 +36,28 @@ const s3 = {
             }
         });
     },
-    uploadPublic: (file, fileName, folder = "folderName") => {
+    uploadPublic: (file, contentType, fileName, folder = "folderName") => {
         return new Promise((resolve, reject) => {
             try {
                 const readStream = fs.createReadStream(file);
+                console.log(contentType, "contentType123");
 
                 const params = {
                     Bucket: environment.s3bucket.public,
                     Key: `${folder}/${fileName}`,
                     Body: readStream,
-                    ACL: "bucket-owner-full-control",
+                    ContentType: contentType,
+                    ContentDisposition: 'inline',
+                    ACL: "public-read",
                 };
+                // const params = {
+                //     Bucket: bucketName,
+                //     Key: fileName,
+                //     Body: fileStream,
+                //     ContentType: 'image/png',  // Set correct content type
+                //     ContentDisposition: 'inline',  // Ensure it opens in browser
+                //     ACL: 'public-read'  // Make it publicly accessible
+                // };
 
                 s3bucket.upload(params, (err, data) => {
                     readStream.destroy();

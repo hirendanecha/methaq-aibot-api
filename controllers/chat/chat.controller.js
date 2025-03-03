@@ -185,6 +185,7 @@ const uploadDocument = async (req, res) => {
     const month = `${dayjs().year()}-${dayjs().month() + 1}`;
     const url = await s3.uploadPublic(
       npath,
+      uploadFile?.mimetype,
       `${uploadFile?.filename}`,
       `ChatDocuments/${month}`
     );
@@ -254,7 +255,7 @@ const whatsappMessages = async (req, res) => {
         receiverType: "admin",
         content: message.text?.body,
       };
-      sendMessageToAdmins(mess2, newChat?.department);
+      sendMessageToAdmins(socketObj, mess2, newChat?.department);
 
       const departments = await fetchDepartmentsAndPrompts();
       console.log(departments, "departments");
@@ -288,7 +289,7 @@ const whatsappMessages = async (req, res) => {
         interectiveMessageDetails
       );
 
-      sendMessageToAdmins(intmessage, null);
+      sendMessageToAdmins(socketObj, intmessage, null);
     } else {
       console.log(message, "message for checking");
 
@@ -313,13 +314,13 @@ const whatsappMessages = async (req, res) => {
           content: "",
           attachments: [url],
         };
-        sendMessageToAdmins(mess1, existingChat?.department?._id);
-        const isDepartmentSelected = await sendInterectiveMessageConfirmation(existingChat, messageSender, messageID);
+        sendMessageToAdmins(socketObj, mess1, existingChat?.department?._id);
+        const isDepartmentSelected = await sendInterectiveMessageConfirmation(socketObj, existingChat, messageSender, messageID);
         if (!isDepartmentSelected) {
           return;
         }
         const isAvailable = await checkDepartmentAvailability(
-          existingChat, messageSender
+          socketObj, existingChat, messageSender
         );
         if (!isAvailable) {
           return;
@@ -336,7 +337,7 @@ const whatsappMessages = async (req, res) => {
           receiverType: "user",
           content: userInputmessage,
         };
-        sendMessageToAdmins(mess2, existingChat?.department?._id);
+        sendMessageToAdmins(socketObj, mess2, existingChat?.department?._id);
         await sendWhatsAppMessage(
           messageSender,
           undefined,
@@ -355,13 +356,13 @@ const whatsappMessages = async (req, res) => {
         };
         console.log(mess, "message from userside");
 
-        sendMessageToAdmins(mess, existingChat?.department?._id);
-        const isDepartmentSelected = await sendInterectiveMessageConfirmation(existingChat, messageSender, messageID);
+        sendMessageToAdmins(socketObj, mess, existingChat?.department?._id);
+        const isDepartmentSelected = await sendInterectiveMessageConfirmation(socketObj, existingChat, messageSender, messageID);
         if (!isDepartmentSelected) {
           return;
         }
         const isAvailable = await checkDepartmentAvailability(
-          existingChat, messageSender
+          socketObj, existingChat, messageSender
         );
         if (!isAvailable) {
           return;
@@ -390,7 +391,7 @@ const whatsappMessages = async (req, res) => {
             messageType: "tooltip",
             content: `Chat is transferred to ${assigneeAgent?.fullName}`,
           };
-          sendMessageToAdmins(mess, existingChat?.department?._id);
+          sendMessageToAdmins(socketObj, mess, existingChat?.department?._id);
         }
         if (!existingChat?.isHuman) {
           const userInput = message.text.body;
@@ -423,7 +424,7 @@ const whatsappMessages = async (req, res) => {
             receiver: existingChat?.customerId?.toString(),
             receiverType: "user",
           };
-          sendMessageToAdmins(mess, existingChat?.department?._id);
+          sendMessageToAdmins(socketObj, mess, existingChat?.department?._id);
           await sendWhatsAppMessage(
             messageSender,
             undefined,
@@ -450,7 +451,7 @@ const whatsappMessages = async (req, res) => {
           messageType: "text",
           content: `${message?.interactive?.list_reply?.title}\n${message?.interactive?.list_reply?.description}`,
         };
-        sendMessageToAdmins(mess1, existingChat?.department?._id);
+        sendMessageToAdmins(socketObj, mess1, existingChat?.department?._id);
         const mess2 = {
           chatId: existingChat?._id,
           sender: null,
@@ -460,9 +461,9 @@ const whatsappMessages = async (req, res) => {
           messageType: "tooltip",
           content: `Chat is transferred to ${message?.interactive?.list_reply?.title} department`,
         };
-        sendMessageToAdmins(mess2, existingChat?.department?._id);
+        sendMessageToAdmins(socketObj, mess2, existingChat?.department?._id);
         const isAvailable = await checkDepartmentAvailability(
-          existingChat, messageSender
+          socketObj, existingChat, messageSender
         );
         console.log(isAvailable, "isAvailable in interactive");
 
@@ -477,7 +478,7 @@ const whatsappMessages = async (req, res) => {
           receiver: existingChat?.customerId?.toString(),
           receiverType: "user",
         };
-        sendMessageToAdmins(mess3, existingChat?.department?._id);
+        sendMessageToAdmins(socketObj, mess3, existingChat?.department?._id);
         await sendWhatsAppMessage(
           // Call sendWhatsAppMessage
           messageSender,

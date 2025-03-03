@@ -5,7 +5,6 @@ const mammoth = require("mammoth");
 const DepartmentModel = require("../models/department.model");
 const UserModel = require("../models/user.model");
 const ChatModel = require("../models/chat.model");
-const socketObj = require("../helpers/socket.helper");
 const MessageModel = require("../models/message.model");
 const { sendWhatsAppMessage, sendInteractiveMessage } = require("../services/whatsaap.service");
 
@@ -269,7 +268,7 @@ const fetchDepartmentsAndPrompts = async () => {
     throw error;
   }
 };
-exports.sendMessageToAdmins = async (message, department) => {
+exports.sendMessageToAdmins = async (socketObj, message, department) => {
   try {
     const newMessage = new MessageModel(message);
     const latestMess = await newMessage.save();
@@ -297,7 +296,7 @@ exports.sendMessageToAdmins = async (message, department) => {
   }
 };
 
-exports.checkDepartmentAvailability = async (existingChat, messageSender) => {
+exports.checkDepartmentAvailability = async (socketObj, existingChat, messageSender) => {
   try {
     console.log(existingChat, "existingChat for asdfdaf");
 
@@ -324,7 +323,7 @@ exports.checkDepartmentAvailability = async (existingChat, messageSender) => {
           receiverType: "user",
           content: existingChat?.department?.messages?.afterHoursResponse,
         };
-        exports.sendMessageToAdmins(message, existingChat?.department?._id);
+        exports.sendMessageToAdmins(socketObj, message, existingChat?.department?._id);
         await sendWhatsAppMessage(
           messageSender,
           undefined,
@@ -388,7 +387,7 @@ exports.getAssigneeAgent = async (department) => {
   }
 }
 
-exports.sendInterectiveMessageConfirmation = async (existingChat, messageSender, messageID) => {
+exports.sendInterectiveMessageConfirmation = async (socketObj, existingChat, messageSender, messageID) => {
   try {
     if (!existingChat?.department) {
       const departments = await fetchDepartmentsAndPrompts();
@@ -423,7 +422,7 @@ exports.sendInterectiveMessageConfirmation = async (existingChat, messageSender,
         interectiveMessageDetails
       );
 
-      exports.sendMessageToAdmins(message, null);
+      exports.sendMessageToAdmins(socketObj, message, null);
 
       return false;
     }
@@ -431,4 +430,9 @@ exports.sendInterectiveMessageConfirmation = async (existingChat, messageSender,
   } catch (error) {
     throw error
   }
-} 
+}
+
+const imagesFormat = ['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp'];
+exports.isImageType = (attachment) => imagesFormat.some((format) =>
+  attachment?.toLowerCase?.().endsWith?.(format),
+);
