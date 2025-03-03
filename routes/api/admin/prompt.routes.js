@@ -11,6 +11,6 @@ const router = express.Router();
 router.get("/", promptCtrl.getAllPrompt);
 router.post("/", promptCtrl.addPrompt);
 router.put("/updatePrompt", promptCtrl.updatePrompt);
-router.delete("/:id", promptCtrl.deletePrompt);
+router.delete("/:department", promptCtrl.deletePrompt);
 
 module.exports = router;
