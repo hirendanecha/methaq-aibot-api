@@ -60,7 +60,7 @@ exports.addDepartment = async (req, res) => {
       const npathD = pathD.replaceAll("\\", "/");
 
       const month = `${dayjs().year()}-${dayjs().month() + 1}`;
-      const url = await s3.uploadPublic(npathD, `${fileData?.filename}`, `DepartmentLogos/${month}`);
+      const url = await s3.uploadPublic(npathD, fileData?.mimetype, `${fileData?.filename}`, `DepartmentLogos/${month}`);
       console.log(url, "url ");
 
       await files
@@ -101,7 +101,7 @@ exports.updateDepartment = async (req, res) => {
       const npathD = pathD.replaceAll("\\", "/");
 
       const month = `${dayjs().year()}-${dayjs().month() + 1}`;
-      const url = await s3.uploadPublic(npathD, `${fileData?.filename}`, `DepartmentLogos/${month}`);
+      const url = await s3.uploadPublic(npathD, fileData?.mimetype, `${fileData?.filename}`, `DepartmentLogos/${month}`);
       console.log(url, "url ");
 
       await files

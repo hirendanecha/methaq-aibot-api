@@ -169,6 +169,7 @@ async function downloadMedia(fileID) {
     const month = new Date().toLocaleString("default", { month: "long" });
     const url = await s3.uploadPublic(
       filePath,
+      fileType,
       `${fileName}`,
       `WhatsappImages/${month}`
     );
