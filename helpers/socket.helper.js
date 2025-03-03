@@ -6,6 +6,7 @@ const UserModel = require("../models/user.model");
 const { sendWhatsAppMessage } = require("../services/whatsaap.service");
 const environment = require("../utils/environment");
 const jwt = require("jsonwebtoken");
+const { getAssigneeAgent } = require("../utils/fn");
 
 let logger = console;
 const socketObj = {};
@@ -168,8 +169,7 @@ socketObj.config = (server) => {
     socket.on("transfer-bot", async (params, cb) => {
       params = typeof params === "string" ? JSON.parse(params) : params;
       const chatDetails = await ChatModel.findById(params.chatId).populate('customerId').lean();
-      console.log(chatDetails?.customerId,"chatDetails?.customerId");
-      
+      console.log(chatDetails?.customerId, "chatDetails?.customerId");
       const mess = {
         chatId: chatDetails?._id,
         sender: null,
@@ -183,7 +183,7 @@ socketObj.config = (server) => {
       }
       const newMessage = new MessageModel(mess)
       const final = await newMessage.save();
-      const updatedChat = await ChatModel.findOneAndUpdate({ _id: chatDetails?._id }, { latestMessage: final?._id,isHuman: false,adminId: null }, { new: true }).lean();
+      const updatedChat = await ChatModel.findOneAndUpdate({ _id: chatDetails?._id }, { latestMessage: final?._id, isHuman: false, adminId: null }, { new: true }).lean();
       const receivers = await UserModel.find({ $or: [{ role: { $in: ["Admin", "Supervisor"] } }, { _id: { $in: [chatDetails?.customerId?._id?.toString()] } }] });
       receivers.forEach(receiver => {
         socketObj.io.to(receiver._id?.toString()).emit("update-chat", updatedChat);
@@ -344,23 +344,9 @@ socketObj.config = (server) => {
           }
         }
         else {
-          const assignedChats = await ChatModel?.find({ adminId: { $in: agents?.map((agent) => agent?._id) } })
-          const assignedChatCounts = {};
-          assignedChats?.map((chat) => {
-            assignedChatCounts[chat?.adminId?.toString()] = (assignedChatCounts[chat?.adminId?.toString()] || 0) + 1;
-          })
-          console.log(assignedChats, assignedChatCounts, "dgfdgfdg");
 
-          let finalAgent = "";
-          Object.keys(assignedChatCounts)?.map((chat) => {
-            if (!finalAgent) {
-              finalAgent = chat;
-            }
-            if (assignedChatCounts[chat] < assignedChatCounts[finalAgent]) {
-              finalAgent = chat
-            }
-          })
-          console.log(finalAgent, "finalAgent");
+          const assigneeAgent = await getAssigneeAgent(department)
+          console.log(assigneeAgent, "assigneeAgent");
 
           chat.adminId = finalAgent || agents[0]?._id;
           chat.department = department;
@@ -454,6 +440,7 @@ socketObj.config = (server) => {
       try {
         const { chatId } = typeof params === "string" ? JSON.parse(params) : params;
         const chat = await ChatModel.findById(chatId).populate("adminId department").lean();
+        console.log(chatId, chat, "desdgsfdg");
 
         if (!chat) {
           return res.status(404).json({ error: "Chat not found" });
@@ -472,13 +459,16 @@ socketObj.config = (server) => {
         }
         const newMessage = new MessageModel(mess)
         const final = await newMessage.save();
-        const updatedChat = await ChatModel.findOneAndUpdate({ _id: chatId }, { latestMessage: final?._id, status: "archived" }, { new: true }).lean();
+        const updatedChat = await ChatModel.findOneAndUpdate({ _id: chatId }, { latestMessage: final?._id, adminId: null, isHuman: false, status: "archived" }, { new: true })?.populate("adminId customerId").lean();
         const receivers = await UserModel.find({ $or: [{ role: { $in: ["Admin", "Supervisor"] } }, { _id: { $in: [chat?.customerId?.toString()] } }] });
         receivers.forEach(receiver => {
           socketObj.io.to(receiver._id?.toString()).emit("update-chat", updatedChat);
           socketObj.io.to(receiver._id?.toString()).emit("message", { ...updatedChat, latestMessage: final });
         })
-
+        if (updatedChat?.source === 'whatsapp') {
+          console.log("zvdgsdfsdf", final?.content, chat?.customerId?.phone);
+          sendWhatsAppMessage(updatedChat?.customerId?.phone, undefined, undefined, undefined, chat?.department?.messages?.chatClosingMessage || `Chat archived by ${chat?.adminId?.fullName}`, updatedChat?.isHuman)
+        }
         if (typeof cb === "function")
           cb({
             message: "Chat archived successfully."

@@ -5,7 +5,7 @@ const { PineconeStore } = require("@langchain/pinecone");
 const { Pinecone } = require("@pinecone-database/pinecone");
 const environment = require("../../utils/environment");
 const ChatModel = require("../../models/chat.model");
-const { fetchDepartmentsAndPrompts } = require("../../utils/fn");
+const DepartmentModel = require("../../models/department.model.js");
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
@@ -25,6 +25,16 @@ ${userInput}
 
 `;
 }
+
+const fetchDepartmentsAndPrompts = async () => {
+  try {
+    const departments = await DepartmentModel.find().lean();
+    return departments;
+  } catch (error) {
+    console.error("Error fetching departments and prompts:", error);
+    throw error;
+  }
+};
 
 async function detectDepartment(message, departments) {
   // Extract department names
@@ -80,18 +90,22 @@ async function generateAIResponse(context, userInput, chatDetails) {
   try {
 
     const departmentsData = await fetchDepartmentsAndPrompts();
+    console.log(departmentsData, "departmentsData");
 
     const detectedDepartment = await detectDepartment(
       userInput,
-      departmentsData.data
+      departmentsData
     );
+    console.log(detectedDepartment, "detectedDepartment");
+
     const updatedChat = await ChatModel.findOneAndUpdate(
       { _id: chatDetails._id },
-      { department: detectedDepartment._id },
+      { department: detectedDepartment?._id || null },
       { new: true }
     )
-    const promptTemplate =
-      detectedDepartment.prompts[0]?.prompt
+    const promptTemplate = detectedDepartment.prompt
+    console.log(promptTemplate, "promptTemplate");
+
     const prompt = buildDynamicPrompt(promptTemplate, context, userInput);
     const response = await openai.chat.completions.create({
       messages: [

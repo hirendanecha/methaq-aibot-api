@@ -7,7 +7,7 @@ const UserModel = require("../models/user.model");
 const ChatModel = require("../models/chat.model");
 const socketObj = require("../helpers/socket.helper");
 const MessageModel = require("../models/message.model");
-const { sendWhatsAppMessage } = require("../services/whatsaap.service");
+const { sendWhatsAppMessage, sendInteractiveMessage } = require("../services/whatsaap.service");
 
 const baseUrl = "";
 exports.removeFile = (fileName) => {
@@ -260,7 +260,7 @@ exports.extractTextFromFile = async (file) => {
     throw new Error("Unsupported file type.");
   }
 };
-exports.fetchDepartmentsAndPrompts = async () => {
+const fetchDepartmentsAndPrompts = async () => {
   try {
     const departments = await DepartmentModel.find().lean();
     return departments;
@@ -299,8 +299,8 @@ exports.sendMessageToAdmins = async (message, department) => {
 
 exports.checkDepartmentAvailability = async (existingChat, messageSender) => {
   try {
-    console.log(existingChat,"existingChat for asdfdaf");
-    
+    console.log(existingChat, "existingChat for asdfdaf");
+
     if (existingChat?.department?.workingHours?.startTime) {
       const currentHour = Number(
         new Date().toLocaleString("en-US", {
@@ -311,10 +311,10 @@ exports.checkDepartmentAvailability = async (existingChat, messageSender) => {
       );
       const startHour = parseInt(existingChat?.department?.workingHours?.startTime.split(":")[0]);
       const endHour = parseInt(existingChat?.department?.workingHours?.endTime.split(":")[0]);
-      console.log(currentHour,"currentHour");
-      console.log(startHour,"startHour");
-      console.log(endHour,"endHour");
-      
+      console.log(currentHour, "currentHour");
+      console.log(startHour, "startHour");
+      console.log(endHour, "endHour");
+
       if (currentHour < startHour || currentHour > endHour) {
         const message = {
           chatId: existingChat?._id,
@@ -344,11 +344,11 @@ exports.checkDepartmentAvailability = async (existingChat, messageSender) => {
 
 exports.getAssigneeAgent = async (department) => {
   try {
-    console.log(department,"department in fun");
-    
+    console.log(department, "department in fun");
+
     const result = await UserModel.aggregate([
       // Step 1: Match agents based on the department
-      { $match: { department: department,role:"Agent" } },
+      { $match: { department: department, role: "Agent" } },
 
       // Step 2: Join with the 'Chat' collection to count chats per agent
       {
@@ -367,9 +367,9 @@ exports.getAssigneeAgent = async (department) => {
         }
       },
     ]);
-    console.log(result,"resultresultresult");
-    
-    if(result?.length > 0){
+    console.log(result, "resultresultresult");
+
+    if (result?.length > 0) {
       let finalAgent = result[0];
       result.map((agent) => {
         if (agent?.chatCount < finalAgent?.chatCount) {
@@ -378,12 +378,57 @@ exports.getAssigneeAgent = async (department) => {
       })
       return finalAgent;
     }
-    else{
+    else {
       return null;
     }
-    
-  }catch (error) {
+
+  } catch (error) {
     console.error("Error getting assignee agent:", error);
     throw error;
   }
 }
+
+exports.sendInterectiveMessageConfirmation = async (existingChat, messageSender, messageID) => {
+  try {
+    if (!existingChat?.department) {
+      const departments = await fetchDepartmentsAndPrompts();
+      console.log(departments, "departments");
+
+      const interectiveMessageDetails = {
+        options: departments,
+        headerText: "Insurance Options",
+        bodyText:
+          "Hello! 👋 How can I assist you today with your insurance needs? Please select a department:",
+        actionButtonText: "Select Department",
+        actionSectionTitle: "Departments",
+      };
+      const message = {
+        chatId: existingChat?._id?.toString(),
+        sender: null,
+        receiver: existingChat?.customerId?.toString(),
+        sendType: "assistant",
+        receiverType: "user",
+        content:
+          "Hello! 👋 How can I assist you today with your insurance needs? Please select a department:",
+        messageType: "interective",
+        messageOptions: departments?.map((department) => ({
+          label: department.name,
+          value: department._id,
+        })),
+      };
+
+      sendInteractiveMessage(
+        messageSender,
+        messageID,
+        interectiveMessageDetails
+      );
+
+      exports.sendMessageToAdmins(message, null);
+
+      return false;
+    }
+    return true;
+  } catch (error) {
+    throw error
+  }
+} 

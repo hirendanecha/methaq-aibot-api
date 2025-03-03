@@ -28,13 +28,24 @@ const UserModel = require("../../models/user.model");
 const { Pinecone } = require("@pinecone-database/pinecone");
 const environment = require("../../utils/environment");
 const {
-  fetchDepartmentsAndPrompts,
   sendMessageToAdmins,
   checkDepartmentAvailability,
   getAssigneeAgent,
+  sendInterectiveMessageConfirmation,
 } = require("../../utils/fn");
 const pinecone = new Pinecone({ apiKey: environment.pinecone.apiKey });
 const socketObj = require("../../helpers/socket.helper");
+const DepartmentModel = require("../../models/department.model");
+
+const fetchDepartmentsAndPrompts = async () => {
+  try {
+    const departments = await DepartmentModel.find().lean();
+    return departments;
+  } catch (error) {
+    console.error("Error fetching departments and prompts:", error);
+    throw error;
+  }
+};
 // Store chat message
 const storeChat = async (req, res) => {
   try {
@@ -235,6 +246,16 @@ const whatsappMessages = async (req, res) => {
       const newChat = await chat.save();
       console.log(chat, "new chatu");
 
+      const mess2 = {
+        chatId: newChat?._id?.toString(),
+        sender: newChat?.customerId?.toString(),
+        receiver: null,
+        sendType: "user",
+        receiverType: "admin",
+        content: message.text?.body,
+      };
+      sendMessageToAdmins(mess2, newChat?.department);
+
       const departments = await fetchDepartmentsAndPrompts();
       console.log(departments, "departments");
 
@@ -246,7 +267,7 @@ const whatsappMessages = async (req, res) => {
         actionButtonText: "Select Department",
         actionSectionTitle: "Departments",
       };
-      const message = {
+      const intmessage = {
         chatId: newChat._id,
         sender: null,
         receiver: updatedCus._id,
@@ -267,21 +288,17 @@ const whatsappMessages = async (req, res) => {
         interectiveMessageDetails
       );
 
-      sendMessageToAdmins(message, null);
+      sendMessageToAdmins(intmessage, null);
     } else {
-      console.log(message,"message for checking");
-      
+      console.log(message, "message for checking");
+
       let existingChat = await ChatModel.findOne({
         customerId: user?._id,
       }).populate("department");
       if (!existingChat) {
         return;
       }
-
-      console.log(
-        existingChat?.department?.workingHours?.startTime,
-        "existingChatexistingChat"
-      );
+      console.log(existingChat, "existingChatexistingChat");
 
       if (message.type === "image" || message.type === "document") {
         const mediaID = message.image?.id || message.document?.id; // Get the media ID from the message
@@ -297,8 +314,12 @@ const whatsappMessages = async (req, res) => {
           attachments: [url],
         };
         sendMessageToAdmins(mess1, existingChat?.department?._id);
+        const isDepartmentSelected = await sendInterectiveMessageConfirmation(existingChat, messageSender, messageID);
+        if (!isDepartmentSelected) {
+          return;
+        }
         const isAvailable = await checkDepartmentAvailability(
-          existingChat,messageSender
+          existingChat, messageSender
         );
         if (!isAvailable) {
           return;
@@ -332,11 +353,15 @@ const whatsappMessages = async (req, res) => {
           receiverType: "admin",
           content: message.text?.body,
         };
-        console.log(mess,"message from userside");
-        
+        console.log(mess, "message from userside");
+
         sendMessageToAdmins(mess, existingChat?.department?._id);
+        const isDepartmentSelected = await sendInterectiveMessageConfirmation(existingChat, messageSender, messageID);
+        if (!isDepartmentSelected) {
+          return;
+        }
         const isAvailable = await checkDepartmentAvailability(
-          existingChat,messageSender
+          existingChat, messageSender
         );
         if (!isAvailable) {
           return;
@@ -409,7 +434,7 @@ const whatsappMessages = async (req, res) => {
         }
       } else if (message?.type === "interactive") {
         console.log(message, "message in interactive");
-        
+
         const department = message?.interactive?.list_reply?.id;
         existingChat = await ChatModel.findOneAndUpdate(
           { _id: existingChat._id },
@@ -437,10 +462,10 @@ const whatsappMessages = async (req, res) => {
         };
         sendMessageToAdmins(mess2, existingChat?.department?._id);
         const isAvailable = await checkDepartmentAvailability(
-          existingChat,messageSender
+          existingChat, messageSender
         );
-        console.log(isAvailable,"isAvailable in interactive");
-        
+        console.log(isAvailable, "isAvailable in interactive");
+
         if (!isAvailable) {
           return;
         }
@@ -462,127 +487,6 @@ const whatsappMessages = async (req, res) => {
           `How can I help you about ${message?.interactive?.list_reply?.title}`
         );
       }
-
-      // switch (message.type) {
-      //   case "text":
-      //     const user = await CustomerModel.findOne({ phone: messageSender });
-      //     //console.log(user, "gdfgdfgfg");
-
-      //     let chatDddd = user?._id
-      //       ? await ChatModel.findOne({ customerId: user._id }).lean()
-      //       : null;
-      //     if (!chatDddd?.isHuman) {
-      //       const userInput = message.text.body;
-
-      //       const embeddings = new OpenAIEmbeddings({
-      //         openAIApiKey: process.env.OPENAI_API_KEY,
-      //       });
-      //       const index = pinecone.Index(environment.pinecone.indexName);
-      //       const vectorStore = await PineconeStore.fromExistingIndex(
-      //         embeddings,
-      //         {
-      //           //@ts-ignore
-      //           pineconeIndex: index,
-      //         }
-      //       );
-
-      //       const results = await vectorStore.similaritySearch(userInput, 5);
-      //       let context = results.map((r) => r.pageContent).join("\n\n");
-      //       const response = await generateAIResponse(
-      //         context,
-      //         userInput,
-      //         chatDddd
-      //       );
-      //       console.log(response, "messageSendermessageSender");
-      //       const mess = {
-      //         chatId: chatDddd._id,
-      //         sender: chatDddd?.customerId?.toString(),
-      //         sendType: "assistant",
-      //         content: response,
-      //         attachments: [],
-      //         timestamp: new Date(),
-      //         receiver: null,
-      //         receiverType: "user",
-      //       };
-      //       const newMessage = new MessageModel(mess);
-      //       const final = await newMessage.save();
-      //       const updatedChat = await ChatModel.findOneAndUpdate(
-      //         { _id: chatDddd._id },
-      //         { latestMessage: final?._id },
-      //         { new: true }
-      //       )
-      //         .populate("customerId")
-      //         .lean();
-      //       const receivers = await UserModel.find({
-      //         $or: [
-      //           { role: { $in: ["Admin", "Supervisor"] } },
-      //           { _id: updatedChat?.adminId },
-      //         ],
-      //       }).lean();
-      //       [...receivers].forEach((receiver) => {
-      //         socketObj.io
-      //           .to(receiver._id?.toString())
-      //           .emit("message", { ...updatedChat, latestMessage: final });
-      //       });
-
-      //       // await sendImageByUrl(messageSender, "hhsh", messageID, response);
-      //       await sendWhatsAppMessage(
-      //         // Call sendWhatsAppMessage
-      //         messageSender,
-      //         context,
-      //         messageID,
-      //         displayPhoneNumber,
-      //         response
-      //       );
-      //     }
-      //     break;
-
-      //   // case "image":
-      //   //   const mediaID = message.image.id; // Get the media ID from the message
-
-      //   //   // Call the downloadMedia function to handle the image download
-      //   //   const downloadResult = await downloadMedia(mediaID);
-      //   //   // console.log("downloadResult", downloadResult);
-      //   //   const { url, extractedText } = downloadResult.data;
-
-      //   //   // sendImageByUrl(messageSender,"hhsh",messageID,url);
-      //   //   // sendDocByUrl(messageSender,"hhsh",messageID,url);
-      //   //   console.log("Starting image analysis...", extractedText);
-      //   //   const userInputmessage = await isDocumentRequest(extractedText);
-      //   //   await sendWhatsAppMessage(
-      //   //     // Call sendWhatsAppMessage
-      //   //     messageSender,
-      //   //     undefined,
-      //   //     messageID,
-      //   //     displayPhoneNumber,
-      //   //     userInputmessage
-      //   //   );
-      //   //   console.log("Image analysis completed.", userInputmessage);
-
-      //   //   console.log("Marking message as read...");
-      //   //   //await markMessageAsRead(messageID);
-      //   //   console.log("Message marked as read.");
-      //   //   if (downloadResult.status === "success") {
-      //   //     console.log("Image downloaded successfully:");
-      //   //   } else {
-      //   //     console.error("Error downloading the image:");
-      //   //   }
-
-      //   //   break;
-
-      //   case "video":
-      //   case "location":
-      //   case "unsupported":
-      //   case "contacts":
-      //     const formalMessage =
-      //       "We are sorry, but we cannot process this type of content.";
-      //     await sendWhatsAppMessageFromalMessage(
-      //       messageSender,
-      //       messageID,
-      //       formalMessage
-      //     );
-      //     break;
-      // }
     }
 
     return res.status(200).send("Message processed"); // Added response for successful processing
