@@ -28,7 +28,7 @@ const updatePrompt = async (req, res) => {
   const { department, prompt } = req.body;
   try {
     const updatedPrompt = await DepartmentModel.findByIdAndUpdate(
-      department,
+      new mongoose.Types.ObjectId(department),
       { prompt },
       { new: true }
     );
@@ -41,7 +41,7 @@ const updatePrompt = async (req, res) => {
 const deletePrompt = async (req, res) => {
   const { department } = req.params;
   try {
-    await DepartmentModel.findByIdAndDelete(department, {
+    await DepartmentModel.findByIdAndDelete(new mongoose.Types.ObjectId(department), {
       prompt: ""
     }, {
       new: true

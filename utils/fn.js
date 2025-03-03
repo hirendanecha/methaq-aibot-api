@@ -280,7 +280,7 @@ exports.sendMessageToAdmins = async (socketObj, message, department) => {
     }).lean();
     const updatedChat = await ChatModel.findOneAndUpdate(
       { _id: message?.chatId },
-      { latestMessage: latestMess?._id },
+      { latestMessage: latestMess?._id, status: "active" },
       { new: true }
     )
       .populate("adminId customerId")
