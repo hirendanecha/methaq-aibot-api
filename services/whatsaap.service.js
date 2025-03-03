@@ -11,6 +11,7 @@ const {
   writeFileSync,
   createReadStream,
 } = require("fs");
+const DepartmentModel = require("../models/department.model");
 
 url = `https://graph.facebook.com/${process.env.WHATSAPP_CLOUD_API_VERSION}/${process.env.WHATSAPP_CLOUD_API_PHONE_NUMBER_ID}/messages`;
 
@@ -42,17 +43,7 @@ const sendWhatsAppMessage = async (
   messageID,
   displayPhoneNumber,
   userInput,
-  isHumanReal
 ) => {
-  //console.log(userInput, "isHumanReal");
-
-  // console.log(isHumanReal, "isHumanReal");
-
-
-  // const isHuman = isHumanReal ? true : await isHumanChatRequest(userInput);
-  // console.log(isHuman, "isHuman");
-
-  if (isHumanReal) {
     const data = JSON.stringify({
       messaging_product: "whatsapp",
       recipient_type: "individual",
@@ -73,30 +64,6 @@ const sendWhatsAppMessage = async (
       },
     });
     await markMessageAsRead(messageID);
-  } else {
-    // const response = await generateAIResponse(context, userInput);
-
-    const data = JSON.stringify({
-      messaging_product: "whatsapp",
-      recipient_type: "individual",
-      to: messageSender,
-      // context: {
-      //   message_id: messageID,
-      // },
-      type: "text",
-      text: {
-        preview_url: false,
-        body: userInput,
-      },
-    });
-    await axios.post(url, data, {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${environment.whatsaap.whatAuthT}`,
-      },
-    });
-    await markMessageAsRead(messageID);
-  }
 };
 
 const sendWhatsAppMessageFromalMessage = async (
@@ -337,20 +304,6 @@ async function downloadMedia(fileID) {
 //   }
 // };
 
-async function fetchDepartmentsAndPrompts() {
-  try {
-    const response = await fetch(
-      "https://methaq-aibot-api.opash.in/api/public/department/departments-with-prompt"
-    );
-    if (!response.ok) {
-      throw new Error("Failed to fetch departments and prompts");
-    }
-    return response.json();
-  } catch (error) {
-    console.error("Error fetching departments and prompts:", error);
-    throw error;
-  }
-}
 // const sendInteractiveMessage = async (messageSender) => {
 //   const config = {
 //     headers: {
@@ -443,7 +396,7 @@ async function fetchDepartmentsAndPrompts() {
 //     return "Axle broke!! Error Sending Image!!";
 //   }
 // };
-const sendInteractiveMessage = async (messageSender,messageID) => {
+const sendInteractiveMessage = async (messageSender,messageID,payload) => {
   const config = {
     headers: {
       'Content-Type': 'application/json',
@@ -451,34 +404,34 @@ const sendInteractiveMessage = async (messageSender,messageID) => {
     },
   };
 
-  const departmentsData = await fetchDepartmentsAndPrompts(); // Assuming this fetches data correctly
-  const dummyDepartments = [
-    { _id: "dummy_1", name: "Dummy Department 1" },
-    { _id: "dummy_2", name: "Dummy Department 2" },
-    { _id: "dummy_3", name: "Dummy Department 3" },
-    { _id: "dummy_4", name: "Dummy Department 4" },
-    { _id: "dummy_5", name: "Dummy Department 5" },
-  ];
-  const combinedDepartments = [...departmentsData.data];
+  // const departmentsData = await fetchDepartmentsAndPrompts(); // Assuming this fetches data correctly
+  // const dummyDepartments = [
+  //   { _id: "dummy_1", name: "Dummy Department 1" },
+  //   { _id: "dummy_2", name: "Dummy Department 2" },
+  //   { _id: "dummy_3", name: "Dummy Department 3" },
+  //   { _id: "dummy_4", name: "Dummy Department 4" },
+  //   { _id: "dummy_5", name: "Dummy Department 5" },
+  // ];
+  // const combinedDepartments = [...departmentsData.data];
 
   const interactivePayload = {
     type: "list",
     header: {
       type: "text",
-      text: "Insurance Options", // Header for the list
+      text: payload?.headerText, // Header for the list
     },
     body: {
-      text: "Hello! 👋 How can I assist you today with your insurance needs? Please select a department:",
+      text: payload?.bodyText,
     },
     action: {
-      button: "Select Department", // Button text to open the list
+      button: payload?.actionButtonText, // Button text to open the list
       sections: [
         {
-          title: "Departments", // Section title
-          rows: combinedDepartments.map((department) => ({
-            id: department._id,
-            title: department.name,
-            description: `let's discuss about ${department.name}`, // Optional description
+          title: payload?.actionSectionTitle, // Section title
+          rows: payload?.options.map((op) => ({
+            id: op?._id,
+            title: op?.name,
+            description: `let's discuss about ${op?.name}`, // Optional description
           })),
         },
       ],
