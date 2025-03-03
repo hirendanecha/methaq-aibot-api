@@ -5,25 +5,12 @@ const { PineconeStore } = require("@langchain/pinecone");
 const { Pinecone } = require("@pinecone-database/pinecone");
 const environment = require("../../utils/environment");
 const ChatModel = require("../../models/chat.model");
+const { fetchDepartmentsAndPrompts } = require("../../utils/fn");
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
 const pinecone = new Pinecone({ apiKey: environment.pinecone.apiKey });
-async function fetchDepartmentsAndPrompts() {
-  try {
-    const response = await fetch(
-      "https://methaq-aibot-api.opash.in/api/public/department/departments-with-prompt"
-    );
-    if (!response.ok) {
-      throw new Error("Failed to fetch departments and prompts");
-    }
-    return response.json();
-  } catch (error) {
-    console.error("Error fetching departments and prompts:", error);
-    throw error;
-  }
-}
 
 
 function buildDynamicPrompt(agent, context, userInput) {
@@ -89,7 +76,7 @@ async function detectDepartment(message, departments) {
   };
 }
 
-async function generateAIResponse(context, userInput,chatDetails) {
+async function generateAIResponse(context, userInput, chatDetails) {
   try {
 
     const departmentsData = await fetchDepartmentsAndPrompts();
