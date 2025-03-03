@@ -408,7 +408,17 @@ const whatsappMessages = async (req, res) => {
             }
           );
 
-          const results = await vectorStore.similaritySearch(userInput, 5);
+          // const results = await vectorStore.similaritySearch(userInput, 5);
+          const results = await vectorStore.similaritySearch(
+            (query = userInput),
+            (k = 5),
+            (filter = {
+              departmentName: { $eq: existingChat?.department?.name },
+            }),
+            include_metadata = true
+          );
+          console.log(results, "resilrrfsgd");
+
           let context = results.map((r) => r.pageContent).join("\n\n");
           const response = await generateAIResponse(
             context,

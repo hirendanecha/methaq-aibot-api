@@ -14,15 +14,26 @@ async function isHumanChatRequest(message) {
   });
 
   const prompt = `
-    You are a chatbot assistant. Your task is to determine if a user's message indicates a desire to speak with a human agent.
-    
-    First, translate the following message to English if it is not already in English.
-    
-    Then, analyze the translated message and respond with ONLY "true" or "false" (lowercase, no quotes) depending on whether the message suggests the user wants human assistance. Do not provide any other text or explanation.
-    
-    Message: ${lowerCaseMessage}
-    
-    Respond with only "true" or "false".
+   You are a chatbot assistant designed to determine if a user's message indicates a desire to speak with a human agent.
+
+First, translate the following message to English if it is not already in English.
+
+Then, analyze the translated message to determine if the user is expressing a need or desire for human assistance. Consider the following:
+
+* Does the message contain keywords or phrases related to:
+    * Speaking with a human, agent, representative, person, customer service, support, or a real person?
+    * Escalating the issue or needing help beyond automated responses?
+    * Asking to be transferred to a human?
+* Does the user's tone or context suggest frustration, confusion, or a need for specialized assistance?
+* Is the user requesting help that a bot can not provide?
+
+Focus on understanding the user's intent, not just the literal words. Be tolerant of variations in phrasing and potential misspellings.
+
+Respond with ONLY "true" (lowercase) if the message indicates a desire for human assistance. Otherwise, respond with ONLY "false" (lowercase). Do not provide any other text or explanation.
+
+Message: ${lowerCaseMessage}
+
+Respond with only "true" or "false".
     `;
   try {
     const response = await openai.invoke([{ role: "user", content: prompt }]);
