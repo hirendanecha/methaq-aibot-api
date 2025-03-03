@@ -2,7 +2,11 @@ const fs = require("fs");
 const path = require("path");
 const pdfParse = require("pdf-parse");
 const mammoth = require("mammoth");
-
+const DepartmentModel = require("../models/department.model");
+const UserModel = require("../models/user.model");
+const ChatModel = require("../models/chat.model");
+const MessageModel = require("../models/message.model");
+const { sendWhatsAppMessage, sendInteractiveMessage } = require("../services/whatsaap.service");
 
 const baseUrl = "";
 exports.removeFile = (fileName) => {
@@ -20,7 +24,7 @@ exports.removeFile = (fileName) => {
 };
 
 exports.paginatedArray = (array, size = 10, page = 1) => {
-  const startIndex = (page && size) ? ((+page - 1) * +size) : 0;
+  const startIndex = page && size ? (+page - 1) * +size : 0;
   const endIndex = size ? startIndex + +size : array.length;
   const totalPages = Math.ceil(array?.length / +size);
   const docs = array?.slice(startIndex, endIndex);
@@ -30,10 +34,10 @@ exports.paginatedArray = (array, size = 10, page = 1) => {
       totalItems: array?.length,
       totalPages: totalPages,
       currentPage: +page,
-      pageSize: +size
-    }
-  }
-}
+      pageSize: +size,
+    },
+  };
+};
 
 exports.getPagination = (page, size) => {
   const limit = size ? +size : 10;
@@ -63,19 +67,19 @@ exports.getCount = async (Model, condition = null) => {
 
 const _get = (obj, path, defValue) => {
   // If path is not defined or it has false value
-  if (!path) return undefined
+  if (!path) return undefined;
   // Check if path is string or array. Regex : ensure that we do not have '.' and brackets.
   // Regex explained: https://regexr.com/58j0k
-  const pathArray = Array.isArray(path) ? path : path.match(/([^[.\]])+/g)
+  const pathArray = Array.isArray(path) ? path : path.match(/([^[.\]])+/g);
   // Find value
   const result = pathArray.reduce(
     (prevObj, key) => prevObj && prevObj[key],
     obj
-  )
+  );
   // If found value is undefined return default value; otherwise return the value
   console.log(result, "res");
-  return result === undefined ? defValue : result
-}
+  return result === undefined ? defValue : result;
+};
 
 exports.getCountA = async (Model, condition = null, aggregate = null) => {
   if (condition && !aggregate) {
@@ -84,15 +88,15 @@ exports.getCountA = async (Model, condition = null, aggregate = null) => {
     const merged = aggregate.reduce((r, c) => Object.assign(r, c), {});
 
     // let newAggregate = _.keys(merged).includes('$match') ? aggregate : [];
-    let _keys = Object.keys
-    let _filter = (inp, fn) => inp.filter(fn)
+    let _keys = Object.keys;
+    let _filter = (inp, fn) => inp.filter(fn);
     let newAggregate = _filter(
       aggregate,
       (a) => !["$sort", "$skip", "$limit"].includes(_keys(a).shift())
     );
     const count = await Model.aggregate(newAggregate).count("count");
     const result = _get(count, "[0].count", 0);
-    return result
+    return result;
   } else {
     return await Model.estimatedDocumentCount();
   }
@@ -158,8 +162,8 @@ exports.isNumber = (number) => {
 };
 
 exports.sleep = (ms) => {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
+  return new Promise((resolve) => setTimeout(resolve, ms));
+};
 
 exports.fileToBlob = (filePath) => {
   return new Promise((resolve, reject) => {
@@ -173,7 +177,7 @@ exports.fileToBlob = (filePath) => {
       resolve(blob);
     });
   });
-}
+};
 
 exports.formatNumber = (number) => {
   return new Intl.NumberFormat("ar-AE", {
@@ -190,26 +194,28 @@ exports.formatNumberWithDecimal = (number) => {
 
 exports.convertToProperCase = async (inputString) => {
   // Convert the input string to lowercase and split into words
-  const words = inputString.toLowerCase().split(' ');
+  const words = inputString.toLowerCase().split(" ");
 
   // Capitalize the first letter of each word
-  const capitalizedWords = words.map(word => word.charAt(0).toUpperCase() + word.slice(1));
+  const capitalizedWords = words.map(
+    (word) => word.charAt(0).toUpperCase() + word.slice(1)
+  );
 
   // Join the words with a space
-  const result = capitalizedWords.join(' ');
+  const result = capitalizedWords.join(" ");
 
   return result;
-}
+};
 
 exports.generateResourceId = async (length = 40) => {
-  let result = '';
-  const characters = '0123456789abcdefghijjklmnopqrstuv';
+  let result = "";
+  const characters = "0123456789abcdefghijjklmnopqrstuv";
   for (let i = 0; i < length; i++) {
     const randomIndex = Math.floor(Math.random() * characters.length);
     result += characters[randomIndex];
   }
   return result;
-}
+};
 
 exports.cleanJson = async (jsonString) => {
   // Remove unexpected line breaks
@@ -220,7 +226,7 @@ exports.cleanJson = async (jsonString) => {
   // Below are examples; you may need custom rules for your specific API:
 
   // Example: Adding missing commas before keys, if found between braces
-  jsonString = jsonString.replace(/}\s*{/g, '},{');
+  jsonString = jsonString.replace(/}\s*{/g, "},{");
 
   // Attempt JSON parsing again after adjustments
   try {
@@ -229,17 +235,16 @@ exports.cleanJson = async (jsonString) => {
     console.error("Final JSON parsing failed after cleaning.");
     return null; // Return null or handle the error appropriately
   }
-}
+};
 
 exports.extractTextFromFile = async (file) => {
   console.log("file in extract", file);
 
   const mimeType = file.mimetype;
   console.log("mimeType", mimeType);
-  
 
   if (mimeType === "text/plain") {
-    var data = fs.readFileSync(file.path, 'utf8');
+    var data = fs.readFileSync(file.path, "utf8");
     return data.toString();
   } else if (mimeType === "application/pdf") {
     const pdfData = await pdfParse(file.path);
@@ -254,3 +259,180 @@ exports.extractTextFromFile = async (file) => {
     throw new Error("Unsupported file type.");
   }
 };
+const fetchDepartmentsAndPrompts = async () => {
+  try {
+    const departments = await DepartmentModel.find().lean();
+    return departments;
+  } catch (error) {
+    console.error("Error fetching departments and prompts:", error);
+    throw error;
+  }
+};
+exports.sendMessageToAdmins = async (socketObj, message, department) => {
+  try {
+    const newMessage = new MessageModel(message);
+    const latestMess = await newMessage.save();
+    const receivers = await UserModel.find({
+      $or: [
+        { role: { $in: ["Admin", "Supervisor"] } },
+        { department: department },
+      ],
+    }).lean();
+    const updatedChat = await ChatModel.findOneAndUpdate(
+      { _id: message?.chatId },
+      { latestMessage: latestMess?._id },
+      { new: true }
+    )
+      .populate("adminId customerId")
+      .lean();
+    [...receivers].forEach((receiver) => {
+      socketObj.io
+        .to(receiver._id?.toString())
+        .emit("message", { ...updatedChat, latestMessage: latestMess });
+    });
+  } catch (error) {
+    console.error("Error sending message to admins:", error);
+    throw error;
+  }
+};
+
+exports.checkDepartmentAvailability = async (socketObj, existingChat, messageSender) => {
+  try {
+    console.log(existingChat, "existingChat for asdfdaf");
+
+    if (existingChat?.department?.workingHours?.startTime) {
+      const currentHour = Number(
+        new Date().toLocaleString("en-US", {
+          timeZone: "Asia/Kolkata",
+          hour: "2-digit",
+          hour12: false,
+        })
+      );
+      const startHour = parseInt(existingChat?.department?.workingHours?.startTime.split(":")[0]);
+      const endHour = parseInt(existingChat?.department?.workingHours?.endTime.split(":")[0]);
+      console.log(currentHour, "currentHour");
+      console.log(startHour, "startHour");
+      console.log(endHour, "endHour");
+
+      if (currentHour < startHour || currentHour > endHour) {
+        const message = {
+          chatId: existingChat?._id,
+          sender: null,
+          receiver: existingChat.customerId?.toString(),
+          sendType: "assistant",
+          receiverType: "user",
+          content: existingChat?.department?.messages?.afterHoursResponse,
+        };
+        exports.sendMessageToAdmins(socketObj, message, existingChat?.department?._id);
+        await sendWhatsAppMessage(
+          messageSender,
+          undefined,
+          undefined,
+          undefined,
+          existingChat?.department?.messages?.afterHoursResponse
+        );
+        return false;
+      }
+    }
+    return true;
+  } catch (error) {
+    console.error("Error checking department availability:", error);
+    throw error;
+  }
+};
+
+exports.getAssigneeAgent = async (department) => {
+  try {
+    console.log(department, "department in fun");
+
+    const result = await UserModel.aggregate([
+      // Step 1: Match agents based on the department
+      { $match: { department: department, role: "Agent" } },
+
+      // Step 2: Join with the 'Chat' collection to count chats per agent
+      {
+        $lookup: {
+          from: 'chats', // The collection to join with
+          localField: '_id', // Field from the 'Agent' collection to match
+          foreignField: 'adminId', // Field from the 'Chat' collection to match
+          as: 'chats', // Alias for the joined chats
+        }
+      },
+
+      // Step 3: Add a new field 'chatCount' that counts the number of chats for each agent
+      {
+        $addFields: {
+          chatCount: { $size: '$chats' }
+        }
+      },
+    ]);
+    console.log(result, "resultresultresult");
+
+    if (result?.length > 0) {
+      let finalAgent = result[0];
+      result.map((agent) => {
+        if (agent?.chatCount < finalAgent?.chatCount) {
+          finalAgent = agent;
+        }
+      })
+      return finalAgent;
+    }
+    else {
+      return null;
+    }
+
+  } catch (error) {
+    console.error("Error getting assignee agent:", error);
+    throw error;
+  }
+}
+
+exports.sendInterectiveMessageConfirmation = async (socketObj, existingChat, messageSender, messageID) => {
+  try {
+    if (!existingChat?.department) {
+      const departments = await fetchDepartmentsAndPrompts();
+      console.log(departments, "departments");
+
+      const interectiveMessageDetails = {
+        options: departments,
+        headerText: "Insurance Options",
+        bodyText:
+          "Hello! 👋 How can I assist you today with your insurance needs? Please select a department:",
+        actionButtonText: "Select Department",
+        actionSectionTitle: "Departments",
+      };
+      const message = {
+        chatId: existingChat?._id?.toString(),
+        sender: null,
+        receiver: existingChat?.customerId?.toString(),
+        sendType: "assistant",
+        receiverType: "user",
+        content:
+          "Hello! 👋 How can I assist you today with your insurance needs? Please select a department:",
+        messageType: "interective",
+        messageOptions: departments?.map((department) => ({
+          label: department.name,
+          value: department._id,
+        })),
+      };
+
+      sendInteractiveMessage(
+        messageSender,
+        messageID,
+        interectiveMessageDetails
+      );
+
+      exports.sendMessageToAdmins(socketObj, message, null);
+
+      return false;
+    }
+    return true;
+  } catch (error) {
+    throw error
+  }
+}
+
+const imagesFormat = ['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp'];
+exports.isImageType = (attachment) => imagesFormat.some((format) =>
+  attachment?.toLowerCase?.().endsWith?.(format),
+);

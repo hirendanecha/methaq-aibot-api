@@ -10,7 +10,7 @@ const router = express.Router();
 */
 router.get("/", promptCtrl.getAllPrompt);
 router.post("/", promptCtrl.addPrompt);
-router.put("/:id", promptCtrl.updatePrompt);
+router.put("/updatePrompt", promptCtrl.updatePrompt);
 router.delete("/:id", promptCtrl.deletePrompt);
 
 module.exports = router;

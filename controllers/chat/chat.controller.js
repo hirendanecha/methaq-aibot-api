@@ -2,8 +2,50 @@ const dayjs = require("dayjs");
 const s3 = require("../../helpers/s3.helper");
 const Chat = require("../../models/chat.model");
 const User = require("../../models/user.model");
-const { sendSuccessResponse, sendErrorResponse } = require("../../utils/response");
+const {
+  sendSuccessResponse,
+  sendErrorResponse,
+} = require("../../utils/response");
+const {
+  sendWhatsAppMessage,
+  sendInteractiveMessage,
+  downloadMedia,
+  markMessageAsRead,
+} = require("../../services/whatsaap.service");
+const CustomerModel = require("../../models/customer.model");
+const ChatModel = require("../../models/chat.model");
+const {
+  isDocumentRequest,
+} = require("../../services/openai/tool/docProcessing");
+const MessageModel = require("../../models/message.model");
+const {
+  isHumanChatRequest,
+} = require("../../services/openai/tool/transferChat");
+const { OpenAIEmbeddings } = require("@langchain/openai");
+const { PineconeStore } = require("@langchain/pinecone");
+const { generateAIResponse } = require("../../services/openai/openai.service");
+const UserModel = require("../../models/user.model");
+const { Pinecone } = require("@pinecone-database/pinecone");
+const environment = require("../../utils/environment");
+const {
+  sendMessageToAdmins,
+  checkDepartmentAvailability,
+  getAssigneeAgent,
+  sendInterectiveMessageConfirmation,
+} = require("../../utils/fn");
+const pinecone = new Pinecone({ apiKey: environment.pinecone.apiKey });
+const socketObj = require("../../helpers/socket.helper");
+const DepartmentModel = require("../../models/department.model");
 
+const fetchDepartmentsAndPrompts = async () => {
+  try {
+    const departments = await DepartmentModel.find().lean();
+    return departments;
+  } catch (error) {
+    console.error("Error fetching departments and prompts:", error);
+    throw error;
+  }
+};
 // Store chat message
 const storeChat = async (req, res) => {
   try {
@@ -143,6 +185,7 @@ const uploadDocument = async (req, res) => {
     const month = `${dayjs().year()}-${dayjs().month() + 1}`;
     const url = await s3.uploadPublic(
       npath,
+      uploadFile?.mimetype,
       `${uploadFile?.filename}`,
       `ChatDocuments/${month}`
     );
@@ -167,6 +210,293 @@ const deleteDocument = async (req, res) => {
   }
 };
 
+const whatsappMessages = async (req, res) => {
+  try {
+    // Added async
+    const { messages, metadata, contacts } =
+      req.body.entry?.[0]?.changes?.[0].value ?? {};
+    const displayPhoneNumber = metadata?.phone_number_id;
+    const phoneNumberId = metadata?.display_phone_number;
+
+    if (!messages) return res.status(400).send("No messages found"); // Added response for no messages
+
+    const message = messages[0];
+    const messageSender = message.from;
+    const messageID = message.id;
+    const messaging_product = "whatsaap";
+    const profileName = contacts?.[0]?.profile?.name;
+
+    const user = await CustomerModel.findOne({ phone: messageSender });
+
+    if (!user) {
+      const customer = new CustomerModel({
+        name: profileName,
+        phone: messageSender,
+      });
+
+      const updatedCus = await customer.save();
+
+      if (!updatedCus._id) {
+        throw new Error("Error while adding new user!");
+      }
+
+      const chat = new ChatModel({
+        customerId: updatedCus._id,
+        source: "whatsapp",
+      });
+      const newChat = await chat.save();
+      console.log(chat, "new chatu");
+
+      const mess2 = {
+        chatId: newChat?._id?.toString(),
+        sender: newChat?.customerId?.toString(),
+        receiver: null,
+        sendType: "user",
+        receiverType: "admin",
+        content: message.text?.body,
+      };
+      sendMessageToAdmins(socketObj, mess2, newChat?.department);
+
+      const departments = await fetchDepartmentsAndPrompts();
+      console.log(departments, "departments");
+
+      const interectiveMessageDetails = {
+        options: departments,
+        headerText: "Insurance Options",
+        bodyText:
+          "Hello! 👋 How can I assist you today with your insurance needs? Please select a department:",
+        actionButtonText: "Select Department",
+        actionSectionTitle: "Departments",
+      };
+      const intmessage = {
+        chatId: newChat._id,
+        sender: null,
+        receiver: updatedCus._id,
+        sendType: "assistant",
+        receiverType: "user",
+        content:
+          "Hello! 👋 How can I assist you today with your insurance needs? Please select a department:",
+        messageType: "interective",
+        messageOptions: departments?.map((department) => ({
+          label: department.name,
+          value: department._id,
+        })),
+      };
+
+      sendInteractiveMessage(
+        messageSender,
+        messageID,
+        interectiveMessageDetails
+      );
+
+      sendMessageToAdmins(socketObj, intmessage, null);
+    } else {
+      console.log(message, "message for checking");
+
+      let existingChat = await ChatModel.findOne({
+        customerId: user?._id,
+      }).populate("department");
+      if (!existingChat) {
+        return;
+      }
+      console.log(existingChat, "existingChatexistingChat");
+
+      if (message.type === "image" || message.type === "document") {
+        const mediaID = message.image?.id || message.document?.id; // Get the media ID from the message
+        const downloadResult = await downloadMedia(mediaID);
+        const { url, extractedText } = downloadResult.data;
+        const mess1 = {
+          chatId: existingChat._id,
+          sender: existingChat?.customerId?.toString(),
+          receiver: existingChat?.adminId?.toString() || null,
+          sendType: "user",
+          receiverType: "admin",
+          content: "",
+          attachments: [url],
+        };
+        sendMessageToAdmins(socketObj, mess1, existingChat?.department?._id);
+        const isDepartmentSelected = await sendInterectiveMessageConfirmation(socketObj, existingChat, messageSender, messageID);
+        if (!isDepartmentSelected) {
+          return;
+        }
+        const isAvailable = await checkDepartmentAvailability(
+          socketObj, existingChat, messageSender
+        );
+        if (!isAvailable) {
+          return;
+        }
+        if (mediaID) {
+          await markMessageAsRead(messageID);
+        }
+        const userInputmessage = await isDocumentRequest(extractedText);
+        const mess2 = {
+          chatId: existingChat._id,
+          sender: null,
+          receiver: existingChat?.customerId?.toString(),
+          sendType: "assistant",
+          receiverType: "user",
+          content: userInputmessage,
+        };
+        sendMessageToAdmins(socketObj, mess2, existingChat?.department?._id);
+        await sendWhatsAppMessage(
+          messageSender,
+          undefined,
+          messageID,
+          displayPhoneNumber,
+          userInputmessage
+        );
+      } else if (message.type == "text") {
+        const mess = {
+          chatId: existingChat?._id,
+          sender: existingChat?.customerId?.toString(),
+          receiver: null,
+          sendType: "user",
+          receiverType: "admin",
+          content: message.text?.body,
+        };
+        console.log(mess, "message from userside");
+
+        sendMessageToAdmins(socketObj, mess, existingChat?.department?._id);
+        const isDepartmentSelected = await sendInterectiveMessageConfirmation(socketObj, existingChat, messageSender, messageID);
+        if (!isDepartmentSelected) {
+          return;
+        }
+        const isAvailable = await checkDepartmentAvailability(
+          socketObj, existingChat, messageSender
+        );
+        if (!isAvailable) {
+          return;
+        }
+        const isHumantrasfer =
+          existingChat?.isHuman === false
+            ? await isHumanChatRequest(message.text?.body)
+            : true;
+        console.log(isHumantrasfer, "isHumantrasfer in function");
+        if (isHumantrasfer != existingChat?.isHuman) {
+          const assigneeAgent = await getAssigneeAgent(
+            existingChat?.department?._id
+          );
+          console.log(assigneeAgent, "assigneeAgent");
+          existingChat = await ChatModel.findOneAndUpdate(
+            { _id: existingChat._id },
+            { isHuman: isHumantrasfer, adminId: assigneeAgent?._id },
+            { new: true }
+          ).populate("department");
+          const mess = {
+            chatId: existingChat?._id,
+            sender: null,
+            receiver: existingChat?.customerId?.toString(),
+            sendType: "assistant",
+            receiverType: "user",
+            messageType: "tooltip",
+            content: `Chat is transferred to ${assigneeAgent?.fullName}`,
+          };
+          sendMessageToAdmins(socketObj, mess, existingChat?.department?._id);
+        }
+        if (!existingChat?.isHuman) {
+          const userInput = message.text.body;
+
+          const embeddings = new OpenAIEmbeddings({
+            openAIApiKey: process.env.OPENAI_API_KEY,
+          });
+          const index = pinecone.Index(environment.pinecone.indexName);
+          const vectorStore = await PineconeStore.fromExistingIndex(
+            embeddings,
+            {
+              //@ts-ignore
+              pineconeIndex: index,
+            }
+          );
+
+          const results = await vectorStore.similaritySearch(userInput, 5);
+          let context = results.map((r) => r.pageContent).join("\n\n");
+          const response = await generateAIResponse(
+            context,
+            userInput,
+            existingChat
+          );
+          console.log(response, "messageSendermessageSender");
+          const mess = {
+            chatId: existingChat?._id,
+            sender: null,
+            sendType: "assistant",
+            content: response,
+            receiver: existingChat?.customerId?.toString(),
+            receiverType: "user",
+          };
+          sendMessageToAdmins(socketObj, mess, existingChat?.department?._id);
+          await sendWhatsAppMessage(
+            messageSender,
+            undefined,
+            messageID,
+            displayPhoneNumber,
+            response
+          );
+        }
+      } else if (message?.type === "interactive") {
+        console.log(message, "message in interactive");
+
+        const department = message?.interactive?.list_reply?.id;
+        existingChat = await ChatModel.findOneAndUpdate(
+          { _id: existingChat._id },
+          { department },
+          { new: true }
+        ).populate("department");
+        const mess1 = {
+          chatId: existingChat?._id,
+          sender: existingChat?.customerId?.toString(),
+          receiver: null,
+          sendType: "user",
+          receiverType: "assistant",
+          messageType: "text",
+          content: `${message?.interactive?.list_reply?.title}\n${message?.interactive?.list_reply?.description}`,
+        };
+        sendMessageToAdmins(socketObj, mess1, existingChat?.department?._id);
+        const mess2 = {
+          chatId: existingChat?._id,
+          sender: null,
+          receiver: null,
+          sendType: "assistant",
+          receiverType: "admin",
+          messageType: "tooltip",
+          content: `Chat is transferred to ${message?.interactive?.list_reply?.title} department`,
+        };
+        sendMessageToAdmins(socketObj, mess2, existingChat?.department?._id);
+        const isAvailable = await checkDepartmentAvailability(
+          socketObj, existingChat, messageSender
+        );
+        console.log(isAvailable, "isAvailable in interactive");
+
+        if (!isAvailable) {
+          return;
+        }
+        const mess3 = {
+          chatId: existingChat?._id,
+          sender: null,
+          sendType: "assistant",
+          content: `How can I help you about ${message?.interactive?.list_reply?.title}`,
+          receiver: existingChat?.customerId?.toString(),
+          receiverType: "user",
+        };
+        sendMessageToAdmins(socketObj, mess3, existingChat?.department?._id);
+        await sendWhatsAppMessage(
+          // Call sendWhatsAppMessage
+          messageSender,
+          undefined,
+          undefined,
+          undefined,
+          `How can I help you about ${message?.interactive?.list_reply?.title}`
+        );
+      }
+    }
+
+    return res.status(200).send("Message processed"); // Added response for successful processing
+  } catch (error) {
+    console.log(error);
+    return res.status(500).send("Error processing message");
+  }
+};
+
 module.exports = {
   storeChat,
   getChatHistory,
@@ -174,4 +504,5 @@ module.exports = {
   updateIsHumanStatus,
   uploadDocument,
   deleteDocument,
+  whatsappMessages,
 };

@@ -11,6 +11,7 @@ const {
   writeFileSync,
   createReadStream,
 } = require("fs");
+const DepartmentModel = require("../models/department.model");
 
 url = `https://graph.facebook.com/${process.env.WHATSAPP_CLOUD_API_VERSION}/${process.env.WHATSAPP_CLOUD_API_PHONE_NUMBER_ID}/messages`;
 
@@ -42,61 +43,27 @@ const sendWhatsAppMessage = async (
   messageID,
   displayPhoneNumber,
   userInput,
-  isHumanReal
 ) => {
-  //console.log(userInput, "isHumanReal");
-
-  // console.log(isHumanReal, "isHumanReal");
-
-
-  // const isHuman = isHumanReal ? true : await isHumanChatRequest(userInput);
-  // console.log(isHuman, "isHuman");
-
-  if (isHumanReal) {
-    const data = JSON.stringify({
-      messaging_product: "whatsapp",
-      recipient_type: "individual",
-      to: messageSender,
-      // context: {
-      //   message_id: messageID,
-      // },
-      type: "text",
-      text: {
-        preview_url: false,
-        body: userInput,
-      },
-    });
-    await axios.post(url, data, {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${environment.whatsaap.whatAuthT}`,
-      },
-    });
-    await markMessageAsRead(messageID);
-  } else {
-    // const response = await generateAIResponse(context, userInput);
-
-    const data = JSON.stringify({
-      messaging_product: "whatsapp",
-      recipient_type: "individual",
-      to: messageSender,
-      // context: {
-      //   message_id: messageID,
-      // },
-      type: "text",
-      text: {
-        preview_url: false,
-        body: userInput,
-      },
-    });
-    await axios.post(url, data, {
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${environment.whatsaap.whatAuthT}`,
-      },
-    });
-    await markMessageAsRead(messageID);
-  }
+  const data = JSON.stringify({
+    messaging_product: "whatsapp",
+    recipient_type: "individual",
+    to: messageSender,
+    // context: {
+    //   message_id: messageID,
+    // },
+    type: "text",
+    text: {
+      preview_url: false,
+      body: userInput,
+    },
+  });
+  await axios.post(url, data, {
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${environment.whatsaap.whatAuthT}`,
+    },
+  });
+  await markMessageAsRead(messageID);
 };
 
 const sendWhatsAppMessageFromalMessage = async (
@@ -213,237 +180,86 @@ async function downloadMedia(fileID) {
   }
 }
 
-// exports.sendImageByUrl = async (messageSender, fileName, messageID, imageUrl) => {
-//   const config = {
-//     headers: {
-//       'Content-Type': 'application/json',
-//       Authorization: `Bearer ${process.env.WHATSAPP_CLOUD_API_ACCESS_TOKEN}`,
-//     }
-//   };
 
+const sendImageByUrl = async (messageSender, fileName, messageID, imageUrl) => {
+  const config = {
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${process.env.WHATSAPP_CLOUD_API_ACCESS_TOKEN}`,
+    },
+  };
 
-//   console.log("Sending image to:", messageSender);
-//   console.log("Image URL:", imageUrl);
+  console.log("Sending image to:", messageSender);
+  console.log("Image URL:", imageUrl);
 
-//   const data = JSON.stringify({
-//     messaging_product: "whatsapp",
-//     recipient_type: "individual",
-//     to: messageSender,
-//     // context: { message_id: messageID },
-//     type: "image",
-//     image: {
-//       link: "https://headsupfortails.com/cdn/shop/files/250gpuppyFront_323e88d4-b432-4d2a-a4cd-60ad98181c9d.jpg?v=1739042541"
-//     },
-//   });
+  const data = JSON.stringify({
+    messaging_product: "whatsapp",
+    recipient_type: "individual",
+    to: messageSender,
+    // context: { message_id: messageID },
+    type: "image",
+    image: {
+      link: imageUrl,
+    },
+  });
 
-//   //const url = `https://graph.facebook.com/${process.env.WHATSAPP_CLOUD_API_VERSION}/${process.env.WHATSAPP_CLOUD_API_PHONE_NUMBER_ID}/messages`; // Corrected line
-
-//   try {
-//     const response = await axios.post(url, data, config);
-//     console.log("Response data:", response.data);
-//     return `Image sent successfully, response: ${response.data}`;
-//   } catch (error) {
-//     console.error("Error sending image:", error.response ? error.response.data : error.message);
-//     return "Axle broke!! Error Sending Image!!";
-//   }
-// };
-
-// const sendAudioByUrl = async (messageSender, fileName) => {
-//   const audioUrl = `${process.env.SERVER_URL}/${fileName}`;
-//   const data = JSON.stringify({
-//     messaging_product: "whatsapp",
-//     recipient_type: "individual",
-//     to: messageSender,
-//     type: "audio",
-//     audio: { link: audioUrl },
-//   });
-
-//   try {
-//     const response = axios.post(url, data, config).pipe(
-//       map((res) => res.data),
-//       catchError((error) => {
-//         console.error(error);
-//         throw new BadRequestException("Error Posting To WhatsApp Cloud API");
-//       })
-//     );
-//     return `Audio sent successfully, response: ${await lastValueFrom(
-//       response
-//     )}`;
-//   } catch (error) {
-//     console.error(error);
-//     return "Axle broke!! Error Sending Audio!!";
-//   }
-// };
-
-// const markMessageAsRead = async (messageID) => {
-//   const data = JSON.stringify({
-//     messaging_product: "whatsapp",
-//     status: "read",
-//     message_id: messageID,
-//   });
-
-//   try {
-//     const response = axios.post(url, data, config).pipe(
-//       map((res) => res.data),
-//       catchError((error) => {
-//         console.error(error);
-//         throw new BadRequestException("Error Marking Message As Read");
-//       })
-//     );
-//     console.log(
-//       "Message Marked As Read. Status:",
-//       await lastValueFrom(response)
-//     );
-//   } catch (error) {
-//     console.error(error);
-//     return "Axle broke!! Abort mission!!";
-//   }
-// };
-
-// Exporting functions using CommonJS syntax
-
-// const sendImageByUrl = async (messageSender, fileName, messageID, imageUrl) => {
-//   const config = {
-//     headers: {
-//       'Content-Type': 'application/json',
-//       Authorization: `Bearer ${process.env.WHATSAPP_CLOUD_API_ACCESS_TOKEN}`,
-//     }
-//   };
-
-
-//   console.log("Sending image to:", messageSender);
-//   console.log("Image URL:", imageUrl);
-
-//   const data = JSON.stringify({
-//     messaging_product: "whatsapp",
-//     recipient_type: "individual",
-//     to: "919537222236",
-//     // context: { message_id: messageID },
-//     type: "image",
-//     image: {
-//       link: "https://headsupfortails.com/cdn/shop/files/250gpuppyFront_323e88d4-b432-4d2a-a4cd-60ad98181c9d.jpg?v=1739042541"
-//     },
-//   });
-
-//   //const url = `https://graph.facebook.com/${process.env.WHATSAPP_CLOUD_API_VERSION}/${process.env.WHATSAPP_CLOUD_API_PHONE_NUMBER_ID}/messages`; // Corrected line
-
-//   try {
-//     const response = await axios.post(url, data, config);
-//     console.log("Response data:", response.data);
-//     return `Image sent successfully, response: ${response.data}`;
-//   } catch (error) {
-//     console.error("Error sending image:", error.response ? error.response.data : error.message);
-//     return "Axle broke!! Error Sending Image!!";
-//   }
-// };
-
-async function fetchDepartmentsAndPrompts() {
   try {
-    const response = await fetch(
-      "https://methaq-aibot-api.opash.in/api/public/department/departments-with-prompt"
-    );
-    if (!response.ok) {
-      throw new Error("Failed to fetch departments and prompts");
-    }
-    return response.json();
+    const response = await axios.post(url, data, config);
+    console.log("Response data:", response.data);
+    return `Image sent successfully, response: ${response.data}`;
   } catch (error) {
-    console.error("Error fetching departments and prompts:", error);
-    throw error;
+    console.error(
+      "Error sending image:",
+      error.response ? error.response.data : error.message
+    );
+    return "Axle broke!! Error Sending Image!!";
   }
-}
-// const sendInteractiveMessage = async (messageSender) => {
-//   const config = {
-//     headers: {
-//       'Content-Type': 'application/json',
-//       Authorization: `Bearer ${process.env.WHATSAPP_CLOUD_API_ACCESS_TOKEN}`,
-//   }};
+};
 
-//   const departmentsData = await fetchDepartmentsAndPrompts();
-//   // const interactivePayload = {
-//   //   type: "button",
-//   //   body: {
-//   //     text: "*Chat with AI Bot?*\n\nWould you like to interact with our intelligent AI bot?", // Bold text and improved spacing
-//   //   },
-//   //   action: {
-//   //     buttons: [
-//   //       {
-//   //         type: "reply",
-//   //         reply: {
-//   //           id: "ai_bot_yes",
-//   //           title: "Yes",
-//   //         },
-//   //       },
-//   //       {
-//   //         type: "reply",
-//   //         reply: {
-//   //           id: "ai_bot_no",
-//   //           title: "No",
-//   //         },
-//   //       },
-//   //     ],
-//   //   },
-//   // };
-    
+const sendDocumentByUrl = async (
+  messageSender,
+  fileName,
+  messageID,
+  imageUrl
+) => {
+  const config = {
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${process.env.WHATSAPP_CLOUD_API_ACCESS_TOKEN}`,
+    },
+  };
 
-//   const dummyDepartments = [
-//     {
-//       _id: "dummy_1",
-//       name: "Dummy Department 1",
-//     },
-//     {
-//       _id: "dummy_2",
-//       name: "Dummy Department 2",
-//     },
-//     {
-//       _id: "dummy_3",
-//       name: "Dummy Department 3",
-//     },
-//     {
-//       _id: "dummy_4",
-//       name: "Dummy Department 4",
-//     },
-//     {
-//       _id: "dummy_5",
-//       name: "Dummy Department 5",
-//     },
-//   ];
-//   const combinedDepartments = [...departmentsData.data, ...dummyDepartments];
-//   const interactivePayload = {
-//     type: "button",
-//     body: {
-//       text: "Hello! 👋 How can I assist you today with your insurance needs? If you have any questions about our policies or services, feel free to ask!", // Bold text and improved spacing
-//     },
-//     action: {
-//       buttons: combinedDepartments.map(department => ({
-//         type: "reply",
-//         reply: {
-//           id: department._id, // Set _id as reply.id
-//           title: department.name, // Set name as title
-//         },
-//       })),
-//     },
-//   };
+  console.log("Sending image to:", messageSender);
+  console.log("Image URL:", imageUrl);
 
-//   const data = JSON.stringify({
-//     messaging_product: "whatsapp",
-//     recipient_type: "individual",
-//     to: messageSender,
-//     type: "interactive",
-//     interactive: interactivePayload,
-//   });
+  const data = JSON.stringify({
+    messaging_product: "whatsapp",
+    recipient_type: "individual",
+    to: messageSender,
+    // context: { message_id: messageID },
+    type: "document",
+    document: {
+      // id: "<MEDIA_ID>" /* Only if using uploaded media */,
+      link: imageUrl /* Only if linking to your media */,
+      // caption: "<DOCUMENT_CAPTION>",
+      // filename: "<DOCUMENT_FILENAME>",
+    },
+  });
 
-//   //const url = `https://graph.facebook.com/${process.env.WHATSAPP_CLOUD_API_VERSION}/${process.env.WHATSAPP_CLOUD_API_PHONE_NUMBER_ID}/messages`; // Corrected line
+  try {
+    const response = await axios.post(url, data, config);
+    console.log("document data:", response.data);
+    return `document sent successfully, response: ${response.data}`;
+  } catch (error) {
+    console.error(
+      "Error sending document:",
+      error.response ? error.response.data : error.message
+    );
+    return "Axle broke!! Error Sending document!!";
+  }
+};
 
-//   try {
-//     const response = await axios.post(url, data, config);
-//     console.log("Response data:", response.data);
-//     return `Image sent successfully, response: ${response.data}`;
-//   } catch (error) {
-//     console.error("Error sending image:", error.response ? error.response.data : error.message);
-//     return "Axle broke!! Error Sending Image!!";
-//   }
-// };
-const sendInteractiveMessage = async (messageSender,messageID) => {
+const sendInteractiveMessage = async (messageSender, messageID, payload) => {
   const config = {
     headers: {
       'Content-Type': 'application/json',
@@ -451,34 +267,34 @@ const sendInteractiveMessage = async (messageSender,messageID) => {
     },
   };
 
-  const departmentsData = await fetchDepartmentsAndPrompts(); // Assuming this fetches data correctly
-  const dummyDepartments = [
-    { _id: "dummy_1", name: "Dummy Department 1" },
-    { _id: "dummy_2", name: "Dummy Department 2" },
-    { _id: "dummy_3", name: "Dummy Department 3" },
-    { _id: "dummy_4", name: "Dummy Department 4" },
-    { _id: "dummy_5", name: "Dummy Department 5" },
-  ];
-  const combinedDepartments = [...departmentsData.data];
+  // const departmentsData = await fetchDepartmentsAndPrompts(); // Assuming this fetches data correctly
+  // const dummyDepartments = [
+  //   { _id: "dummy_1", name: "Dummy Department 1" },
+  //   { _id: "dummy_2", name: "Dummy Department 2" },
+  //   { _id: "dummy_3", name: "Dummy Department 3" },
+  //   { _id: "dummy_4", name: "Dummy Department 4" },
+  //   { _id: "dummy_5", name: "Dummy Department 5" },
+  // ];
+  // const combinedDepartments = [...departmentsData.data];
 
   const interactivePayload = {
     type: "list",
     header: {
       type: "text",
-      text: "Insurance Options", // Header for the list
+      text: payload?.headerText, // Header for the list
     },
     body: {
-      text: "Hello! 👋 How can I assist you today with your insurance needs? Please select a department:",
+      text: payload?.bodyText,
     },
     action: {
-      button: "Select Department", // Button text to open the list
+      button: payload?.actionButtonText, // Button text to open the list
       sections: [
         {
-          title: "Departments", // Section title
-          rows: combinedDepartments.map((department) => ({
-            id: department._id,
-            title: department.name,
-            description: `let's discuss about ${department.name}`, // Optional description
+          title: payload?.actionSectionTitle, // Section title
+          rows: payload?.options.map((op) => ({
+            id: op?._id,
+            title: op?.name,
+            description: `let's discuss about ${op?.name}`, // Optional description
           })),
         },
       ],
@@ -512,11 +328,7 @@ module.exports = {
   sendWhatsAppMessageFromalMessage,
   downloadMedia,
   markMessageAsRead,
-  sendInteractiveMessage
-  // sendImageByUrl
-  //   getMediaUrl,
-  //   downloadMedia,
-  //   sendImageByUrl,
-  //   sendAudioByUrl,
-  //   markMessageAsRead,
+  sendInteractiveMessage,
+  sendImageByUrl,
+  sendDocumentByUrl
 };
