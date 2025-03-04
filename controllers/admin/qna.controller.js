@@ -24,7 +24,6 @@ const addQnA = async (req, res) => {
       department: {
         _id: populatedQnA?.department._id,
         name: populatedQnA?.department.name,
-        file_id: populatedQnA?.department._id,
       },
     };
     console.log("populatedQnA", populatedQnA);
