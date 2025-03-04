@@ -228,20 +228,83 @@ exports.updatePermissions = async (req, res) => {
 exports.getChatList = async (req, res) => {
     try {
         const { _id: userId, role } = req.user;
-        const { status = "active", department } = req.body;
+        const { page, size, status = "active", department, search } = req.body;
+
+        const { limit, offset } = getPagination(page, size);
         const userDetails = await UserModel.findById(userId);
-        let chats = [];
-        if (role === "Admin" || role === "Supervisor") {
-            chats = await ChatModel.find({ latestMessage: { $ne: null }, status: status, ...department ? { department } : {} }).populate('adminId latestMessage customerId').lean();
+
+        let searchCondition = { latestMessage: { $ne: null }, status };
+
+        if (department) {
+            searchCondition.department = { $in: department };
         }
-        else {
-            chats = await ChatModel.find({ latestMessage: { $ne: null }, status: status, department: userDetails?.department }).populate('adminId latestMessage customerId').lean();
+
+        if (role !== "Admin" && role !== "Supervisor") {
+            searchCondition.department = { $in: userDetails?.department };
         }
-        return sendSuccessResponse(res, { data: chats });
+
+        let pipeline = [
+            { $match: searchCondition },
+
+            { 
+                $lookup: {
+                    from: "customers",
+                    localField: "customerId",
+                    foreignField: "_id",
+                    as: "customerId"
+                }
+            },
+            { $unwind: "$customerId" },
+
+            ...(search
+                ? [{ $match: { "customerId.name": { $regex: new RegExp(search, "i") } } }]
+                : []
+            ),
+
+            { 
+                $lookup: {
+                    from: "users",
+                    localField: "adminId",
+                    foreignField: "_id",
+                    as: "adminId"
+                }
+            },
+            { $unwind: { path: "$adminId", preserveNullAndEmptyArrays: true } },
+
+            { 
+                $lookup: {
+                    from: "messages",
+                    localField: "latestMessage",
+                    foreignField: "_id",
+                    as: "latestMessage"
+                }
+            },
+            { $unwind: { path: "$latestMessage", preserveNullAndEmptyArrays: true } },
+
+            { $sort: { "latestMessage.timestamp": -1 } },
+
+            { 
+                $facet: {
+                    totalCount: [{ $count: "count" }], 
+                    paginatedResults: [{ $skip: offset }, { $limit: limit }]
+                }
+            }
+        ];
+
+        let result = await ChatModel.aggregate(pipeline);
+
+        let totalChats = result[0]?.totalCount?.[0]?.count || 0;
+        let chats = result[0]?.paginatedResults || [];
+
+        return sendSuccessResponse(
+            res,
+            getPaginationData({ count: totalChats, docs: chats }, page, limit)
+        );
     } catch (error) {
         return sendErrorResponse(res, error.message);
     }
-}
+};
+
 
 exports.getChatDetails = async (req, res) => {
     try {
