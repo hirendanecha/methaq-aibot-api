@@ -30,17 +30,19 @@ const ChatSchema = Schema(
     notes: [{
       type: String
     }],
-    source:{
-      type:String,
-      enum:["whatsapp","bot"],
-      default:"bot"
+    source: {
+      type: String,
+      enum: ["whatsapp", "bot"],
+      default: "bot"
     },
     status: {
       type: String,
       enum: constants.chatStatus,
       default: "active"
     },
-  }
+  }, {
+  timestamps: true
+}
 );
 
 const ChatModel = mongoose.model("chat", ChatSchema);
