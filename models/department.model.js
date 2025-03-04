@@ -13,7 +13,7 @@ const DepartmentSchema = new Schema(
       allAgentsOfflineResponse: { type: String },
       chatClosingMessage: { type: String }
     },
-    prompt: { type: String },
+    prompt: { type: String, default: "" },
     workingHours: {
       startTime: { type: String },
       endTime: { type: String }
