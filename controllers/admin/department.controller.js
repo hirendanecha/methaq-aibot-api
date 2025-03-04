@@ -11,6 +11,7 @@ const {
 } = require("../../utils/response");
 const s3 = require("../../helpers/s3.helper");
 const dayjs = require("dayjs");
+const { deleteDocumentsByMetadata } = require("../../helpers/pineconeupload.helper");
 
 exports.getAllDepartment = async (req, res) => {
   try {
@@ -134,6 +135,7 @@ exports.deleteDepartment = async (req, res) => {
   const { id } = req.params;
   try {
     const department = await DepartmentModel.findByIdAndDelete(id);
+    await deleteDocumentsByMetadata({ departmentName: department?.name });
     await PromptModel.deleteMany({ department: id });
     await QnaModel.deleteMany({ department: id });
     const uploadFiles = await UploadModel.find({ department: id });
