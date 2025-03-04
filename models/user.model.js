@@ -34,7 +34,6 @@ const UserSchema = new Schema(
       ref: "departments",
     }],
     isActive: { type: Boolean, default: false },
-    assignChats: [{ type: mongoose.Schema.Types.ObjectId, ref: "Chat" }],
   },
   {
     timestamps: true,
