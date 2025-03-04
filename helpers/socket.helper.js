@@ -181,6 +181,12 @@ socketObj.config = (server) => {
         socketObj.io.to(receiver._id?.toString()).emit("update-chat", updatedChat);
         socketObj.io.to(receiver._id?.toString()).emit("message", { ...updatedChat, latestMessage: final });
       })
+      if (typeof cb === "function")
+        cb({
+          success: true,
+          message: "Chat transfered to bot"
+        });
+
     })
 
     socket.on("get-messages", async (params, cb) => {
@@ -439,19 +445,27 @@ socketObj.config = (server) => {
 
     socket.on('archive-chat', async (params, cb) => {
       try {
+        const authHeader = socket.handshake.headers.authorization || '';
+        const token = (authHeader && authHeader.split(' ')[1]);
+        let decoded = jwt.decode(token);
+        const adminDetails = await UserModel.findById(decoded?._id).lean();
         const { chatId } = typeof params === "string" ? JSON.parse(params) : params;
         const chat = await ChatModel.findById(chatId).populate("adminId department").lean();
         console.log(chatId, chat, "desdgsfdg");
 
         if (!chat) {
-          return res.status(404).json({ error: "Chat not found" });
+          if (typeof cb === "function")
+            return cb({
+              success: false,
+              message: "Chat not found"
+            });
         };
 
         const mess = {
           chatId: chatId,
           sender: null,
           sendType: "admin",
-          content: chat?.department?.messages?.chatClosingMessage || `Chat archived by ${chat?.adminId?.fullName}`,
+          content: chat?.department?.messages?.chatClosingMessage || `Chat archived by ${adminDetails?.fullName}`,
           attachments: [],
           timestamp: new Date(),
           receiver: chat?.customerId?.toString(),
@@ -474,6 +488,50 @@ socketObj.config = (server) => {
           cb({
             message: "Chat archived successfully."
           });
+      } catch (error) {
+        console.error("Error archiving chat:", error);
+        if (typeof cb === "function")
+          cb({
+            message: error.message
+          });
+      }
+    })
+
+    socket.on('unarchive-chat', async (params, cb) => {
+      try {
+        const { chatId } = typeof params === "string" ? JSON.parse(params) : params;
+        const chat = await ChatModel.findById(chatId);
+        console.log(chat, "chatchatchatchat");
+
+        if (!chat) {
+          if (typeof cb === "function")
+            return cb({
+              success: false,
+              message: "Chat not found"
+            });
+        };
+        const authHeader = socket.handshake.headers.authorization || '';
+        const token = (authHeader && authHeader.split(' ')[1]);
+        let decoded = jwt.decode(token);
+        const adminDetails = await UserModel.findById(decoded?._id).lean();
+        chat.status = "active";
+        const updatedChat = await chat.save();
+        const mess = {
+          chatId: chatId,
+          sender: null,
+          sendType: "admin",
+          content: `Chat unarchived by ${adminDetails?.fullName || ""}`,
+          receiver: chat?.customerId?.toString(),
+          receiverType: "user",
+          messageType: "tooltip"
+        }
+        await sendMessageToAdmins(socketObj, mess, chat?.department)
+
+        if (typeof cb === "function")
+          cb({
+            message: "Chat is successfully unarchived"
+          });
+
       } catch (error) {
         console.error("Error archiving chat:", error);
         if (typeof cb === "function")

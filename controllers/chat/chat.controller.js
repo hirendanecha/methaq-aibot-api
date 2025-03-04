@@ -376,22 +376,50 @@ const whatsappMessages = async (req, res) => {
           const assigneeAgent = await getAssigneeAgent(
             existingChat?.department?._id
           );
-          console.log(assigneeAgent, "assigneeAgent");
-          existingChat = await ChatModel.findOneAndUpdate(
-            { _id: existingChat._id },
-            { isHuman: isHumantrasfer, adminId: assigneeAgent?._id },
-            { new: true }
-          ).populate("department");
-          const mess = {
-            chatId: existingChat?._id,
-            sender: null,
-            receiver: existingChat?.customerId?.toString(),
-            sendType: "assistant",
-            receiverType: "user",
-            messageType: "tooltip",
-            content: `Chat is transferred to ${assigneeAgent?.fullName}`,
-          };
-          sendMessageToAdmins(socketObj, mess, existingChat?.department?._id);
+          if (assigneeAgent) {
+            console.log(assigneeAgent, "assigneeAgent");
+            existingChat = await ChatModel.findOneAndUpdate(
+              { _id: existingChat._id },
+              { isHuman: isHumantrasfer, adminId: assigneeAgent?._id },
+              { new: true }
+            ).populate("department");
+            const mess = {
+              chatId: existingChat?._id,
+              sender: null,
+              receiver: existingChat?.customerId?.toString(),
+              sendType: "assistant",
+              receiverType: "user",
+              messageType: "tooltip",
+              content: `Chat is transferred to ${assigneeAgent?.fullName}`,
+            };
+            sendMessageToAdmins(socketObj, mess, existingChat?.department?._id);
+            return await sendWhatsAppMessage(
+              messageSender,
+              undefined,
+              messageID,
+              displayPhoneNumber,
+              `We have transferred your chat to ${assigneeAgent?.fullName}`
+            );
+          }
+          else {
+            const mess = {
+              chatId: existingChat?._id,
+              sender: null,
+              receiver: existingChat?.customerId?.toString(),
+              sendType: "assistant",
+              receiverType: "user",
+              messageType: "text",
+              content: existingChat?.department?.messages?.allAgentsOfflineResponse,
+            };
+            sendMessageToAdmins(socketObj, mess, existingChat?.department?._id);
+            return await sendWhatsAppMessage(
+              messageSender,
+              undefined,
+              messageID,
+              displayPhoneNumber,
+              existingChat?.department?.messages?.allAgentsOfflineResponse
+            );
+          }
         }
         if (!existingChat?.isHuman) {
           const userInput = message.text.body;
