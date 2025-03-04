@@ -173,6 +173,7 @@ const addDocument = async (req, res) => {
       department: {
         _id: upload?.department._id,
         name: upload?.department.name,
+        file_id: newFile._id,
       },
     };
 
