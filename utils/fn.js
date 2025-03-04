@@ -347,7 +347,7 @@ exports.getAssigneeAgent = async (department) => {
 
     const result = await UserModel.aggregate([
       // Step 1: Match agents based on the department
-      { $match: { department: department, role: "Agent" } },
+      { $match: { department: department, role: "Agent", isOnline: true } },
 
       // Step 2: Join with the 'Chat' collection to count chats per agent
       {
