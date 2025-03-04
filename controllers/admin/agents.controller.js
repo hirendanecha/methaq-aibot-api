@@ -228,9 +228,9 @@ exports.updatePermissions = async (req, res) => {
 exports.getChatList = async (req, res) => {
     try {
         const { _id: userId, role } = req.user;
-        const { page, size, status = "active", department, search } = req.body;
+        const { limit, offset, status = "active", department, search } = req.body;
 
-        const { limit, offset } = getPagination(page, size);
+        // const { limit, offset } = getPagination(page, size);
         const userDetails = await UserModel.findById(userId);
 
         let searchCondition = { latestMessage: { $ne: null }, status };
@@ -246,7 +246,7 @@ exports.getChatList = async (req, res) => {
         let pipeline = [
             { $match: searchCondition },
 
-            { 
+            {
                 $lookup: {
                     from: "customers",
                     localField: "customerId",
@@ -261,7 +261,7 @@ exports.getChatList = async (req, res) => {
                 : []
             ),
 
-            { 
+            {
                 $lookup: {
                     from: "users",
                     localField: "adminId",
@@ -271,7 +271,7 @@ exports.getChatList = async (req, res) => {
             },
             { $unwind: { path: "$adminId", preserveNullAndEmptyArrays: true } },
 
-            { 
+            {
                 $lookup: {
                     from: "messages",
                     localField: "latestMessage",
@@ -283,9 +283,9 @@ exports.getChatList = async (req, res) => {
 
             { $sort: { "latestMessage.timestamp": -1 } },
 
-            { 
+            {
                 $facet: {
-                    totalCount: [{ $count: "count" }], 
+                    totalCount: [{ $count: "count" }],
                     paginatedResults: [{ $skip: offset }, { $limit: limit }]
                 }
             }
@@ -298,7 +298,7 @@ exports.getChatList = async (req, res) => {
 
         return sendSuccessResponse(
             res,
-            getPaginationData({ count: totalChats, docs: chats }, page, limit)
+            getPaginationData({ count: totalChats, docs: chats }, offset, limit)
         );
     } catch (error) {
         return sendErrorResponse(res, error.message);
