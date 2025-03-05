@@ -191,7 +191,7 @@ socketObj.config = (server) => {
 
     socket.on("get-messages", async (params, cb) => {
       params = typeof params === "string" ? JSON.parse(params) : params;
-      const messages = await MessageModel.find({ chatId: params.chatId }).sort({ timestamp: 1 });
+      const messages = await MessageModel.find({ chatId: params.chatId }).sort({ timestamp: -1 }).skip(params.offset).limit(params.limit).lean();
       console.log(messages, "messages");
 
       if (typeof cb === "function")
@@ -384,7 +384,7 @@ socketObj.config = (server) => {
             cb({
               success: true,
               message: "Agent is now assigned",
-              agentId: agents[0]?._id
+              agentId: assigneeAgent?._id
             });
         }
       }
@@ -404,6 +404,7 @@ socketObj.config = (server) => {
           }
         );
       }
+      console.log(agents, "agentsss");
 
       if (agents[socket.id]) {
         clearTimeout(agents[socket.id].idleTimer);
@@ -419,6 +420,8 @@ socketObj.config = (server) => {
         }, 10 * 60 * 1000), // 10 minutes
         isIdle: false
       };
+      console.log(agents, "ahenenehj");
+
     });
 
     socket.on('active', () => {
