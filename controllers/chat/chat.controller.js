@@ -303,7 +303,7 @@ const whatsappMessages = async (req, res) => {
 
       if (message.type === "image" || message.type === "document") {
         const mediaID = message.image?.id || message.document?.id; // Get the media ID from the message
-        const downloadResult = await downloadMedia(mediaID,existingChat);
+        const downloadResult = await downloadMedia(mediaID, existingChat);
         const { url, extractedText } = downloadResult.data;
         const mess1 = {
           chatId: existingChat._id,
@@ -508,23 +508,75 @@ const whatsappMessages = async (req, res) => {
         if (!isAvailable) {
           return;
         }
-        const mess3 = {
-          chatId: existingChat?._id,
-          sender: null,
-          sendType: "assistant",
-          content: `How can I help you about ${message?.interactive?.list_reply?.title}`,
-          receiver: existingChat?.customerId?.toString(),
-          receiverType: "user",
-        };
-        sendMessageToAdmins(socketObj, mess3, existingChat?.department?._id);
-        await sendWhatsAppMessage(
-          // Call sendWhatsAppMessage
-          messageSender,
-          undefined,
-          undefined,
-          undefined,
-          `How can I help you about ${message?.interactive?.list_reply?.title}`
-        );
+
+        if (!existingChat?.isHuman) {
+          const userInput = message?.interactive?.list_reply?.description;
+
+          const embeddings = new OpenAIEmbeddings({
+            openAIApiKey: process.env.OPENAI_API_KEY,
+          });
+          const index = pinecone.Index(environment.pinecone.indexName);
+          const vectorStore = await PineconeStore.fromExistingIndex(
+            embeddings,
+            {
+              //@ts-ignore
+              pineconeIndex: index,
+            }
+          );
+
+          // const results = await vectorStore.similaritySearch(userInput, 5);
+          const results = await vectorStore.similaritySearch(
+            (query = userInput),
+            (k = 5),
+            (filter = {
+              departmentName: { $eq: existingChat?.department?.name },
+            }),
+            include_metadata = true
+          );
+          console.log(results, "resilrrfsgd");
+
+          let context = results.map((r) => r.pageContent).join("\n\n");
+          const response = await generateAIResponse(
+            context,
+            userInput,
+            existingChat
+          );
+          console.log(response, "messageSendermessageSender");
+          const mess = {
+            chatId: existingChat?._id,
+            sender: null,
+            sendType: "assistant",
+            content: response,
+            receiver: existingChat?.customerId?.toString(),
+            receiverType: "user",
+          };
+          sendMessageToAdmins(socketObj, mess, existingChat?.department?._id);
+          await sendWhatsAppMessage(
+            messageSender,
+            undefined,
+            messageID,
+            displayPhoneNumber,
+            response
+          );
+        }
+
+        // const mess3 = {
+        //   chatId: existingChat?._id,
+        //   sender: null,
+        //   sendType: "assistant",
+        //   content: `How can I help you about ${message?.interactive?.list_reply?.title}`,
+        //   receiver: existingChat?.customerId?.toString(),
+        //   receiverType: "user",
+        // };
+        // sendMessageToAdmins(socketObj, mess3, existingChat?.department?._id);
+        // await sendWhatsAppMessage(
+        //   // Call sendWhatsAppMessage
+        //   messageSender,
+        //   undefined,
+        //   undefined,
+        //   undefined,
+        //   `How can I help you about ${message?.interactive?.list_reply?.title}`
+        // );
       }
     }
 

@@ -485,7 +485,7 @@ socketObj.config = (server) => {
         })
         if (updatedChat?.source === 'whatsapp') {
           console.log("zvdgsdfsdf", final?.content, chat?.customerId?.phone);
-          sendWhatsAppMessage(updatedChat?.customerId?.phone, undefined, undefined, undefined, chat?.department?.messages?.chatClosingMessage || `Chat archived by ${chat?.adminId?.fullName}`, updatedChat?.isHuman)
+          sendWhatsAppMessage(updatedChat?.customerId?.phone, undefined, undefined, undefined, chat?.department?.messages?.chatClosingMessage || `Chat archived by ${adminDetails?.fullName}`, updatedChat?.isHuman)
         }
         if (typeof cb === "function")
           cb({

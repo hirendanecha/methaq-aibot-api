@@ -228,7 +228,7 @@ exports.updatePermissions = async (req, res) => {
 exports.getChatList = async (req, res) => {
     try {
         const { _id: userId, role } = req.user;
-        const { limit, offset, status = "active", department, search } = req.body;
+        const { limit = 25, offset = 0, status = "active", department, search } = req.body;
 
         // const { limit, offset } = getPagination(page, size);
         const userDetails = await UserModel.findById(userId);

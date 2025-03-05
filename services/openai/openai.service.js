@@ -92,16 +92,18 @@ async function generateAIResponse(
   formData
 ) {
   try {
-    console.log("Generating AI Response...",chatDetails);
+    console.log("Generating AI Response...", chatDetails);
     const departmentsData = await fetchDepartmentsAndPrompts();
     let detectedDepartment = null;
     if (userInput) {
       detectedDepartment = await detectDepartment(userInput, departmentsData);
     }
 
-    const promptTemplate = image_url
-      ? chatDetails?.department?.prompt
-      : detectedDepartment.prompt;
+    // const promptTemplate = image_url
+    //   ? chatDetails?.department?.prompt
+    //   : detectedDepartment.prompt;
+
+    const promptTemplate = chatDetails?.department?.prompt;
 
     const imageDescription = image_url ? `Image URL: ${image_url}` : "";
 
