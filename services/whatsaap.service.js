@@ -10,6 +10,8 @@ const {
   mkdirSync,
   writeFileSync,
   createReadStream,
+  readFileSync,
+  unlinkSync,
 } = require("fs");
 const DepartmentModel = require("../models/department.model");
 
@@ -42,7 +44,7 @@ const sendWhatsAppMessage = async (
   context,
   messageID,
   displayPhoneNumber,
-  userInput,
+  userInput
 ) => {
   const data = JSON.stringify({
     messaging_product: "whatsapp",
@@ -92,6 +94,9 @@ const sendWhatsAppMessageFromalMessage = async (
   });
   await markMessageAsRead(messageID);
 };
+
+//convert pdf to image//
+
 async function getMediaUrl(mediaID) {
   const url = `https://graph.facebook.com/${process.env.WHATSAPP_CLOUD_API_VERSION}/${mediaID}`;
   try {
@@ -106,7 +111,7 @@ async function getMediaUrl(mediaID) {
     return { status: "error", data: "Error fetching Media Url" };
   }
 }
-async function downloadMedia(fileID) {
+async function downloadMedia(fileID, existingChat) {
   const config = {
     headers: {
       "Content-Type": "application/json",
@@ -126,7 +131,6 @@ async function downloadMedia(fileID) {
     console.log("File Type:", fileType); // Log file type for debugging
 
     const fileExtension = fileType?.split("/")[1];
-    console.log("File Extension:", fileExtension); // Log file extension for debugging
 
     if (!fileExtension) {
       throw new Error("File extension could not be determined");
@@ -143,29 +147,20 @@ async function downloadMedia(fileID) {
       mkdirSync(folderPath);
     }
 
-
-
     // return response.data;
     writeFileSync(filePath, response.data);
 
-    const formData = new FormData();
-    formData.append("files", createReadStream(filePath), {
-      filename: fileName,
-      contentType: fileType,
-    });
+    const imageBuffer = readFileSync(filePath);
 
-    const response22 = await axios.post(
-      `${process.env.OCR_API}/default`,
-      formData,
-      {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      }
-    );
+    const base64Image = imageBuffer.toString("base64");
+    //remove
 
-    const extractedText = response22?.data?.text;
-    console.log("response22", response22?.data?.text);
+    const imageUrl = `data:image/png;base64,${base64Image}`;
+
+    // console.log("AI Response:", aiResponse);
+
+    ///
+    // console.log("response22", response22?.data?.text);
     const month = new Date().toLocaleString("default", { month: "long" });
     const url = await s3.uploadPublic(
       filePath,
@@ -174,13 +169,34 @@ async function downloadMedia(fileID) {
       `WhatsappImages/${month}`
     );
     console.log(url, "ppppp");
+
+    const formData = new FormData();
+    formData.append("files", createReadStream(filePath), {
+      filename: fileName,
+      contentType: fileType,
+    });
+
+    let aiResponse;
+    if (formData) {
+      // Ensure the function is invoked when formData is present
+      aiResponse = await generateAIResponse(
+        null, // context
+        null,
+        existingChat,
+        url,
+        formData
+      );
+    }
+
+    const extractedText = aiResponse.message;
+
+    unlinkSync(filePath);
     return { status: "success", data: { url, extractedText } };
   } catch (e) {
     console.error("Error downloading media", e);
     return { status: "error", data: "Error downloading Media" };
   }
 }
-
 
 const sendImageByUrl = async (messageSender, fileName, messageID, imageUrl) => {
   const config = {
@@ -263,7 +279,7 @@ const sendDocumentByUrl = async (
 const sendInteractiveMessage = async (messageSender, messageID, payload) => {
   const config = {
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       Authorization: `Bearer ${process.env.WHATSAPP_CLOUD_API_ACCESS_TOKEN}`,
     },
   };
@@ -311,11 +327,7 @@ const sendInteractiveMessage = async (messageSender, messageID, payload) => {
   });
 
   try {
-    const response = await axios.post(
-      url,
-      data,
-      config
-    );
+    const response = await axios.post(url, data, config);
     console.log("Interactive list message sent:", response.data);
     await markMessageAsRead(messageID);
     return response.data; // Return the response data
@@ -331,5 +343,5 @@ module.exports = {
   markMessageAsRead,
   sendInteractiveMessage,
   sendImageByUrl,
-  sendDocumentByUrl
+  sendDocumentByUrl,
 };

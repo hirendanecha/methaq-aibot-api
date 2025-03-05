@@ -1,17 +1,16 @@
 const { OpenAI } = require("openai");
 const { OpenAIEmbeddings } = require("@langchain/openai");
-
+const axios = require("axios");
 const { PineconeStore } = require("@langchain/pinecone");
 const { Pinecone } = require("@pinecone-database/pinecone");
 const environment = require("../../utils/environment");
-const ChatModel = require("../../models/chat.model");
 const DepartmentModel = require("../../models/department.model.js");
+const processImage = require("./openai-functions/processImage.js");
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
 const pinecone = new Pinecone({ apiKey: environment.pinecone.apiKey });
-
 
 function buildDynamicPrompt(agent, context, userInput) {
   return `
@@ -47,7 +46,6 @@ async function detectDepartment(message, departments) {
   const index = pinecone.Index(process.env.PINECONE_INDEX_NAME);
 
   const vectorStore = await PineconeStore.fromExistingIndex(embeddings, {
-
     pineconeIndex: index,
   });
 
@@ -80,41 +78,90 @@ async function detectDepartment(message, departments) {
   // Fallback to a default department if no match is found
   // console.log("No Match Found, Defaulting to General");
   return {
-    name: "General Insurance",
+    name: "Motor Insurance",
     prompts: [],
     workingHours: { startTime: "09:00:00", endTime: "20:00:00" },
   };
 }
 
-async function generateAIResponse(context, userInput, chatDetails) {
+async function generateAIResponse(
+  context,
+  userInput,
+  chatDetails,
+  image_url,
+  formData
+) {
   try {
-
+    console.log("Generating AI Response...",chatDetails);
     const departmentsData = await fetchDepartmentsAndPrompts();
-    console.log(departmentsData, "departmentsData");
+    let detectedDepartment = null;
+    if (userInput) {
+      detectedDepartment = await detectDepartment(userInput, departmentsData);
+    }
 
-    const detectedDepartment = await detectDepartment(
-      userInput,
-      departmentsData
-    );
-    console.log(detectedDepartment, "detectedDepartment");
+    const promptTemplate = image_url
+      ? chatDetails?.department?.prompt
+      : detectedDepartment.prompt;
 
-    const updatedChat = await ChatModel.findOneAndUpdate(
-      { _id: chatDetails._id },
-      { department: detectedDepartment?._id || null },
-      { new: true }
-    )
-    const promptTemplate = detectedDepartment.prompt
-    console.log(promptTemplate, "promptTemplate");
+    const imageDescription = image_url ? `Image URL: ${image_url}` : "";
 
     const prompt = buildDynamicPrompt(promptTemplate, context, userInput);
+
+    const userMessageContent = [
+      { type: "text", text: userInput },
+      { type: "text", text: imageDescription },
+    ];
+
     const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
       messages: [
         { role: "system", content: prompt },
-        { role: "user", content: userInput },
+        { role: "user", content: userMessageContent },
       ],
-      model: process.env.OPENAI_MODEL || "gpt-4o-mini",
+      tools: [
+        {
+          type: "function",
+          function: {
+            name: "processImage",
+            description:
+              "Process and analyze an image, including document verification",
+            parameters: {
+              type: "object",
+              properties: {
+                imageUrl: {
+                  type: "string",
+                  description: "URL of the image to process",
+                },
+              },
+              required: ["imageUrl"],
+            },
+          },
+        },
+      ],
+      tool_choice: "auto",
     });
 
+    const toolCalls = response.choices[0].message.tool_calls;
+
+    if (toolCalls && toolCalls.length > 0) {
+      for (const toolCall of toolCalls) {
+        const functionName = toolCall.function.name;
+        const functionArgs = JSON.parse(toolCall.function.arguments);
+
+        let functionResult;
+        switch (functionName) {
+          case "processImage":
+            functionResult = await processImage(formData);
+            break;
+          default:
+            console.error("Unknown function:", functionName);
+            return "Unknown function call.";
+        }
+
+        console.log(functionResult);
+        return functionResult; // If multiple tool calls, handle differently
+      }
+    }
     return response.choices[0].message.content;
   } catch (error) {
     console.error("Error generating AI response:", error);
