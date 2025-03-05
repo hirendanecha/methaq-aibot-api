@@ -66,7 +66,7 @@ const s3 = {
                     } else {
                         resolve(data.Location);
                     }
-                    fs.unlinkSync(file);
+                    // fs.unlinkSync(file);
                 });
             } catch (error) {
                 reject(error);

@@ -291,7 +291,7 @@ const whatsappMessages = async (req, res) => {
 
       sendMessageToAdmins(socketObj, intmessage, null);
     } else {
-      console.log(message, "message for checking");
+      //console.log(message, "message for checking");
 
       let existingChat = await ChatModel.findOne({
         customerId: user?._id,
@@ -299,11 +299,11 @@ const whatsappMessages = async (req, res) => {
       if (!existingChat) {
         return;
       }
-      console.log(existingChat, "existingChatexistingChat");
+      //console.log(existingChat, "existingChatexistingChat");
 
       if (message.type === "image" || message.type === "document") {
         const mediaID = message.image?.id || message.document?.id; // Get the media ID from the message
-        const downloadResult = await downloadMedia(mediaID);
+        const downloadResult = await downloadMedia(mediaID,existingChat);
         const { url, extractedText } = downloadResult.data;
         const mess1 = {
           chatId: existingChat._id,
@@ -328,7 +328,7 @@ const whatsappMessages = async (req, res) => {
         if (mediaID) {
           await markMessageAsRead(messageID);
         }
-        const userInputmessage = await isDocumentRequest(extractedText);
+        const userInputmessage = extractedText;
         const mess2 = {
           chatId: existingChat._id,
           sender: null,

@@ -298,7 +298,7 @@ exports.sendMessageToAdmins = async (socketObj, message, department) => {
 
 exports.checkDepartmentAvailability = async (socketObj, existingChat, messageSender) => {
   try {
-    console.log(existingChat, "existingChat for asdfdaf");
+    //console.log(existingChat, "existingChat for asdfdaf");
 
     if (existingChat?.department?.workingHours?.startTime) {
       const currentHour = Number(
