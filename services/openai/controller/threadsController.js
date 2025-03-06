@@ -12,38 +12,33 @@ exports.createThread = async () => {
   }
 };
 // Add a user message with an optional attachment to a thread
-exports.addUserMessageWithAttachment =
-  async function addUserMessageWithAttachment(
-    threadId,
-    userMessage,
-    fileUrl = null
-  ) {
-    try {
-      // Validate inputs
-      if (!threadId || !userMessage) {
-        throw new Error("Thread ID and user message are required.");
-      }
-
-      // Construct the message payload
-      const messagePayload = {
-        role: "user",
-        content: userMessage,
-      };
-
-      // Add attachment if fileUrl is provided
-      if (fileUrl) {
-        messagePayload.attachments = [{ file_url: fileUrl }];
-      }
-
-      // Send the message
-      const message = await openai.beta.threads.messages.create(
-        threadId,
-        messagePayload
-      );
-      console.log("Message added:", message);
-      return message;
-    } catch (error) {
-      console.error("Error adding message:", error);
-      throw new Error("Failed to add message.");
+exports.addUserMessageWithAttachment = async (threadId, userMessage, fileUrl = null) => {
+  try {
+    // Validate inputs
+    if (!threadId || !userMessage) {
+      throw new Error("Thread ID and user message are required.");
     }
-  };
+
+    // Construct the message payload
+    const messagePayload = {
+      role: "user",
+      content: userMessage,
+    };
+
+    // Add attachment if fileUrl is provided
+    if (fileUrl) {
+      messagePayload.attachments = [{ file_url: fileUrl }];
+    }
+
+    // Send the message
+    const message = await openai.beta.threads.messages.create(
+      threadId,
+      messagePayload
+    );
+    console.log("Message added:", message);
+    return message;
+  } catch (error) {
+    console.error("Error adding message:", error);
+    throw new Error("Failed to add message.");
+  }
+};

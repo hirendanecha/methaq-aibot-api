@@ -1,11 +1,11 @@
 const openai = require("../openai-config/openai-config.js");
 
 // Create an assistant
-export async function createAssistant(
+exports.createAssistant = async (
   name,
   instructions,
   tools = [{ type: "code_interpreter" }, { type: "file_search" }]
-) {
+) => {
   try {
     if (!name || !instructions) {
       throw new Error(
@@ -42,7 +42,7 @@ export async function createAssistant(
 }
 
 // Update an assistant
-export async function updateAssistant(assistantId, updates) {
+exports.updateAssistant = async (assistantId, updates) => {
   try {
     if (!assistantId) {
       throw new Error(
@@ -75,7 +75,7 @@ export async function updateAssistant(assistantId, updates) {
 }
 
 // Delete an assistant
-export async function deleteAssistant(assistantId) {
+exports.deleteAssistant = async (assistantId) => {
   try {
     if (!assistantId) {
       throw new Error("Assistant ID is required to delete an assistant.");
