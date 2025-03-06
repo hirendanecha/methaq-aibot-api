@@ -1,4 +1,5 @@
-const openai = require("../openai-config/openai-config.js");
+const { openai } = require("../openai-config/openai-config");
+
 
 // Create an assistant
 exports.createAssistant = async (

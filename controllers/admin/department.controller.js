@@ -11,6 +11,7 @@ const {
 } = require("../../utils/response");
 const s3 = require("../../helpers/s3.helper");
 const dayjs = require("dayjs");
+const { createAssistant } = require("../../services/openai/controller/openai.assistant.controller");
 
 exports.getAllDepartment = async (req, res) => {
   try {
@@ -73,7 +74,23 @@ exports.addDepartment = async (req, res) => {
     const newDepartment = new DepartmentModel({
       ...mergedObject,
     });
-    await newDepartment.save();
+    const savedDepartment = await newDepartment.save();
+
+    if (savedDepartment) {
+      console.log(savedDepartment, "savedDepartment");
+
+      const newAssistant = await createAssistant(savedDepartment?.name, savedDepartment?.prompt);
+      console.log(newAssistant, "newAssistant");
+      const updatedDepartment = await DepartmentModel.findByIdAndUpdate(
+        savedDepartment?._id,
+        {
+          assistantDetails: newAssistant?.assistantData,
+        },
+        {
+          new: true,
+        }
+      )
+    }
 
     return sendSuccessResponse(res, { data: newDepartment }, 201);
   } catch (error) {
