@@ -159,57 +159,57 @@ const addDocument = async (req, res) => {
     });
     await newFile.save();
     const newVector = await createVectorStore(departmentDetails?.name, file);
-    console.log(departmentDetails, "departmentDetails");
+    console.log(newVector, "departmentDetails");
 
     const updatedAssistant = await updateAssistantVectorStore(departmentDetails?.assistantDetails?.id, newVector?.vectorStore?.id)
     console.log("updatedAssistant", updatedAssistant);
 
-    let fileContent;
+    // let fileContent;
 
-    if (file[0]) {
-      fileContent = await extractTextFromFile(file[0]);
-    } else {
-      return sendErrorResponse(res, error.message);
-      // return res.status(400).send("No file or URL provided.");
-    }
+    // if (file[0]) {
+    //   fileContent = await extractTextFromFile(file[0]);
+    // } else {
+    //   return sendErrorResponse(res, error.message);
+    //   // return res.status(400).send("No file or URL provided.");
+    // }
 
-    fileContent = fileContent.replace(/<script.*?>.*?<\/script>/g, "");
-    fileContent = fileContent.replace(/<style.*?>.*?<\/style>/g, "");
-    fileContent = fileContent.replace(/<\/?[^>]+(>|$)/g, "");
+    // fileContent = fileContent.replace(/<script.*?>.*?<\/script>/g, "");
+    // fileContent = fileContent.replace(/<style.*?>.*?<\/style>/g, "");
+    // fileContent = fileContent.replace(/<\/?[^>]+(>|$)/g, "");
 
-    let upload = await UploadModel.findByIdAndUpdate(newFile._id, {
-      content: fileContent,
-    }).populate("department");
+    // let upload = await UploadModel.findByIdAndUpdate(newFile._id, {
+    //   content: fileContent,
+    // }).populate("department");
 
-    upload = {
-      content: fileContent,
-      department: {
-        _id: upload?.department._id,
-        name: upload?.department.name,
-      },
-    };
+    // upload = {
+    //   content: fileContent,
+    //   department: {
+    //     _id: upload?.department._id,
+    //     name: upload?.department.name,
+    //   },
+    // };
 
-    await fetchAndStoreDocuments({ details: upload });
+    // await fetchAndStoreDocuments({ details: upload });
 
-    const chunks = fileContent
-      .split("\n\n")
-      .filter((chunk) => chunk.trim())
-      .slice(0, 100);
+    // const chunks = fileContent
+    //   .split("\n\n")
+    //   .filter((chunk) => chunk.trim())
+    //   .slice(0, 100);
 
-    for (const chunk of chunks) {
-      // const trimmedChunk = chunk.substring(0, 1000); // Truncate each chunk to 1000 characters to fit within token limits
-      const embedding = await openai.embeddings.create({
-        model: "text-embedding-ada-002",
-        input: chunk,
-      });
+    // for (const chunk of chunks) {
+    //   // const trimmedChunk = chunk.substring(0, 1000); // Truncate each chunk to 1000 characters to fit within token limits
+    //   const embedding = await openai.embeddings.create({
+    //     model: "text-embedding-ada-002",
+    //     input: chunk,
+    //   });
 
-      await Embedding.create({
-        chunk: chunk,
-        embedding: embedding.data[0].embedding,
-        documentId: newFile._id,
-      });
-    }
-    return sendSuccessResponse(res, { data: newFile }, 201);
+    //   await Embedding.create({
+    //     chunk: chunk,
+    //     embedding: embedding.data[0].embedding,
+    //     documentId: newFile._id,
+    //   });
+    // }
+    return sendSuccessResponse(res, { message: "File uploaded successfullys" }, 201);
   } catch (error) {
     console.error(error);
     return sendErrorResponse(res, error.message);

@@ -62,10 +62,14 @@ exports.handleUserMessage = async (
       throw new Error("Thread ID and user message are required.");
     }
 
+    let messageContent = userMessage || "";
+    if (fileUrl) {
+      messageContent += ` Analyze the file at this URL: ${fileUrl}`;
+    }
     // Construct the message payload
     const messagePayload = {
       role: "user",
-      content: userMessage || fileUrl || "",
+      content: messageContent,
     };
 
     // Add attachment if fileUrl is provided
