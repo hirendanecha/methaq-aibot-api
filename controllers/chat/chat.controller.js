@@ -36,6 +36,7 @@ const {
 const pinecone = new Pinecone({ apiKey: environment.pinecone.apiKey });
 const socketObj = require("../../helpers/socket.helper");
 const DepartmentModel = require("../../models/department.model");
+const { createThread, handleUserMessage } = require("../../services/openai/controller/threadsController");
 
 const fetchDepartmentsAndPrompts = async () => {
   try {
@@ -243,9 +244,10 @@ const whatsappMessages = async (req, res) => {
       if (!updatedCus._id) {
         throw new Error("Error while adding new user!");
       }
-
+      const threadId = await createThread();
       const chat = new ChatModel({
         customerId: updatedCus._id,
+        threadId: threadId,
         source: "whatsapp",
       });
       const newChat = await chat.save();
@@ -459,10 +461,16 @@ const whatsappMessages = async (req, res) => {
           console.log(results, "resilrrfsgd");
 
           let context = results.map((r) => r.pageContent).join("\n\n");
-          const response = await generateAIResponse(
-            context,
+          // const response = await generateAIResponse(
+          //   context,
+          //   userInput,
+          //   existingChat
+          // );
+
+          const response = await handleUserMessage(
+            existingChat?.threadId,
             userInput,
-            existingChat
+            existingChat?.department?.assistantDetails?.id,
           );
           console.log(response, "messageSendermessageSender");
           const mess = {
@@ -549,10 +557,15 @@ const whatsappMessages = async (req, res) => {
           console.log(results, "resilrrfsgd");
 
           let context = results.map((r) => r.pageContent).join("\n\n");
-          const response = await generateAIResponse(
-            context,
+          // const response = await generateAIResponse(
+          //   context,
+          //   userInput,
+          //   existingChat
+          // );
+          const response = await handleUserMessage(
+            existingChat?.threadId,
             userInput,
-            existingChat
+            existingChat?.department?.assistantDetails?.id,
           );
           console.log(response, "messageSendermessageSender");
           const mess = {

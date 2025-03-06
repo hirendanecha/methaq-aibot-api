@@ -14,6 +14,7 @@ const {
   unlinkSync,
 } = require("fs");
 const DepartmentModel = require("../models/department.model");
+const { handleUserMessage } = require("./openai/controller/threadsController");
 
 url = `https://graph.facebook.com/${process.env.WHATSAPP_CLOUD_API_VERSION}/${process.env.WHATSAPP_CLOUD_API_PHONE_NUMBER_ID}/messages`;
 
@@ -179,13 +180,19 @@ async function downloadMedia(fileID, existingChat) {
     let aiResponse;
     if (formData) {
       // Ensure the function is invoked when formData is present
-      aiResponse = await generateAIResponse(
-        null, // context
-        null,
-        existingChat,
-        url,
-        formData
-      );
+      // aiResponse = await generateAIResponse(
+      //   null, // context
+      //   null,
+      //   existingChat,
+      //   url,
+      //   formData
+      // );
+      console.log(existingChat, "existingChat for asdfdaf");
+
+      console.log(existingChat?.threadId, null, existingChat?.department?.assistantDetails?.id, url, "details for image");
+
+      aiResponse = await handleUserMessage(existingChat?.threadId, null, existingChat?.department?.assistantDetails?.id, url);
+
     }
 
     const extractedText = aiResponse.message;
