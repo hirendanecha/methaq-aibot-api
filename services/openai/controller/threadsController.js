@@ -1,4 +1,4 @@
-const openai = require("../openai-config/openai-config.js");
+const { openai } = require("../openai-config/openai-config");
 
 // Create a new thread
 exports.createThread = async () => {
@@ -49,20 +49,20 @@ exports.addUserMessageWithAttachment = async (
 
 exports.handleUserMessage = async (
   threadId,
-  userMessage,
+  userMessage = null,
   assistantId,
   fileUrl = null
 ) => {
   try {
     // Validate inputs
-    if (!threadId || !userMessage) {
+    if (!threadId || !assistantId) {
       throw new Error("Thread ID and user message are required.");
     }
 
     // Construct the message payload
     const messagePayload = {
       role: "user",
-      content: userMessage,
+      content: userMessage || "",
     };
 
     // Add attachment if fileUrl is provided
