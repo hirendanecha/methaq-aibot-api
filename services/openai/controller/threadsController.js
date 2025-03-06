@@ -1,5 +1,6 @@
 const openai = require("../openai-config/openai-config.js");
-
+const path = require("path");
+const multer = require("multer");
 // Create a new thread
 exports.createThread = async () => {
   try {
@@ -92,5 +93,77 @@ exports.handleUserMessage = async (
   } catch (error) {
     console.error("Error handling user message:", error);
     throw new Error("Failed to handle user message.");
+  }
+};
+
+exports.createVectorStore = async (vectorName, files) => {
+  if (!vectorName) {
+    throw new Error("Vector store name is required!");
+  }
+
+  if (!files || files.length === 0) {
+    throw new Error("No files uploaded!");
+  }
+
+  try {
+    const vectorStore = await openai.beta.vectorStores.create({
+      name: vectorName,
+    });
+    console.log("Vector Store Created:", vectorStore);
+
+    if (vectorStore.id) {
+      for (const file of files) {
+        const filePath = file.path;
+        const originalExtension = path.extname(file.originalname);
+        const newFilePath = filePath + originalExtension;
+
+        fs.renameSync(filePath, newFilePath);
+
+        const fileStream = fs.createReadStream(newFilePath);
+        const response = await openai.files.create({
+          file: fileStream,
+          purpose: "assistants",
+        });
+
+        console.log(`Uploaded File ID: ${response.id}`);
+
+        await openai.beta.vectorStores.files.createAndPoll(vectorStore.id, {
+          file_id: response.id,
+        });
+
+        console.log(`File ${response.id} attached to Vector Store!`);
+      }
+
+      return {
+        success: true,
+        message: "Vector Store created successfully!",
+        vectorStore,
+      };
+    }
+  } catch (error) {
+    console.error("Error:", error);
+    throw new Error(error.message);
+  }
+};
+
+exports.updateAssistantVectorStore = async (assistantId, vectorStoreId) => {
+  if (!vectorStoreId) {
+    throw new Error("Vector Store ID is required!");
+  }
+
+  try {
+    await openai.beta.assistants.update(assistantId, {
+      tool_resources: { file_search: { vector_store_ids: [vectorStoreId] } },
+    });
+
+    return {
+      success: true,
+      message: "Vector Store assigned to Assistant!",
+      assistantId,
+      vectorStoreId,
+    };
+  } catch (error) {
+    console.error("Error updating assistant:", error);
+    throw new Error(`Failed to update assistant: ${error.message}`);
   }
 };
