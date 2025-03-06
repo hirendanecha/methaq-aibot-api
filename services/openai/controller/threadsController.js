@@ -1,6 +1,7 @@
-const openai = require("../openai-config/openai-config.js");
+
 const path = require("path");
 const multer = require("multer");
+const { openai } = require("../openai-config/openai-config");
 // Create a new thread
 exports.createThread = async () => {
   try {

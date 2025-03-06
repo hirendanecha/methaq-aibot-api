@@ -20,6 +20,7 @@ const constants = require("../../utils/constants");
 const {
   fetchAndStoreDocuments,
 } = require("../../helpers/pineconeupload.helper");
+const DepartmentModel = require("../../models/department.model");
 
 const openai = new OpenAIApi({
   apiKey: environment.openaiApiKey,
@@ -142,7 +143,10 @@ const getAllDocument = async (req, res) => {
 
 const addDocument = async (req, res) => {
   const { department } = req.body;
-
+  const departmentDetails = await DepartmentModel.findById(department);
+  if (!departmentDetails) {
+    return sendErrorResponse(res, "Department not found.");
+  }
   const { file = [] } = req.files || {};
   try {
     const newFile = new UploadModel({
@@ -151,6 +155,8 @@ const addDocument = async (req, res) => {
       status: constants.status.statusObj.success,
     });
     await newFile.save();
+    const newVector =
+      formdata.append("file", file[0].path);
     let fileContent;
 
     if (file[0]) {
