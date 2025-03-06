@@ -3,6 +3,7 @@ const path = require("path");
 const multer = require("multer");
 const { openai } = require("../openai-config/openai-config");
 const fs = require("fs");
+const processImage = require("../openai-functions/processImage");
 // Create a new thread
 exports.createThread = async () => {
   try {
@@ -49,12 +50,17 @@ exports.addUserMessageWithAttachment = async (
     throw new Error("Failed to add message.");
   }
 };
-
+const getActiveRun = async (threadId) => {
+  const activeRuns = await openai.beta.threads.runs.list(threadId);
+  return activeRuns.data.find(run => run.status === "active");
+};
 exports.handleUserMessage = async (
   threadId,
   userMessage = null,
   assistantId,
-  fileUrl = null
+  fileUrl = null,
+  formData,
+  prompt
 ) => {
   try {
     // Validate inputs
@@ -83,12 +89,114 @@ exports.handleUserMessage = async (
       messagePayload
     );
     console.log("User message added:", userMessageResponse);
-
+    const activeRun = await getActiveRun(threadId);
+    if (activeRun) {
+      console.log(`Cancelling active run: ${activeRun.id}`);
+      await openai.beta.threads.runs.cancel(activeRun.id, { thread_id: threadId });
+    }
     // Run the assistant
-    const run = await openai.beta.threads.runs.createAndPoll(threadId, {
+    let run = await openai.beta.threads.runs.createAndPoll(threadId, {
       assistant_id: assistantId,
     });
+    console.log(run.status, "run.status");
+    // if (run.status === "requires_action") {
+    //   // Extract the required function call
+    //   const functionCall =
+    //     run.required_action.submit_tool_outputs.tool_calls[0];
+    //   let xyz = "";
+    //   if (functionCall) {
+    //     const functionName = functionCall.function.name;
+    //     const functionArgs = JSON.parse(functionCall.function.arguments);
 
+    //     console.log(`Function to Call: ${functionName}`, functionArgs);
+    //     let functionResult;
+    //     switch (functionName) {
+    //       case "processImage":
+    //         console.log("hey i am function");
+
+    //         functionResult = await processImage(formData, threadId, assistantId);
+    //         xyz = {
+    //           tool_call_id: functionCall.id,
+    //           output: JSON.stringify(functionResult?.message),
+    //         };
+
+
+    //         // const messagePayload = {
+    //         //   role: "user",
+    //         //   content: functionResult?.message,
+    //         // };
+    //         // const userMessageResponse = await openai.beta.threads.messages.create(
+    //         //   threadId,
+    //         //   messagePayload
+    //         // );
+    //         // const run = await openai.beta.threads.runs.createAndPoll(threadId, {
+    //         //   assistant_id: assistantId,
+    //         // });
+    //         if (run.status === "completed") {
+    //           const messages = await openai.beta.threads.messages.list(threadId);
+    //           const aiReply = messages.data.find((m) => m.role === "assistant");
+    //           return aiReply.content[0].text.value;
+    //         }
+    //         break;
+    //       default:
+    //         console.error("Unknown function:", functionName);
+    //         return "Unknown function call.";
+    //     }
+    //     await openai.beta.threads.runs.submitToolOutputs(threadId, run.id, {
+    //       tool_outputs: [xyz],
+    //     });
+    //     while (run.status !== "completed") {
+    //       console.log("Waiting for assistant to finish processing...");
+    //       await new Promise((resolve) => setTimeout(resolve, 2000));
+    //       run = await openai.beta.threads.runs.retrieve(threadId, run.id);
+    //     }
+    //     // console.log(functionResult);
+    //     return functionResult?.message;
+    //     //aiResponse = functionResult;
+    //   }
+    // }
+    if (run.status === "requires_action") {
+      const toolCalls = run.required_action.submit_tool_outputs.tool_calls;
+
+      const toolOutputs = await Promise.all(
+        toolCalls.map(async (toolCall) => {
+          const functionName = toolCall.function.name;
+          const functionArgs = JSON.parse(toolCall.function.arguments);
+
+          console.log(`Function to Call: ${functionName}`, functionArgs);
+
+          let output;
+
+          if (functionName === "processImage") {
+            // console.log('Fetching Temperature for:', functionArgs.location);
+            output = await processImage(formData, threadId, assistantId);
+            console.log('output :>> ', output);
+          } else {
+            console.warn(`Unknown function called: ${functionName}`);
+            output = { error: "Unknown function" };
+          }
+
+          return {
+            tool_call_id: toolCall.id,
+            output: JSON.stringify(output?.message),
+          };
+        })
+      );
+
+      // Submit function response to OpenAI
+      await openai.beta.threads.runs.submitToolOutputs(threadId, run.id, {
+        tool_outputs: toolOutputs,
+      });
+
+      console.log("Tool outputs submitted. Waiting for final response...");
+
+      // Poll again until Assistant completes processing**
+      while (run.status !== "completed") {
+        console.log("Waiting for assistant to finish processing...");
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        run = await openai.beta.threads.runs.retrieve(threadId, run.id);
+      }
+    }
     if (run.status === "completed") {
       const messages = await openai.beta.threads.messages.list(threadId);
       const aiReply = messages.data.find((m) => m.role === "assistant");
