@@ -29,7 +29,6 @@ export async function createAssistant(
     };
     return {
       success: true,
-      assistantId: assistant.id,
       assistantData,
       message: "Assistant created successfully!",
     };
