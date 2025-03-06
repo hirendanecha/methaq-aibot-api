@@ -11,7 +11,7 @@ const {
 } = require("../../utils/response");
 const s3 = require("../../helpers/s3.helper");
 const dayjs = require("dayjs");
-const { createAssistant } = require("../../services/openai/controller/openai.assistant.controller");
+const { createAssistant, updateAssistant, deleteAssistant } = require("../../services/openai/controller/openai.assistant.controller");
 
 exports.getAllDepartment = async (req, res) => {
   try {
@@ -101,7 +101,10 @@ exports.addDepartment = async (req, res) => {
 exports.updateDepartment = async (req, res) => {
   try {
     const { id } = req.params;
-
+    const department = await DepartmentModel.findById(id).lean();
+    if (!department) {
+      return sendErrorResponse(res, "Department not found.");
+    }
     let columns = Object.keys(req.body);
     let columnNames = columns.map((val) => {
       return { [val]: req.body[val] };
@@ -127,7 +130,6 @@ exports.updateDepartment = async (req, res) => {
 
       mergedObject.logo = url;
 
-      const department = await DepartmentModel.findById(id).lean();
       await s3.deleteFiles([department?.logo]);
     };
 
@@ -141,6 +143,13 @@ exports.updateDepartment = async (req, res) => {
       }
     );
 
+    if (updatedDepartment) {
+      // console.log(updatedDepartment, "updatedDepartment")
+      const updatedAssistant = await updateAssistant(updatedDepartment?.assistantDetails?.id, { name: updatedDepartment?.name, instructions: updatedDepartment?.prompt });
+      console.log(updatedAssistant, "updatedAssistant");
+
+    }
+
     return sendSuccessResponse(res, { data: updatedDepartment });
   } catch (error) {
     return sendErrorResponse(res, error.message);
@@ -151,7 +160,8 @@ exports.deleteDepartment = async (req, res) => {
   const { id } = req.params;
   try {
     const department = await DepartmentModel.findByIdAndDelete(id);
-    await PromptModel.deleteMany({ department: id });
+    console.log(department, "department");
+    const deletedAssistant = await deleteAssistant(department?.assistantDetails?.id);
     await QnaModel.deleteMany({ department: id });
     const uploadFiles = await UploadModel.find({ department: id });
     for (let i = 0; i < uploadFiles?.length; i++) {

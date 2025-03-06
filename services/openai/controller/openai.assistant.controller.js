@@ -50,11 +50,10 @@ exports.updateAssistant = async (assistantId, updates) => {
         "Assistant ID and updates are required to update an assistant."
       );
     }
-    const { name, instructions, tools } = updates;
+    const { name, instructions } = updates;
     const updatedAssistant = await openai.beta.assistants.update(assistantId, {
       name,
-      instructions,
-      tools,
+      instructions
     });
 
     console.log(
