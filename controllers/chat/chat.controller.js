@@ -222,6 +222,10 @@ const whatsappMessages = async (req, res) => {
     if (!messages) return res.status(400).send("No messages found"); // Added response for no messages
 
     const message = messages[0];
+    const messInDB = await MessageModel.findOne({ wpId: message.id });
+    if (messInDB) {
+      return res.status(200).send("Message already processed");
+    }
     const messageSender = message.from;
     const messageID = message.id;
     const messaging_product = "whatsaap";
@@ -251,6 +255,7 @@ const whatsappMessages = async (req, res) => {
 
       const mess2 = {
         chatId: newChat?._id?.toString(),
+        wpId: message?.id,
         sender: newChat?.customerId?.toString(),
         receiver: null,
         sendType: "user",
@@ -299,7 +304,7 @@ const whatsappMessages = async (req, res) => {
         customerId: user?._id,
       }).populate("department");
       if (!existingChat) {
-        return;
+        return res.status(200).send("Message processed");
       }
       //console.log(existingChat, "existingChatexistingChat");
 
@@ -309,6 +314,7 @@ const whatsappMessages = async (req, res) => {
         const { url, extractedText } = downloadResult.data;
         const mess1 = {
           chatId: existingChat._id,
+          wpId: message?.id,
           sender: existingChat?.customerId?.toString(),
           receiver: existingChat?.adminId?.toString() || null,
           sendType: "user",
@@ -319,13 +325,13 @@ const whatsappMessages = async (req, res) => {
         sendMessageToAdmins(socketObj, mess1, existingChat?.department?._id);
         const isDepartmentSelected = await sendInterectiveMessageConfirmation(socketObj, existingChat, messageSender, messageID);
         if (!isDepartmentSelected) {
-          return;
+          return res.status(200).send("Message processed");
         }
         const isAvailable = await checkDepartmentAvailability(
           socketObj, existingChat, messageSender
         );
         if (!isAvailable) {
-          return;
+          return res.status(200).send("Message processed");
         }
         if (mediaID) {
           await markMessageAsRead(messageID);
@@ -350,6 +356,7 @@ const whatsappMessages = async (req, res) => {
       } else if (message.type == "text") {
         const mess = {
           chatId: existingChat?._id,
+          wpId: message?.id,
           sender: existingChat?.customerId?.toString(),
           receiver: null,
           sendType: "user",
@@ -361,13 +368,13 @@ const whatsappMessages = async (req, res) => {
         sendMessageToAdmins(socketObj, mess, existingChat?.department?._id);
         const isDepartmentSelected = await sendInterectiveMessageConfirmation(socketObj, existingChat, messageSender, messageID);
         if (!isDepartmentSelected) {
-          return;
+          return res.status(200).send("Message processed");
         }
         const isAvailable = await checkDepartmentAvailability(
           socketObj, existingChat, messageSender
         );
         if (!isAvailable) {
-          return;
+          return res.status(200).send("Message processed");
         }
         const isHumantrasfer =
           existingChat?.isHuman === false
@@ -395,13 +402,15 @@ const whatsappMessages = async (req, res) => {
               content: `Chat is transferred to ${assigneeAgent?.fullName}`,
             };
             sendMessageToAdmins(socketObj, mess, existingChat?.department?._id);
-            return await sendWhatsAppMessage(
+            await sendWhatsAppMessage(
               messageSender,
               undefined,
               messageID,
               displayPhoneNumber,
               `We have transferred your chat to ${assigneeAgent?.fullName}`
             );
+
+            return res.status(200).send("Message processed")
           }
           else {
             const mess = {
@@ -414,13 +423,15 @@ const whatsappMessages = async (req, res) => {
               content: existingChat?.department?.messages?.allAgentsOfflineResponse,
             };
             sendMessageToAdmins(socketObj, mess, existingChat?.department?._id);
-            return await sendWhatsAppMessage(
+            await sendWhatsAppMessage(
               messageSender,
               undefined,
               messageID,
               displayPhoneNumber,
               existingChat?.department?.messages?.allAgentsOfflineResponse
             );
+
+            return res.status(200).send("Message processed")
           }
         }
         if (!existingChat?.isHuman) {
@@ -490,6 +501,7 @@ const whatsappMessages = async (req, res) => {
         ).populate("department");
         const mess1 = {
           chatId: existingChat?._id,
+          wpId: message?.id,
           sender: existingChat?.customerId?.toString(),
           receiver: null,
           sendType: "user",
@@ -514,11 +526,12 @@ const whatsappMessages = async (req, res) => {
         console.log(isAvailable, "isAvailable in interactive");
 
         if (!isAvailable) {
-          return;
+          return res.status(200).send("Message processed");
         }
 
         if (!existingChat?.isHuman) {
-          const userInput = message?.interactive?.list_reply?.description;
+          // const userInput = message?.interactive?.list_reply?.title;
+          const userInput = "Hi";
 
           const embeddings = new OpenAIEmbeddings({
             openAIApiKey: process.env.OPENAI_API_KEY,
