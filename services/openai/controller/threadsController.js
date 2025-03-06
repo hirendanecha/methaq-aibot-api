@@ -2,6 +2,7 @@
 const path = require("path");
 const multer = require("multer");
 const { openai } = require("../openai-config/openai-config");
+const fs = require("fs");
 // Create a new thread
 exports.createThread = async () => {
   try {
@@ -64,13 +65,13 @@ exports.handleUserMessage = async (
     // Construct the message payload
     const messagePayload = {
       role: "user",
-      content: userMessage || "",
+      content: userMessage || fileUrl || "",
     };
 
     // Add attachment if fileUrl is provided
-    if (fileUrl) {
-      messagePayload.attachments = [{ file_url: fileUrl }];
-    }
+    // if (fileUrl) {
+    //   messagePayload.attachments = [{ file_url: fileUrl }];
+    // }
 
     // Send the user message
     const userMessageResponse = await openai.beta.threads.messages.create(
@@ -117,8 +118,10 @@ exports.createVectorStore = async (vectorName, files) => {
         const filePath = file.path;
         const originalExtension = path.extname(file.originalname);
         const newFilePath = filePath + originalExtension;
-
-        fs.renameSync(filePath, newFilePath);
+        console.log("newFilePath", newFilePath, filePath);
+        const filePathT = filePath.replaceAll("\\", "/")
+        const newFilePathT = newFilePath.replaceAll("\\", "/")
+        fs.renameSync(filePathT, newFilePathT);
 
         const fileStream = fs.createReadStream(newFilePath);
         const response = await openai.files.create({

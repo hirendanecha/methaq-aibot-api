@@ -187,9 +187,12 @@ async function downloadMedia(fileID, existingChat) {
       //   url,
       //   formData
       // );
+      console.log(existingChat, "existingChat for asdfdaf");
+
       console.log(existingChat?.threadId, null, existingChat?.department?.assistantDetails?.id, url, "details for image");
 
-      aiResponse = await handleUserMessage(existingChat?.threadId, null, existingChat?.department?.assistantDetails?.id, url);;
+      aiResponse = await handleUserMessage(existingChat?.threadId, null, existingChat?.department?.assistantDetails?.id, url);
+
     }
 
     const extractedText = aiResponse.message;
