@@ -5,6 +5,8 @@ const { PineconeStore } = require("@langchain/pinecone");
 const { Pinecone } = require("@pinecone-database/pinecone");
 const environment = require("../../utils/environment");
 const DepartmentModel = require("../../models/department.model.js");
+const ChatModel = require("../../models/chat.model");
+const MessageModel = require("../../models/message.model");
 const processImage = require("./openai-functions/processImage.js");
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -12,16 +14,25 @@ const openai = new OpenAI({
 
 const pinecone = new Pinecone({ apiKey: environment.pinecone.apiKey });
 
-function buildDynamicPrompt(agent, context, userInput) {
+function buildDynamicPrompt(agent, context, userInput, formattedHistory) {
   return `
 ${agent}
 
 ### 📌 Context:
 ${context}
 
+### 🧠 Important Rule:
+You must only respond to the user's request by parsing the past conversation.
+If the user asks "Which documents i uploaded" you must only list the documents that the user has explicitly stated that they uploaded. Ignore all other conversation.
+Search the conversation for phrases like 'Car Document' or 'ID' or other document names. Extract the document types mentioned in these phrases.
+
+### 🔄 Conversation History (Context-Aware):
+${formattedHistory}
+
+
+
 ### ❓ User Query:
 ${userInput}
-
 `;
 }
 
@@ -99,6 +110,28 @@ async function generateAIResponse(
       detectedDepartment = await detectDepartment(userInput, departmentsData);
     }
 
+    const pastMessages = await MessageModel.find({ chatId: chatDetails._id })
+      .sort({ timestamp: -1 })
+      .limit(10)
+      .lean();
+
+    const formattedHistory = pastMessages
+      .map((msg) => {
+        let messageContent = msg.content;
+        // If attachments exist, append them to the message content.
+        if (msg.attachments && msg.attachments.length > 0) {
+          // Assume attachments is an array of file URLs.
+          const attachmentUrls = msg.attachments.join(", ");
+          messageContent += `\n[Attachments: ${attachmentUrls}]`;
+        }
+        // Prefix with the appropriate label based on sendType.
+        return `${
+          msg.sendType === "user" ? "👤 User" : "🤖 Assistant"
+        }: ${messageContent}`;
+      })
+      .join("\n");
+
+    console.log(formattedHistory, "formattedHistory");
     // const promptTemplate = image_url
     //   ? chatDetails?.department?.prompt
     //   : detectedDepartment.prompt;
@@ -106,13 +139,19 @@ async function generateAIResponse(
     const promptTemplate = chatDetails?.department?.prompt;
 
     const imageDescription = image_url ? `Image URL: ${image_url}` : "";
-
-    const prompt = buildDynamicPrompt(promptTemplate, context, userInput);
+    const prompt = buildDynamicPrompt(
+      promptTemplate,
+      context,
+      userInput,
+      formattedHistory
+    );
 
     const userMessageContent = [
       { type: "text", text: userInput },
       { type: "text", text: imageDescription },
     ];
+
+    console.log("prompt", prompt);
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
@@ -153,7 +192,11 @@ async function generateAIResponse(
         let functionResult;
         switch (functionName) {
           case "processImage":
-            functionResult = await processImage(formData);
+            functionResult = await processImage(
+              formData,
+              prompt,
+              formattedHistory
+            );
             break;
           default:
             console.error("Unknown function:", functionName);
