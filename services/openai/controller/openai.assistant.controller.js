@@ -1,26 +1,37 @@
-const { sendSuccessResponse, sendErrorResponse } = require("../../../utils/response");
+const {
+  sendSuccessResponse,
+  sendErrorResponse,
+} = require("../../../utils/response");
 const { openai } = require("../openai-config/openai-config");
 const {
   toolFunctions,
 } = require("../openai-functions/function-schema/functionsSchema");
 
 // Create an assistant
-exports.createAssistant = async (
-  name,
-  instructions,
-  tools = [{ type: "code_interpreter" }, { type: "file_search" }]
-) => {
+exports.createAssistant = async (name, instructions, toolNames = []) => {
   try {
     if (!name || !instructions) {
-      throw new Error(
-        "Name and instructions are required to create an assistant."
-      );
+      throw new Error("Both name and instructions are required.");
     }
+
+    // Default tools like code interpreter and file search
+    let tools = [{ type: "code_interpreter" }, { type: "file_search" }];
+
+    // Ensure toolNames is an array
+    const functionNames = Array.isArray(toolNames) ? toolNames : [toolNames];
+
+    const selectedTools = functionNames
+      .map((name) =>
+        Object.values(toolFunctions).find((tool) => tool.name === name)
+      )
+      .filter((tool) => tool !== undefined); // Remove undefined tools
+    // Merge selected tools
+    tools = tools.concat(selectedTools);
 
     const assistant = await openai.beta.assistants.create({
       name,
       instructions,
-      model: process.env.OPENAI_MODEL,
+      model: process.env.OPENAI_MODEL || "gpt-4-turbo",
       tools,
     });
 
@@ -53,10 +64,32 @@ exports.updateAssistant = async (assistantId, updates) => {
         "Assistant ID and updates are required to update an assistant."
       );
     }
+
+    // Retrieve the existing assistant details
+    const existingAssistant = await openai.beta.assistants.retrieve(
+      assistantId
+    );
+
+    let updatedTools = [...existingAssistant.tools]; // Keep existing tools by default
+
+    if (updates.tools) {
+      if (updates.tools.length === 0) {
+        // If an empty array is provided, remove all tools
+        updatedTools = [];
+      } else {
+        // Process tools (replace old ones)
+        updatedTools = updates.tools
+          .map((toolName) => toolFunctions[toolName])
+          .filter(Boolean);
+      }
+    }
+
     const { name, instructions } = updates;
+
     const updatedAssistant = await openai.beta.assistants.update(assistantId, {
       name,
       instructions,
+      tools: updatedTools, // Update tools dynamically
     });
 
     console.log(
