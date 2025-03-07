@@ -54,6 +54,143 @@ const getActiveRun = async (threadId) => {
   const activeRuns = await openai.beta.threads.runs.list(threadId);
   return activeRuns.data.find(run => run.status === "active");
 };
+
+const messageQueues = new Map();
+const processingThreads = new Map();
+const messageResponses = new Map();
+
+const runAssistant = async (threadId, assistantId, formData) => {
+  try {
+    const runs = await openai.beta.threads.runs.list(threadId);
+    const activeRun = runs.data.find(run =>
+      ['in_progress', 'queued', 'requires_action'].includes(run.status)
+    );
+
+    if (activeRun) {
+      console.log(`Found active run ${activeRun.id}, cancelling`);
+      await openai.beta.threads.runs.cancel(threadId, activeRun.id);
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+
+    let run = await openai.beta.threads.runs.create(threadId, {
+      assistant_id: assistantId
+    });
+    
+    while (['in_progress', 'queued', 'requires_action'].includes(run.status)) {
+      console.log(`Run status: ${run.status}`);
+      await new Promise((resolve) => setTimeout(resolve, 500));
+      run = await openai.beta.threads.runs.retrieve(threadId, run.id);
+
+      if (run.status === "requires_action") {
+        console.log("Function call required.");
+
+        const toolCalls = run.required_action.submit_tool_outputs.tool_calls;
+
+        const toolOutputs = await Promise.allSettled(
+          toolCalls.map(async (toolCall) => {
+            try {
+              const functionName = toolCall.function.name;
+              const functionArgs = JSON.parse(toolCall.function.arguments);
+              console.log(`Calling Function: ${functionName}`, functionArgs);
+
+              let output;
+              if (functionName === "processImage") {
+                output = await processImage(formData, threadId, assistantId);
+              } else {
+                console.warn(`Unknown function: ${functionName}`);
+                output = { error: "Unknown function" };
+              }
+
+              return {
+                tool_call_id: toolCall.id,
+                output: JSON.stringify(output),
+              };
+            } catch (error) {
+              console.error("Error executing function:", error);
+              return { tool_call_id: toolCall.id, output: JSON.stringify({ error: "Function execution failed" }) };
+            }
+          })
+        );
+
+        const validOutputs = toolOutputs
+          .filter(result => result.status === "fulfilled")
+          .map(result => result.value);
+
+        if (validOutputs.length > 0) {
+          await openai.beta.threads.runs.submitToolOutputs(threadId, run.id, {
+            tool_outputs: validOutputs,
+          });
+          console.log("Tool outputs submitted. Waiting for final response...");
+        }
+      }
+
+      if (run.status === "failed") {
+        console.error("Run failed:", run.last_error);
+        return "The assistant encountered an error processing your request.";
+      }
+
+      const messages = await openai.beta.threads.messages.list(threadId);
+      const aiReply = messages.data.find(m => m.role === "assistant");
+
+      return aiReply ? aiReply.content[0].text.value : "No response from the assistant.";
+    }
+
+  } catch (error) {
+    console.error(error);
+  }
+}
+
+const processMessageQueue = async (threadId, formData) => {
+  processingThreads.set(threadId, true);
+
+  try {
+    const queue = messageQueues.get(threadId);
+
+    while (queue.length > 0) {
+      const currentMessage = queue[0];
+      console.log(`Processing message ${currentMessage.messageId} for thread ${threadId}, ${queue.length} messages remaining in queue`);
+      const messagePayload = {
+        role: "user",
+        content: currentMessage?.userMessage,
+      };
+      const userMessageResponse = await openai.beta.threads.messages.create(
+        threadId,
+        messagePayload
+      );
+
+      // Process with assistant
+      try {
+        // let run = await openai.beta.threads.runs.createAndPoll(threadId, {
+        //   assistant_id: assistantId,
+        // });
+        const response = await runAssistant(threadId, currentMessage.assistantId, formData);
+        console.log(`Message ${currentMessage.messageId} processed successfully for thread ${threadId}`);
+
+        const responseHandler = messageResponses.get(currentMessage.messageId);
+        if (responseHandler) {
+          responseHandler.resolve(response);
+        }
+      } catch (error) {
+        console.error(`Error processing message ${currentMessage.messageId} for thread ${threadId}:`, error);
+
+        const responseHandler = messageResponses.get(currentMessage.messageId);
+        if (responseHandler) {
+          responseHandler.resolve("Sorry, there was an error processing your message.");
+        }
+      }
+
+      // Remove processed message from queue
+      queue.shift();
+    }
+  } catch (error) {
+    console.error(`Error processing message queue for thread ${threadId}:`, error);
+  } finally {
+    processingThreads.set(threadId, false);
+    console.log(`Finished processing queue for thread ${threadId}`);
+  }
+}
+
+
 exports.handleUserMessage = async (
   threadId,
   userMessage = null,
@@ -67,16 +204,60 @@ exports.handleUserMessage = async (
     if (!threadId || !assistantId) {
       throw new Error("Thread ID and user message are required.");
     }
+    const messageId = `msg_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    console.log(messageId, "messageIdmessageId")
+    let resolveResponsePromise;
+    const responsePromise = new Promise(resolve => {
+      resolveResponsePromise = resolve;
+    });
+
+    messageResponses.set(messageId, {
+      promise: responsePromise,
+      resolve: resolveResponsePromise
+    });
+
+    if (!messageQueues.has(threadId)) {
+      messageQueues.set(threadId, []);
+    }
 
     let messageContent = userMessage || "";
     if (fileUrl) {
       messageContent += ` Analyze the file at this URL: ${fileUrl}`;
     }
+
+    messageQueues.get(threadId).push({
+      messageId,
+      userMessage: messageContent,
+      assistantId
+    });
+
+    if (!processingThreads.get(threadId)) {
+      processMessageQueue(threadId, formData);
+    }
+
+    try {
+      const aiResponse = await responsePromise;
+      res.json({
+        success: true,
+        messageId,
+        response: aiResponse
+      });
+    } catch (error) {
+      console.error("Error getting AI response:", error);
+      res.status(500).json({
+        error: "Failed to get AI response",
+        messageId
+      });
+    } finally {
+      messageResponses.delete(messageId);
+    }
+
+
     // Construct the message payload
-    const messagePayload = {
-      role: "user",
-      content: messageContent,
-    };
+    // const messagePayload = {
+    //   role: "user",
+    //   content: messageContent,
+    // };
 
     // Add attachment if fileUrl is provided
     // if (fileUrl) {
@@ -84,21 +265,21 @@ exports.handleUserMessage = async (
     // }
 
     // Send the user message
-    const userMessageResponse = await openai.beta.threads.messages.create(
-      threadId,
-      messagePayload
-    );
-    console.log("User message added:", userMessageResponse);
-    const activeRun = await getActiveRun(threadId);
-    if (activeRun) {
-      console.log(`Cancelling active run: ${activeRun.id}`);
-      await openai.beta.threads.runs.cancel(activeRun.id, { thread_id: threadId });
-    }
+    // const userMessageResponse = await openai.beta.threads.messages.create(
+    //   threadId,
+    //   messagePayload
+    // );
+    // console.log("User message added:", userMessageResponse);
+    // const activeRun = await getActiveRun(threadId);
+    // if (activeRun) {
+    //   console.log(`Cancelling active run: ${activeRun.id}`);
+    //   await openai.beta.threads.runs.cancel(activeRun.id, { thread_id: threadId });
+    // }
     // Run the assistant
-    let run = await openai.beta.threads.runs.createAndPoll(threadId, {
-      assistant_id: assistantId,
-    });
-    console.log(run.status, "run.status");
+    // let run = await openai.beta.threads.runs.createAndPoll(threadId, {
+    //   assistant_id: assistantId,
+    // });
+    // console.log(run.status, "run.status");
     // if (run.status === "requires_action") {
     //   // Extract the required function call
     //   const functionCall =
@@ -155,57 +336,57 @@ exports.handleUserMessage = async (
     //     //aiResponse = functionResult;
     //   }
     // }
-    if (run.status === "requires_action") {
-      const toolCalls = run.required_action.submit_tool_outputs.tool_calls;
+    // if (run.status === "requires_action") {
+    //   const toolCalls = run.required_action.submit_tool_outputs.tool_calls;
 
-      const toolOutputs = await Promise.all(
-        toolCalls.map(async (toolCall) => {
-          const functionName = toolCall.function.name;
-          const functionArgs = JSON.parse(toolCall.function.arguments);
+    //   const toolOutputs = await Promise.all(
+    //     toolCalls.map(async (toolCall) => {
+    //       const functionName = toolCall.function.name;
+    //       const functionArgs = JSON.parse(toolCall.function.arguments);
 
-          console.log(`Function to Call: ${functionName}`, functionArgs);
+    //       console.log(`Function to Call: ${functionName}`, functionArgs);
 
-          let output;
+    //       let output;
 
-          if (functionName === "processImage") {
-            // console.log('Fetching Temperature for:', functionArgs.location);
-            output = await processImage(formData, threadId, assistantId);
-            console.log('output :>> ', output);
-          } else {
-            console.warn(`Unknown function called: ${functionName}`);
-            output = { error: "Unknown function" };
-          }
+    //       if (functionName === "processImage") {
+    //         // console.log('Fetching Temperature for:', functionArgs.location);
+    //         output = await processImage(formData, threadId, assistantId);
+    //         console.log('output :>> ', output);
+    //       } else {
+    //         console.warn(`Unknown function called: ${functionName}`);
+    //         output = { error: "Unknown function" };
+    //       }
 
-          return {
-            tool_call_id: toolCall.id,
-            output: JSON.stringify(output?.message),
-          };
-        })
-      );
+    //       return {
+    //         tool_call_id: toolCall.id,
+    //         output: JSON.stringify(output?.message),
+    //       };
+    //     })
+    //   );
 
-      // Submit function response to OpenAI
-      await openai.beta.threads.runs.submitToolOutputs(threadId, run.id, {
-        tool_outputs: toolOutputs,
-      });
+    //   // Submit function response to OpenAI
+    //   await openai.beta.threads.runs.submitToolOutputs(threadId, run.id, {
+    //     tool_outputs: toolOutputs,
+    //   });
 
-      console.log("Tool outputs submitted. Waiting for final response...");
+    //   console.log("Tool outputs submitted. Waiting for final response...");
 
-      // Poll again until Assistant completes processing**
-      while (run.status !== "completed") {
-        console.log("Waiting for assistant to finish processing...");
-        await new Promise((resolve) => setTimeout(resolve, 2000));
-        run = await openai.beta.threads.runs.retrieve(threadId, run.id);
-      }
-    }
-    if (run.status === "completed") {
-      const messages = await openai.beta.threads.messages.list(threadId);
-      const aiReply = messages.data.find((m) => m.role === "assistant");
-      return aiReply.content[0].text.value;
-    } else {
-      return "Processing your request...";
-    }
+    //   // Poll again until Assistant completes processing**
+    //   while (run.status !== "completed") {
+    //     console.log("Waiting for assistant to finish processing...");
+    //     await new Promise((resolve) => setTimeout(resolve, 2000));
+    //     run = await openai.beta.threads.runs.retrieve(threadId, run.id);
+    //   }
+    // }
+    // if (run.status === "completed") {
+    //   const messages = await openai.beta.threads.messages.list(threadId);
+    //   const aiReply = messages.data.find((m) => m.role === "assistant");
+    //   return aiReply.content[0].text.value;
+    // } else {
+    //   return "Processing your request...";
+    // }
   } catch (error) {
-    console.error("Error handling user message:", error);
+    console.error("Error handling user message:", error.message);
     throw new Error("Failed to handle user message.");
   }
 };
