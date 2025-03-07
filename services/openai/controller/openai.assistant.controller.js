@@ -1,11 +1,11 @@
-const openai = require("../openai-config/openai-config.js");
-
+const { openai } = require("../openai-config/openai-config");
+const toolFunctions = require("../openai-functions/function-schema/functionsSchema");
 // Create an assistant
-export async function createAssistant(
+exports.createAssistant = async (
   name,
   instructions,
   tools = [{ type: "code_interpreter" }, { type: "file_search" }]
-) {
+) => {
   try {
     if (!name || !instructions) {
       throw new Error(
@@ -29,7 +29,6 @@ export async function createAssistant(
     };
     return {
       success: true,
-      assistantId: assistant.id,
       assistantData,
       message: "Assistant created successfully!",
     };
@@ -40,21 +39,20 @@ export async function createAssistant(
       message: `Failed to create assistant: ${error.message}`,
     };
   }
-}
+};
 
 // Update an assistant
-export async function updateAssistant(assistantId, updates) {
+exports.updateAssistant = async (assistantId, updates) => {
   try {
     if (!assistantId) {
       throw new Error(
         "Assistant ID and updates are required to update an assistant."
       );
     }
-    const { name, instructions, tools } = updates;
+    const { name, instructions } = updates;
     const updatedAssistant = await openai.beta.assistants.update(assistantId, {
       name,
       instructions,
-      tools,
     });
 
     console.log(
@@ -73,10 +71,10 @@ export async function updateAssistant(assistantId, updates) {
       message: `Failed to update assistant: ${error.message}`,
     };
   }
-}
+};
 
 // Delete an assistant
-export async function deleteAssistant(assistantId) {
+exports.deleteAssistant = async (assistantId) => {
   try {
     if (!assistantId) {
       throw new Error("Assistant ID is required to delete an assistant.");
@@ -98,3 +96,28 @@ export async function deleteAssistant(assistantId) {
     };
   }
 }
+
+
+//add fucntion
+
+exports.addToolToAssistant = async (assistantId, functionId) => {
+  try {
+    const toolFunction = toolFunctions[functionId];
+
+    if (!toolFunction) {
+      return { success: false, message: "Tool function not found" };
+    }
+
+     const existingAssistant = await openai.beta.assistants.retrieve(assistantId);
+
+     const updatedTools = [...existingAssistant.tools, toolFunction];
+
+     const updatedAssistant = await openai.beta.assistants.update(assistantId, {
+      tools: updatedTools,
+    });
+
+    return { success: true, updatedAssistant };
+  } catch (error) {
+    return { success: false, message: error.message };
+  }
+};

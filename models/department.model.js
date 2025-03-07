@@ -18,6 +18,11 @@ const DepartmentSchema = new Schema(
       startTime: { type: String },
       endTime: { type: String }
     },
+    assistantDetails: {
+      id: { type: String },
+      name: { type: String },
+      createdAt: { type: String }
+    }
   },
   {
     timestamps: true,
