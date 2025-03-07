@@ -6,7 +6,10 @@ const DepartmentModel = require("../models/department.model");
 const UserModel = require("../models/user.model");
 const ChatModel = require("../models/chat.model");
 const MessageModel = require("../models/message.model");
-const { sendWhatsAppMessage, sendInteractiveMessage } = require("../services/whatsaap.service");
+const {
+  sendWhatsAppMessage,
+  sendInteractiveMessage,
+} = require("../services/whatsaap.service");
 
 const baseUrl = "";
 exports.removeFile = (fileName) => {
@@ -296,20 +299,32 @@ exports.sendMessageToAdmins = async (socketObj, message, department) => {
   }
 };
 
-exports.checkDepartmentAvailability = async (socketObj, existingChat, messageSender) => {
+exports.checkDepartmentAvailability = async (
+  socketObj,
+  existingChat,
+  messageSender
+) => {
   try {
-    //console.log(existingChat, "existingChat for asdfdaf");
-
     if (existingChat?.department?.workingHours?.startTime) {
-      const currentHour = Number(
-        new Date().toLocaleString("en-US", {
-          timeZone: "Asia/Kolkata",
-          hour: "2-digit",
-          hour12: false,
-        })
+      // Get the current hour in the server's local time zone
+
+      // const currentHour = Number(
+      //   new Date().toLocaleString("en-US", {
+      //     timeZone: "Asia/Kolkata",
+      //     hour: "2-digit",
+      //     hour12: false,
+      //   })
+      // );
+
+      const currentHour = new Date().getHours();
+
+      const startHour = parseInt(
+        existingChat?.department?.workingHours?.startTime.split(":")[0]
       );
-      const startHour = parseInt(existingChat?.department?.workingHours?.startTime.split(":")[0]);
-      const endHour = parseInt(existingChat?.department?.workingHours?.endTime.split(":")[0]);
+      const endHour = parseInt(
+        existingChat?.department?.workingHours?.endTime.split(":")[0]
+      );
+
       console.log(currentHour, "currentHour");
       console.log(startHour, "startHour");
       console.log(endHour, "endHour");
@@ -323,7 +338,11 @@ exports.checkDepartmentAvailability = async (socketObj, existingChat, messageSen
           receiverType: "user",
           content: existingChat?.department?.messages?.afterHoursResponse,
         };
-        exports.sendMessageToAdmins(socketObj, message, existingChat?.department?._id);
+        exports.sendMessageToAdmins(
+          socketObj,
+          message,
+          existingChat?.department?._id
+        );
         await sendWhatsAppMessage(
           messageSender,
           undefined,
@@ -352,18 +371,18 @@ exports.getAssigneeAgent = async (department) => {
       // Step 2: Join with the 'Chat' collection to count chats per agent
       {
         $lookup: {
-          from: 'chats', // The collection to join with
-          localField: '_id', // Field from the 'Agent' collection to match
-          foreignField: 'adminId', // Field from the 'Chat' collection to match
-          as: 'chats', // Alias for the joined chats
-        }
+          from: "chats", // The collection to join with
+          localField: "_id", // Field from the 'Agent' collection to match
+          foreignField: "adminId", // Field from the 'Chat' collection to match
+          as: "chats", // Alias for the joined chats
+        },
       },
 
       // Step 3: Add a new field 'chatCount' that counts the number of chats for each agent
       {
         $addFields: {
-          chatCount: { $size: '$chats' }
-        }
+          chatCount: { $size: "$chats" },
+        },
       },
     ]);
     console.log(result, "resultresultresult");
@@ -374,20 +393,23 @@ exports.getAssigneeAgent = async (department) => {
         if (agent?.chatCount < finalAgent?.chatCount) {
           finalAgent = agent;
         }
-      })
+      });
       return finalAgent;
-    }
-    else {
+    } else {
       return null;
     }
-
   } catch (error) {
     console.error("Error getting assignee agent:", error);
     throw error;
   }
-}
+};
 
-exports.sendInterectiveMessageConfirmation = async (socketObj, existingChat, messageSender, messageID) => {
+exports.sendInterectiveMessageConfirmation = async (
+  socketObj,
+  existingChat,
+  messageSender,
+  messageID
+) => {
   try {
     if (!existingChat?.department) {
       const departments = await fetchDepartmentsAndPrompts();
@@ -428,11 +450,10 @@ exports.sendInterectiveMessageConfirmation = async (socketObj, existingChat, mes
     }
     return true;
   } catch (error) {
-    throw error
+    throw error;
   }
-}
+};
 
-const imagesFormat = ['jpg', 'jpeg', 'png', 'gif', 'svg', 'webp'];
-exports.isImageType = (attachment) => imagesFormat.some((format) =>
-  attachment?.toLowerCase?.().endsWith?.(format),
-);
+const imagesFormat = ["jpg", "jpeg", "png", "gif", "svg", "webp"];
+exports.isImageType = (attachment) =>
+  imagesFormat.some((format) => attachment?.toLowerCase?.().endsWith?.(format));
