@@ -18,8 +18,8 @@ async function processImage(formData, prompt) {
     );
     let extractedText;
 
-    const documentType = response22?.data?.document_type;
-    const sideDetection = response22?.data?.side_detection;
+    const documentType = response22?.data?.document_types;
+    const sideDetection = response22?.data?.side_detections;
 
     const documentInfo = {
       documentType,
@@ -45,7 +45,7 @@ async function processImage(formData, prompt) {
     // });
     return {
       status: "success",
-      message: extractedText,
+      message: documentInfo,
     };
   } catch (error) {
     console.error("Error processing image:", error);

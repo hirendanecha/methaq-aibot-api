@@ -11,6 +11,7 @@ const {
   sendInteractiveMessage,
   downloadMedia,
   markMessageAsRead,
+  sendListMessage,
 } = require("../../services/whatsaap.service");
 const CustomerModel = require("../../models/customer.model");
 const ChatModel = require("../../models/chat.model");
@@ -36,7 +37,13 @@ const {
 const pinecone = new Pinecone({ apiKey: environment.pinecone.apiKey });
 const socketObj = require("../../helpers/socket.helper");
 const DepartmentModel = require("../../models/department.model");
-const { createThread, handleUserMessage } = require("../../services/openai/controller/threadsController");
+const {
+  createThread,
+  handleUserMessage,
+} = require("../../services/openai/controller/threadsController");
+const {
+  isDeparmentChange,
+} = require("../../services/openai/tool/deparmentChange");
 
 const fetchDepartmentsAndPrompts = async () => {
   try {
@@ -233,6 +240,13 @@ const whatsappMessages = async (req, res) => {
 
     const user = await CustomerModel.findOne({ phone: messageSender });
 
+    // const isDeparmentChangeVal = await isDeparmentChange(message.text?.body);
+    // console.log(isDeparmentChangeVal, "isDeparmentChangeVal");
+
+    // if (isDeparmentChangeVal) {
+    //   sendListMessage(messageSender, messageID);
+    // }
+
     if (!user) {
       const customer = new CustomerModel({
         name: profileName,
@@ -323,12 +337,19 @@ const whatsappMessages = async (req, res) => {
           attachments: [url],
         };
         sendMessageToAdmins(socketObj, mess1, existingChat?.department?._id);
-        const isDepartmentSelected = await sendInterectiveMessageConfirmation(socketObj, existingChat, messageSender, messageID);
+        const isDepartmentSelected = await sendInterectiveMessageConfirmation(
+          socketObj,
+          existingChat,
+          messageSender,
+          messageID
+        );
         if (!isDepartmentSelected) {
           return res.status(200).send("Message processed");
         }
         const isAvailable = await checkDepartmentAvailability(
-          socketObj, existingChat, messageSender
+          socketObj,
+          existingChat,
+          messageSender
         );
         if (!isAvailable) {
           return res.status(200).send("Message processed");
@@ -366,12 +387,19 @@ const whatsappMessages = async (req, res) => {
         console.log(mess, "message from userside");
 
         sendMessageToAdmins(socketObj, mess, existingChat?.department?._id);
-        const isDepartmentSelected = await sendInterectiveMessageConfirmation(socketObj, existingChat, messageSender, messageID);
+        const isDepartmentSelected = await sendInterectiveMessageConfirmation(
+          socketObj,
+          existingChat,
+          messageSender,
+          messageID
+        );
         if (!isDepartmentSelected) {
           return res.status(200).send("Message processed");
         }
         const isAvailable = await checkDepartmentAvailability(
-          socketObj, existingChat, messageSender
+          socketObj,
+          existingChat,
+          messageSender
         );
         if (!isAvailable) {
           return res.status(200).send("Message processed");
@@ -410,9 +438,8 @@ const whatsappMessages = async (req, res) => {
               `We have transferred your chat to ${assigneeAgent?.fullName}`
             );
 
-            return res.status(200).send("Message processed")
-          }
-          else {
+            return res.status(200).send("Message processed");
+          } else {
             const mess = {
               chatId: existingChat?._id,
               sender: null,
@@ -420,7 +447,8 @@ const whatsappMessages = async (req, res) => {
               sendType: "assistant",
               receiverType: "user",
               messageType: "text",
-              content: existingChat?.department?.messages?.allAgentsOfflineResponse,
+              content:
+                existingChat?.department?.messages?.allAgentsOfflineResponse,
             };
             sendMessageToAdmins(socketObj, mess, existingChat?.department?._id);
             await sendWhatsAppMessage(
@@ -431,7 +459,7 @@ const whatsappMessages = async (req, res) => {
               existingChat?.department?.messages?.allAgentsOfflineResponse
             );
 
-            return res.status(200).send("Message processed")
+            return res.status(200).send("Message processed");
           }
         }
         if (!existingChat?.isHuman) {
@@ -456,9 +484,9 @@ const whatsappMessages = async (req, res) => {
             (filter = {
               departmentName: { $eq: existingChat?.department?.name },
             }),
-            include_metadata = true
+            (include_metadata = true)
           );
-          console.log(results, "resilrrfsgd");
+          //console.log(results, "resilrrfsgd");
 
           let context = results.map((r) => r.pageContent).join("\n\n");
           // const response = await generateAIResponse(
@@ -470,7 +498,7 @@ const whatsappMessages = async (req, res) => {
           const response = await handleUserMessage(
             existingChat?.threadId,
             userInput,
-            existingChat?.department?.assistantDetails?.id,
+            existingChat?.department?.assistantDetails?.id
           );
           console.log(response, "messageSendermessageSender");
           const mess = {
@@ -521,7 +549,9 @@ const whatsappMessages = async (req, res) => {
         };
         sendMessageToAdmins(socketObj, mess2, existingChat?.department?._id);
         const isAvailable = await checkDepartmentAvailability(
-          socketObj, existingChat, messageSender
+          socketObj,
+          existingChat,
+          messageSender
         );
         console.log(isAvailable, "isAvailable in interactive");
 
@@ -552,9 +582,9 @@ const whatsappMessages = async (req, res) => {
             (filter = {
               departmentName: { $eq: existingChat?.department?.name },
             }),
-            include_metadata = true
+            (include_metadata = true)
           );
-          console.log(results, "resilrrfsgd");
+          //console.log(results, "resilrrfsgd");
 
           let context = results.map((r) => r.pageContent).join("\n\n");
           // const response = await generateAIResponse(
@@ -565,7 +595,7 @@ const whatsappMessages = async (req, res) => {
           const response = await handleUserMessage(
             existingChat?.threadId,
             userInput,
-            existingChat?.department?.assistantDetails?.id,
+            existingChat?.department?.assistantDetails?.id
           );
           console.log(response, "messageSendermessageSender");
           const mess = {
