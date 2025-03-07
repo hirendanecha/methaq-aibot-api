@@ -12,6 +12,8 @@ const {
 const s3 = require("../../helpers/s3.helper");
 const dayjs = require("dayjs");
 const { createAssistant, updateAssistant, deleteAssistant, addToolToAssistant } = require("../../services/openai/controller/openai.assistant.controller");
+const { openai } = require("../../services/openai/openai-config/openai-config");
+const { toolFunctions } = require("../../services/openai/openai-functions/function-schema/functionsSchema");
 
 exports.getAllDepartment = async (req, res) => {
   try {
@@ -130,13 +132,22 @@ exports.addDepartment = async (req, res) => {
       ...mergedObject,
     });
     const savedDepartment = await newDepartment.save();
-
+    const tools = []
     if (savedDepartment) {
       console.log(savedDepartment, "savedDepartment");
+      for (const id of savedDepartment?.functionId) {
+        const toolFunction = toolFunctions[id];
+        if (!toolFunction) {
+          return sendErrorResponse(res, `Tool function not found for ID: ${id}`);
+        }
+        tools.push(toolFunction);
+      }
+      console.log(tools, "tools");
 
-      const newAssistant = await createAssistant(savedDepartment?.name, savedDepartment?.prompt);
-      console.log(newAssistant, "newAssistant");
-
+      const newAssistant = await createAssistant(savedDepartment?.name, savedDepartment?.prompt, tools);
+      const updatedAssistant = await openai.beta.assistants.update(newAssistant?.assistantData?.id, {
+        tools: tools,
+      });
       const updatedDepartment = await DepartmentModel.findByIdAndUpdate(
         savedDepartment?._id,
         {
@@ -148,16 +159,16 @@ exports.addDepartment = async (req, res) => {
       );
 
       // Add tool functions if functionId is provided
-      if (req.body.functionId && Array.isArray(req.body.functionId)) {
-        for (const functionId of req.body.functionId) {
-          await addToolToAssistant({
-            body: {
-              assistantId: newAssistant?.assistantData?.id,
-              functionId: functionId
-            }
-          }, res);
-        }
-      }
+      // if (req.body.functionId && Array.isArray(req.body.functionId)) {
+      //   for (const functionId of req.body.functionId) {
+      //     await addToolToAssistant({
+      //       body: {
+      //         assistantId: newAssistant?.assistantData?.id,
+      //         functionId: functionId
+      //       }
+      //     }, res);
+      //   }
+      // }
     }
 
     return sendSuccessResponse(res, { data: newDepartment }, 201);
@@ -213,7 +224,7 @@ exports.updateDepartment = async (req, res) => {
 
     if (updatedDepartment) {
       // console.log(updatedDepartment, "updatedDepartment")
-      const updatedAssistant = await updateAssistant(updatedDepartment?.assistantDetails?.id, { name: updatedDepartment?.name, instructions: updatedDepartment?.prompt });
+      const updatedAssistant = await updateAssistant(updatedDepartment?.assistantDetails?.id, { name: updatedDepartment?.name, instructions: updatedDepartment?.prompt, tools: updatedDepartment?.functionId });
       console.log(updatedAssistant, "updatedAssistant");
 
     }

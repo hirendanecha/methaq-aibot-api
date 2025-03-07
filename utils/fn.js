@@ -408,10 +408,11 @@ exports.sendInterectiveMessageConfirmation = async (
   socketObj,
   existingChat,
   messageSender,
-  messageID
+  messageID,
+  noCondition
 ) => {
   try {
-    if (!existingChat?.department) {
+    if (!existingChat?.department || noCondition) {
       const departments = await fetchDepartmentsAndPrompts();
       console.log(departments, "departments");
 
@@ -449,6 +450,52 @@ exports.sendInterectiveMessageConfirmation = async (
       return false;
     }
     return true;
+  } catch (error) {
+    throw error;
+  }
+};
+exports.sendInterectiveMessageReSelectDepartment = async (
+  socketObj,
+  existingChat,
+  messageSender,
+  messageID
+) => {
+  try {
+
+    const interectiveMessageDetails = {
+      options: departments,
+      headerText: "Insurance Options",
+      bodyText:
+        "Hello! 👋 How can I assist you today with your insurance needs? Please select a department:",
+      actionButtonText: "Select Department",
+      actionSectionTitle: "Departments",
+    };
+    const message = {
+      chatId: existingChat?._id?.toString(),
+      sender: null,
+      receiver: existingChat?.customerId?.toString(),
+      sendType: "assistant",
+      receiverType: "user",
+      content:
+        "Hello! 👋 How can I assist you today with your insurance needs? Please select a department:",
+      messageType: "interective",
+      messageOptions: departments?.map((department) => ({
+        label: department.name,
+        value: department._id,
+      })),
+    };
+
+    sendInteractiveMessage(
+      messageSender,
+      messageID,
+      interectiveMessageDetails
+    );
+
+    exports.sendMessageToAdmins(socketObj, message, null);
+
+    return false;
+    // }
+    // return true;
   } catch (error) {
     throw error;
   }
