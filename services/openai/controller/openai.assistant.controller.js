@@ -1,5 +1,9 @@
+const { sendSuccessResponse } = require("../../../utils/response");
 const { openai } = require("../openai-config/openai-config");
-const toolFunctions = require("../openai-functions/function-schema/functionsSchema");
+const {
+  toolFunctions,
+} = require("../openai-functions/function-schema/functionsSchema");
+
 // Create an assistant
 exports.createAssistant = async (
   name,
@@ -95,29 +99,40 @@ exports.deleteAssistant = async (assistantId) => {
       message: `Failed to delete assistant: ${error.message}`,
     };
   }
-}
-
+};
 
 //add fucntion
 
-exports.addToolToAssistant = async (assistantId, functionId) => {
+exports.addToolToAssistant = async (req, res) => {
   try {
+    const { assistantId, functionId } = req.body;
     const toolFunction = toolFunctions[functionId];
 
     if (!toolFunction) {
       return { success: false, message: "Tool function not found" };
     }
 
-     const existingAssistant = await openai.beta.assistants.retrieve(assistantId);
+    const existingAssistant = await openai.beta.assistants.retrieve(
+      assistantId
+    );
 
-     const updatedTools = [...existingAssistant.tools, toolFunction];
+    const updatedTools = [...existingAssistant.tools, toolFunction];
 
-     const updatedAssistant = await openai.beta.assistants.update(assistantId, {
+    const updatedAssistant = await openai.beta.assistants.update(assistantId, {
       tools: updatedTools,
     });
 
-    return { success: true, updatedAssistant };
+    return sendSuccessResponse(res, { data: updatedAssistant });
   } catch (error) {
-    return { success: false, message: error.message };
+    sendErrorResponse(res, error.message);
+  }
+};
+
+exports.getToolFunctions = async (req, res) => {
+  try {
+    const functions = Object.keys(toolFunctions);
+    return sendSuccessResponse(res, { data: functions });
+  } catch (error) {
+    sendErrorResponse(res, error.message);
   }
 };

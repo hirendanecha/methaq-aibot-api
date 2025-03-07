@@ -1,4 +1,4 @@
-const toolFunctions = {
+exports.toolFunctions = {
   processImage: {
     type: "function",
     function: {
@@ -22,5 +22,3 @@ const toolFunctions = {
 
   // Add more function schemas here
 };
-// Export the toolFunctions object
-module.exports = toolFunctions;
