@@ -195,9 +195,15 @@ async function downloadMedia(fileID, existingChat) {
       // console.log(existingChat, "existingChat for asdfdaf");
 
       // console.log(existingChat?.threadId, null, existingChat?.department?.assistantDetails?.id, url, "details for image");
-      aiResponse = await handleUserMessage(existingChat?.threadId, null, existingChat?.department?.assistantDetails?.id, url, formData, existingChat?.department?.prompt);
+      aiResponse = await handleUserMessage(
+        existingChat?.threadId,
+        null,
+        existingChat?.department?.assistantDetails?.id,
+        url,
+        formData,
+        existingChat?.department?.prompt
+      );
       console.log(aiResponse, "aiResponsefdgdfgfh");
-
     }
 
     //const extractedText = aiResponse?.message;
@@ -289,6 +295,69 @@ const sendDocumentByUrl = async (
   }
 };
 
+const sendListMessage = async (messageSender, messageID, buttonPayload) => {
+  const config = {
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${process.env.WHATSAPP_CLOUD_API_ACCESS_TOKEN}`,
+    },
+  };
+
+  const buttonInteractivePayload = {
+    type: "button",
+    header: {
+      type: "text",
+      text: "Choose an option", // Static header text
+    },
+    body: {
+      text: "Please select one of the options below:", // Static body text
+    },
+    action: {
+      buttons: [
+        {
+          type: "reply",
+          reply: {
+            id: "yes_option",
+            title: "Yes", // New button title
+          },
+        },
+        {
+          type: "reply",
+          reply: {
+            id: "no_option",
+            title: "No", // New button title
+          },
+        },
+        {
+          type: "reply",
+          reply: {
+            id: "main_menu_option",
+            title: "Main-Menu", // New button title
+          },
+        },
+      ],
+    },
+  };
+
+  const data = JSON.stringify({
+    messaging_product: "whatsapp",
+    recipient_type: "individual",
+    to: messageSender,
+    type: "interactive",
+    interactive: buttonInteractivePayload,
+  });
+
+  try {
+    const response = await axios.post(url, data, config);
+    console.log("Button interactive message sent:", response.data);
+    await markMessageAsRead(messageID);
+    return response.data; // Return the response data
+  } catch (error) {
+    console.error("Error sending button interactive message:", error);
+    throw error; // Rethrow the error to be handled by the caller
+  }
+};
+
 const sendInteractiveMessage = async (messageSender, messageID, payload) => {
   const config = {
     headers: {
@@ -357,4 +426,5 @@ module.exports = {
   sendInteractiveMessage,
   sendImageByUrl,
   sendDocumentByUrl,
+  sendListMessage,
 };
