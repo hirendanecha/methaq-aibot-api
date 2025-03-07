@@ -237,17 +237,10 @@ exports.handleUserMessage = async (
 
     try {
       const aiResponse = await responsePromise;
-      res.json({
-        success: true,
-        messageId,
-        response: aiResponse
-      });
+      return aiResponse
     } catch (error) {
       console.error("Error getting AI response:", error);
-      res.status(500).json({
-        error: "Failed to get AI response",
-        messageId
-      });
+      return "Failed to get AI response"
     } finally {
       messageResponses.delete(messageId);
     }
