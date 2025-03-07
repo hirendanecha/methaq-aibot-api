@@ -1,5 +1,9 @@
+const { sendSuccessResponse, sendErrorResponse } = require("../../../utils/response");
 const { openai } = require("../openai-config/openai-config");
-const toolFunctions = require("../openai-functions/function-schema/functionsSchema");
+const {
+  toolFunctions,
+} = require("../openai-functions/function-schema/functionsSchema");
+
 // Create an assistant
 exports.createAssistant = async (
   name,
@@ -95,29 +99,49 @@ exports.deleteAssistant = async (assistantId) => {
       message: `Failed to delete assistant: ${error.message}`,
     };
   }
-}
-
+};
 
 //add fucntion
 
-exports.addToolToAssistant = async (assistantId, functionId) => {
+exports.addToolToAssistant = async (req, res) => {
   try {
-    const toolFunction = toolFunctions[functionId];
+    const { assistantId, functionId } = req.body;
 
-    if (!toolFunction) {
-      return { success: false, message: "Tool function not found" };
+    // Ensure functionId is an array
+    const functionIds = Array.isArray(functionId) ? functionId : [functionId];
+
+    // Retrieve existing assistant
+    const existingAssistant = await openai.beta.assistants.retrieve(
+      assistantId
+    );
+
+    // Initialize updated tools with existing tools
+    let updatedTools = [...existingAssistant.tools];
+
+    // Add each tool function to the updated tools
+    for (const id of functionIds) {
+      const toolFunction = toolFunctions[id];
+      if (!toolFunction) {
+        return sendErrorResponse(res, `Tool function not found for ID: ${id}`);
+      }
+      updatedTools.push(toolFunction);
     }
 
-     const existingAssistant = await openai.beta.assistants.retrieve(assistantId);
-
-     const updatedTools = [...existingAssistant.tools, toolFunction];
-
-     const updatedAssistant = await openai.beta.assistants.update(assistantId, {
+    // Update the assistant with the new tools
+    const updatedAssistant = await openai.beta.assistants.update(assistantId, {
       tools: updatedTools,
     });
 
-    return { success: true, updatedAssistant };
+    return sendSuccessResponse(res, { data: updatedAssistant });
   } catch (error) {
-    return { success: false, message: error.message };
+    return sendErrorResponse(res, error.message);
+  }
+};
+exports.getToolFunctions = async (req, res) => {
+  try {
+    const functions = Object.keys(toolFunctions);
+    return sendSuccessResponse(res, { data: functions });
+  } catch (error) {
+    return sendErrorResponse(res, error.message);
   }
 };
