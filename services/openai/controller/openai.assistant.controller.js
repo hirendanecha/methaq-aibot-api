@@ -1,4 +1,4 @@
-const { sendSuccessResponse } = require("../../../utils/response");
+const { sendSuccessResponse, sendErrorResponse } = require("../../../utils/response");
 const { openai } = require("../openai-config/openai-config");
 const {
   toolFunctions,
@@ -106,33 +106,42 @@ exports.deleteAssistant = async (assistantId) => {
 exports.addToolToAssistant = async (req, res) => {
   try {
     const { assistantId, functionId } = req.body;
-    const toolFunction = toolFunctions[functionId];
 
-    if (!toolFunction) {
-      return { success: false, message: "Tool function not found" };
-    }
+    // Ensure functionId is an array
+    const functionIds = Array.isArray(functionId) ? functionId : [functionId];
 
+    // Retrieve existing assistant
     const existingAssistant = await openai.beta.assistants.retrieve(
       assistantId
     );
 
-    const updatedTools = [...existingAssistant.tools, toolFunction];
+    // Initialize updated tools with existing tools
+    let updatedTools = [...existingAssistant.tools];
 
+    // Add each tool function to the updated tools
+    for (const id of functionIds) {
+      const toolFunction = toolFunctions[id];
+      if (!toolFunction) {
+        return sendErrorResponse(res, `Tool function not found for ID: ${id}`);
+      }
+      updatedTools.push(toolFunction);
+    }
+
+    // Update the assistant with the new tools
     const updatedAssistant = await openai.beta.assistants.update(assistantId, {
       tools: updatedTools,
     });
 
     return sendSuccessResponse(res, { data: updatedAssistant });
   } catch (error) {
-    sendErrorResponse(res, error.message);
+    return sendErrorResponse(res, error.message);
   }
 };
-
 exports.getToolFunctions = async (req, res) => {
   try {
     const functions = Object.keys(toolFunctions);
     return sendSuccessResponse(res, { data: functions });
   } catch (error) {
-    sendErrorResponse(res, error.message);
+    return sendErrorResponse(res, error.message);
   }
 };
