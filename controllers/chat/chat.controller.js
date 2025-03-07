@@ -240,12 +240,6 @@ const whatsappMessages = async (req, res) => {
 
     const user = await CustomerModel.findOne({ phone: messageSender });
 
-    // const isDeparmentChangeVal = await isDeparmentChange(message.text?.body);
-    // console.log(isDeparmentChangeVal, "isDeparmentChangeVal");
-
-    // if (isDeparmentChangeVal) {
-    //   sendListMessage(messageSender, messageID);
-    // }
 
     if (!user) {
       const customer = new CustomerModel({
@@ -324,8 +318,10 @@ const whatsappMessages = async (req, res) => {
 
       if (message.type === "image" || message.type === "document") {
         const mediaID = message.image?.id || message.document?.id; // Get the media ID from the message
+        console.log(mediaID, "mediaID123456");
+
         const downloadResult = await downloadMedia(mediaID, existingChat);
-        const { url, extractedText } = downloadResult.data;
+        const { url, extractedText } = downloadResult?.data || {};
         const mess1 = {
           chatId: existingChat._id,
           wpId: message?.id,
@@ -394,6 +390,34 @@ const whatsappMessages = async (req, res) => {
           messageID
         );
         if (!isDepartmentSelected) {
+          return res.status(200).send("Message processed");
+        }
+        const isDeparmentChangeVal = await isDeparmentChange(message.text?.body);
+        console.log(isDeparmentChangeVal, "isDeparmentChangeVal");
+
+        if (isDeparmentChangeVal) {
+          const message = {
+            chatId: existingChat?._id?.toString(),
+            sender: null,
+            receiver: existingChat?.customerId?.toString(),
+            sendType: "assistant",
+            receiverType: "user",
+            content:
+              "Please select one of the options below:",
+            messageType: "interective",
+            messageOptions: [{
+              label: "Yes",
+              value: "yes_option",
+            }, {
+              label: "No",
+              value: "no_option",
+            }, {
+              label: "Main-Menu", // New button title
+              value: "main_menu_option",
+            }],
+          };
+          sendMessageToAdmins(socketObj, message, null);
+          sendListMessage(messageSender, messageID);
           return res.status(200).send("Message processed");
         }
         const isAvailable = await checkDepartmentAvailability(
@@ -520,119 +544,118 @@ const whatsappMessages = async (req, res) => {
         }
       } else if (message?.type === "interactive") {
         console.log(message, "message in interactive");
+        const messageReplayType = message?.interactive?.type;
 
-        const department = message?.interactive?.list_reply?.id;
-        existingChat = await ChatModel.findOneAndUpdate(
-          { _id: existingChat._id },
-          { department },
-          { new: true }
-        ).populate("department");
-        const mess1 = {
-          chatId: existingChat?._id,
-          wpId: message?.id,
-          sender: existingChat?.customerId?.toString(),
-          receiver: null,
-          sendType: "user",
-          receiverType: "assistant",
-          messageType: "text",
-          content: `${message?.interactive?.list_reply?.title}\n${message?.interactive?.list_reply?.description}`,
-        };
-        sendMessageToAdmins(socketObj, mess1, existingChat?.department?._id);
-        const mess2 = {
-          chatId: existingChat?._id,
-          sender: null,
-          receiver: null,
-          sendType: "assistant",
-          receiverType: "admin",
-          messageType: "tooltip",
-          content: `Chat is transferred to ${message?.interactive?.list_reply?.title} department`,
-        };
-        sendMessageToAdmins(socketObj, mess2, existingChat?.department?._id);
-        const isAvailable = await checkDepartmentAvailability(
-          socketObj,
-          existingChat,
-          messageSender
-        );
-        console.log(isAvailable, "isAvailable in interactive");
+        if (messageReplayType === "button_reply") {
+          const answer = message?.interactive?.button_reply?.id;
+          console.log(answer, "answeransweransweransweranswer");
 
-        if (!isAvailable) {
+          if (['yes_option', 'main_menu_option'].includes(answer)) {
+            const isDepartmentSelected = await sendInterectiveMessageConfirmation(
+              socketObj,
+              existingChat,
+              messageSender,
+              messageID,
+              true
+            );
+          }
           return res.status(200).send("Message processed");
-        }
-
-        if (!existingChat?.isHuman) {
-          // const userInput = message?.interactive?.list_reply?.title;
-          const userInput = "Hi";
-
-          const embeddings = new OpenAIEmbeddings({
-            openAIApiKey: process.env.OPENAI_API_KEY,
-          });
-          const index = pinecone.Index(environment.pinecone.indexName);
-          const vectorStore = await PineconeStore.fromExistingIndex(
-            embeddings,
-            {
-              //@ts-ignore
-              pineconeIndex: index,
-            }
-          );
-
-          // const results = await vectorStore.similaritySearch(userInput, 5);
-          const results = await vectorStore.similaritySearch(
-            (query = userInput),
-            (k = 5),
-            (filter = {
-              departmentName: { $eq: existingChat?.department?.name },
-            }),
-            (include_metadata = true)
-          );
-          //console.log(results, "resilrrfsgd");
-
-          let context = results.map((r) => r.pageContent).join("\n\n");
-          // const response = await generateAIResponse(
-          //   context,
-          //   userInput,
-          //   existingChat
-          // );
-          const response = await handleUserMessage(
-            existingChat?.threadId,
-            userInput,
-            existingChat?.department?.assistantDetails?.id
-          );
-          console.log(response, "messageSendermessageSender");
-          const mess = {
+        } else {
+          const answer = message?.interactive?.list_reply?.id;
+          existingChat = await ChatModel.findOneAndUpdate(
+            { _id: existingChat._id },
+            { department: answer },
+            { new: true }
+          ).populate("department");
+          const mess1 = {
+            chatId: existingChat?._id,
+            wpId: message?.id,
+            sender: existingChat?.customerId?.toString(),
+            receiver: null,
+            sendType: "user",
+            receiverType: "assistant",
+            messageType: "text",
+            content: `${message?.interactive?.list_reply?.title}\n${message?.interactive?.list_reply?.description}`,
+          };
+          sendMessageToAdmins(socketObj, mess1, existingChat?.department?._id);
+          const mess2 = {
             chatId: existingChat?._id,
             sender: null,
+            receiver: null,
             sendType: "assistant",
-            content: response,
-            receiver: existingChat?.customerId?.toString(),
-            receiverType: "user",
+            receiverType: "admin",
+            messageType: "tooltip",
+            content: `Chat is transferred to ${message?.interactive?.list_reply?.title} department`,
           };
-          sendMessageToAdmins(socketObj, mess, existingChat?.department?._id);
-          await sendWhatsAppMessage(
-            messageSender,
-            undefined,
-            messageID,
-            displayPhoneNumber,
-            response
+          sendMessageToAdmins(socketObj, mess2, existingChat?.department?._id);
+          const isAvailable = await checkDepartmentAvailability(
+            socketObj,
+            existingChat,
+            messageSender
           );
-        }
+          console.log(isAvailable, "isAvailable in interactive");
 
-        // const mess3 = {
-        //   chatId: existingChat?._id,
-        //   sender: null,
-        //   sendType: "assistant",
-        //   content: `How can I help you about ${message?.interactive?.list_reply?.title}`,
-        //   receiver: existingChat?.customerId?.toString(),
-        //   receiverType: "user",
-        // };
-        // sendMessageToAdmins(socketObj, mess3, existingChat?.department?._id);
-        // await sendWhatsAppMessage(
-        //   // Call sendWhatsAppMessage
-        //   messageSender,
-        //   undefined,
-        //   undefined,
-        //   undefined,
-        //   `How can I help you about ${message?.interactive?.list_reply?.title}`
-        // );
+          if (!isAvailable) {
+            return res.status(200).send("Message processed");
+          }
+
+          if (!existingChat?.isHuman) {
+            // const userInput = message?.interactive?.list_reply?.title;
+            const userInput = "Hi";
+
+            const embeddings = new OpenAIEmbeddings({
+              openAIApiKey: process.env.OPENAI_API_KEY,
+            });
+            const index = pinecone.Index(environment.pinecone.indexName);
+            const vectorStore = await PineconeStore.fromExistingIndex(
+              embeddings,
+              {
+                //@ts-ignore
+                pineconeIndex: index,
+              }
+            );
+
+            // const results = await vectorStore.similaritySearch(userInput, 5);
+            const results = await vectorStore.similaritySearch(
+              (query = userInput),
+              (k = 5),
+              (filter = {
+                departmentName: { $eq: existingChat?.department?.name },
+              }),
+              (include_metadata = true)
+            );
+            //console.log(results, "resilrrfsgd");
+
+            let context = results.map((r) => r.pageContent).join("\n\n");
+            // const response = await generateAIResponse(
+            //   context,
+            //   userInput,
+            //   existingChat
+            // );
+            const response = await handleUserMessage(
+              existingChat?.threadId,
+              userInput,
+              existingChat?.department?.assistantDetails?.id
+            );
+            console.log(response, "messageSendermessageSender");
+            const mess = {
+              chatId: existingChat?._id,
+              sender: null,
+              sendType: "assistant",
+              content: response,
+              receiver: existingChat?.customerId?.toString(),
+              receiverType: "user",
+            };
+            sendMessageToAdmins(socketObj, mess, existingChat?.department?._id);
+            await sendWhatsAppMessage(
+              messageSender,
+              undefined,
+              messageID,
+              displayPhoneNumber,
+              response
+            );
+          }
+        }
       }
     }
 

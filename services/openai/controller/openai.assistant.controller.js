@@ -159,6 +159,7 @@ exports.addToolToAssistant = async (req, res) => {
       }
       updatedTools.push(toolFunction);
     }
+    console.log(updatedTools, "updatedTools");
 
     // Update the assistant with the new tools
     const updatedAssistant = await openai.beta.assistants.update(assistantId, {
@@ -172,8 +173,8 @@ exports.addToolToAssistant = async (req, res) => {
 };
 exports.getToolFunctions = async (req, res) => {
   try {
-    const functions = Object.keys(toolFunctions);
-    return sendSuccessResponse(res, { data: functions });
+    // const functions = Object.keys(toolFunctions);
+    return sendSuccessResponse(res, { data: toolFunctions });
   } catch (error) {
     return sendErrorResponse(res, error.message);
   }
