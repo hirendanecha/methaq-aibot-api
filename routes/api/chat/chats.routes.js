@@ -17,6 +17,10 @@ const { fileUpload } = require("../../../middleware/file-upload");
 const environment = require("../../../utils/environment");
 
 const { Pinecone } = require("@pinecone-database/pinecone");
+const {
+  getToolFunctions,
+  addToolToAssistant,
+} = require("../../../services/openai/controller/openai.assistant.controller");
 const pinecone = new Pinecone({ apiKey: environment.pinecone.apiKey });
 // Route to store chat
 router.post("/store-chat", storeChat);
@@ -80,4 +84,9 @@ router.get("/getwhatsappmessages", (req, res) => {
 });
 
 router.post("/getwhatsappmessages", whatsappMessages);
+
+router.get("/get-tools", getToolFunctions);
+
+router.post("/addtool", addToolToAssistant);
+
 module.exports = router;
