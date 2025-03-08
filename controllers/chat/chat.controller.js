@@ -2,6 +2,7 @@ const dayjs = require("dayjs");
 const s3 = require("../../helpers/s3.helper");
 const Chat = require("../../models/chat.model");
 const User = require("../../models/user.model");
+const fs = require("fs");
 const {
   sendSuccessResponse,
   sendErrorResponse,
@@ -44,13 +45,15 @@ const {
 const {
   isDeparmentChange,
 } = require("../../services/openai/tool/deparmentChange");
+const { createReadStream } = require("fs");
+const { readFileSync } = require("fs");
 
 const fetchDepartmentsAndPrompts = async () => {
   try {
     const departments = await DepartmentModel.find().lean();
     return departments;
   } catch (error) {
-    console.error("Error fetching departments and prompts:", error);
+    console.error("Error fetching departments and prompts:", error.message);
     throw error;
   }
 };
@@ -93,7 +96,7 @@ const storeChat = async (req, res) => {
 
     res.status(200).json({ message: "Chat stored successfully", chat });
   } catch (error) {
-    console.error("Error storing chat:", error);
+    console.error("Error storing chat:", error.message);
     res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -110,7 +113,7 @@ const getChatHistory = async (req, res) => {
 
     res.status(200).json(chat);
   } catch (error) {
-    console.error("Error fetching chat history:", error);
+    console.error("Error fetching chat history:", error.message);
     res.status(500).json({ error: "Internal server error" });
   }
 };
@@ -201,7 +204,7 @@ const uploadDocument = async (req, res) => {
       .status(200)
       .json({ url: url, message: "Document uploaded successfully" });
   } catch (error) {
-    console.log(error);
+    console.log(error.message);
 
     return res.status(500).json({ error: "Failed to upload document" });
   }
@@ -217,7 +220,7 @@ const deleteDocument = async (req, res) => {
     return res.status(500).json({ error: "Failed to delete document" });
   }
 };
-
+const images = {};
 const whatsappMessages = async (req, res) => {
   try {
     // Added async
@@ -239,7 +242,6 @@ const whatsappMessages = async (req, res) => {
     const profileName = contacts?.[0]?.profile?.name;
 
     const user = await CustomerModel.findOne({ phone: messageSender });
-
 
     if (!user) {
       const customer = new CustomerModel({
@@ -321,7 +323,8 @@ const whatsappMessages = async (req, res) => {
         console.log(mediaID, "mediaID123456");
 
         const downloadResult = await downloadMedia(mediaID, existingChat);
-        const { url, extractedText } = downloadResult?.data || {};
+
+        const { url, filePath, fileType } = downloadResult?.data || {};
         const mess1 = {
           chatId: existingChat._id,
           wpId: message?.id,
@@ -350,26 +353,70 @@ const whatsappMessages = async (req, res) => {
         if (!isAvailable) {
           return res.status(200).send("Message processed");
         }
-        if (mediaID) {
-          await markMessageAsRead(messageID);
+        if (images[existingChat?.threadId]) {
+          images[existingChat?.threadId].push({
+            mediaID,
+            url,
+            filePath,
+            fileType,
+          });
+        } else {
+          images[existingChat?.threadId] = [
+            { mediaID, url, filePath, fileType },
+          ];
+
+          setTimeout(async () => {
+            const formData = new FormData();
+            images[existingChat?.threadId].forEach((imageObj) => {
+              const fileExtension = imageObj?.fileType?.split("/")[1];
+              const fileName = `${imageObj?.mediaID}.${fileExtension}`;
+              console.log(imageObj?.filePath,"imageObj?.filePath")
+              const fileBuffer = createReadStream(imageObj?.filePath);
+              formData.append(
+                "files",
+                fileBuffer,
+                {
+                  filename: fileName,
+                  contentType: fileType,
+                }
+              );
+            });
+            const aiResponse = await handleUserMessage(
+              existingChat?.threadId,
+              null,
+              existingChat?.department?.assistantDetails?.id,
+              images[existingChat?.threadId],
+              formData,
+              existingChat?.department?.prompt
+            );
+            console.log(aiResponse, "aiResponseaiResponse");
+            if (mediaID) {
+              await markMessageAsRead(messageID);
+            }
+            const userInputmessage = aiResponse || "";
+            const mess2 = {
+              chatId: existingChat._id,
+              sender: null,
+              receiver: existingChat?.customerId?.toString(),
+              sendType: "assistant",
+              receiverType: "user",
+              content: userInputmessage,
+            };
+            sendMessageToAdmins(
+              socketObj,
+              mess2,
+              existingChat?.department?._id
+            );
+            await sendWhatsAppMessage(
+              messageSender,
+              undefined,
+              messageID,
+              displayPhoneNumber,
+              userInputmessage
+            );
+            images[existingChat?.threadId] = [];
+          }, 5000);
         }
-        const userInputmessage = extractedText;
-        const mess2 = {
-          chatId: existingChat._id,
-          sender: null,
-          receiver: existingChat?.customerId?.toString(),
-          sendType: "assistant",
-          receiverType: "user",
-          content: userInputmessage,
-        };
-        sendMessageToAdmins(socketObj, mess2, existingChat?.department?._id);
-        await sendWhatsAppMessage(
-          messageSender,
-          undefined,
-          messageID,
-          displayPhoneNumber,
-          userInputmessage
-        );
       } else if (message.type == "text") {
         const mess = {
           chatId: existingChat?._id,
@@ -392,7 +439,9 @@ const whatsappMessages = async (req, res) => {
         if (!isDepartmentSelected) {
           return res.status(200).send("Message processed");
         }
-        const isDeparmentChangeVal = await isDeparmentChange(message.text?.body);
+        const isDeparmentChangeVal = await isDeparmentChange(
+          message.text?.body
+        );
         console.log(isDeparmentChangeVal, "isDeparmentChangeVal");
 
         if (isDeparmentChangeVal) {
@@ -402,19 +451,22 @@ const whatsappMessages = async (req, res) => {
             receiver: existingChat?.customerId?.toString(),
             sendType: "assistant",
             receiverType: "user",
-            content:
-              "Please select one of the options below:",
+            content: "Please select one of the options below:",
             messageType: "interective",
-            messageOptions: [{
-              label: "Yes",
-              value: "yes_option",
-            }, {
-              label: "No",
-              value: "no_option",
-            }, {
-              label: "Main-Menu", // New button title
-              value: "main_menu_option",
-            }],
+            messageOptions: [
+              {
+                label: "Yes",
+                value: "yes_option",
+              },
+              {
+                label: "No",
+                value: "no_option",
+              },
+              {
+                label: "Main-Menu", // New button title
+                value: "main_menu_option",
+              },
+            ],
           };
           sendMessageToAdmins(socketObj, message, null);
           sendListMessage(messageSender, messageID);
@@ -550,14 +602,15 @@ const whatsappMessages = async (req, res) => {
           const answer = message?.interactive?.button_reply?.id;
           console.log(answer, "answeransweransweransweranswer");
 
-          if (['yes_option', 'main_menu_option'].includes(answer)) {
-            const isDepartmentSelected = await sendInterectiveMessageConfirmation(
-              socketObj,
-              existingChat,
-              messageSender,
-              messageID,
-              true
-            );
+          if (["yes_option", "main_menu_option"].includes(answer)) {
+            const isDepartmentSelected =
+              await sendInterectiveMessageConfirmation(
+                socketObj,
+                existingChat,
+                messageSender,
+                messageID,
+                true
+              );
           }
           return res.status(200).send("Message processed");
         } else {
@@ -661,7 +714,7 @@ const whatsappMessages = async (req, res) => {
 
     return res.status(200).send("Message processed"); // Added response for successful processing
   } catch (error) {
-    console.log(error);
+    console.log(error.message);
     return res.status(500).send("Error processing message");
   }
 };
