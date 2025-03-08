@@ -2,7 +2,6 @@ const dayjs = require("dayjs");
 const s3 = require("../../helpers/s3.helper");
 const Chat = require("../../models/chat.model");
 const User = require("../../models/user.model");
-const fs = require("fs");
 const {
   sendSuccessResponse,
   sendErrorResponse,
@@ -46,7 +45,6 @@ const {
   isDeparmentChange,
 } = require("../../services/openai/tool/deparmentChange");
 const { createReadStream } = require("fs");
-const { readFileSync } = require("fs");
 
 const fetchDepartmentsAndPrompts = async () => {
   try {
@@ -324,7 +322,7 @@ const whatsappMessages = async (req, res) => {
 
         const downloadResult = await downloadMedia(mediaID, existingChat);
 
-        const { url, filePath, fileType } = downloadResult?.data || {};
+        const { url, filePath, fileType, file } = downloadResult?.data || {};
         const mess1 = {
           chatId: existingChat._id,
           wpId: message?.id,
@@ -359,34 +357,32 @@ const whatsappMessages = async (req, res) => {
             url,
             filePath,
             fileType,
+            file,
           });
         } else {
           images[existingChat?.threadId] = [
-            { mediaID, url, filePath, fileType },
+            { mediaID, url, filePath, fileType, file },
           ];
 
           setTimeout(async () => {
-            const formData = new FormData();
-            images[existingChat?.threadId].forEach((imageObj) => {
-              const fileExtension = imageObj?.fileType?.split("/")[1];
-              const fileName = `${imageObj?.mediaID}.${fileExtension}`;
-              console.log(imageObj?.filePath,"imageObj?.filePath")
-              const fileBuffer = createReadStream(imageObj?.filePath);
-              formData.append(
-                "files",
-                fileBuffer,
-                {
-                  filename: fileName,
-                  contentType: fileType,
-                }
-              );
-            });
+            // const formData = new FormData();
+            // images[existingChat?.threadId].forEach((imageObj) => {
+            //   const fileExtension = imageObj?.fileType?.split("/")[1];
+            //   const fileName = `${imageObj?.mediaID}.${fileExtension}`;
+            //   console.log(imageObj?.filePath, "imageObj?.filePath");
+            //   const fileStream = createReadStream(imageObj?.filePath);
+            //   formData.append("files", fileStream, {
+            //     filename: fileName,
+            //     contentType: fileType,
+            //   });
+            // });
+            
             const aiResponse = await handleUserMessage(
               existingChat?.threadId,
               null,
               existingChat?.department?.assistantDetails?.id,
               images[existingChat?.threadId],
-              formData,
+              images[existingChat?.threadId]?.map((imageObj) => imageObj?.url),
               existingChat?.department?.prompt
             );
             console.log(aiResponse, "aiResponseaiResponse");

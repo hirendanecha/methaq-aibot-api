@@ -152,13 +152,14 @@ async function downloadMedia(fileID, existingChat) {
 
     // return response.data;
     writeFileSync(filePath, response.data);
+    console.log(response.data,"response.data");
+    
+    // const imageBuffer = readFileSync(filePath);
 
-    const imageBuffer = readFileSync(filePath);
-
-    const base64Image = imageBuffer.toString("base64");
+    // const base64Image = imageBuffer.toString("base64");
     //remove
 
-    const imageUrl = `data:image/png;base64,${base64Image}`;
+    // const imageUrl = `data:image/png;base64,${base64Image}`;
 
     // console.log("AI Response:", aiResponse);
 
@@ -210,7 +211,7 @@ async function downloadMedia(fileID, existingChat) {
     // const extractedText = aiResponse;
 
     // unlinkSync(filePath);
-    return { status: "success", data: { url, filePath,fileType } };
+    return { status: "success", data: { url, filePath,fileType,file:response.data } };
   } catch (e) {
     console.error("Error downloading media", e);
     return { status: "error", data: "Error downloading Media" };
