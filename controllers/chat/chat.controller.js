@@ -363,7 +363,27 @@ const whatsappMessages = async (req, res) => {
           images[existingChat?.threadId] = [
             { mediaID, url, filePath, fileType, file },
           ];
-
+          // Send We are processing your images message here
+          const mess = {
+            chatId: existingChat._id,
+            sender: null,
+            receiver: existingChat?.customerId?.toString(),
+            sendType: "assistant",
+            receiverType: "user",
+            content: "We are processing your image(s)",
+          };
+          sendMessageToAdmins(
+            socketObj,
+            mess,
+            existingChat?.department?._id
+          );
+          await sendWhatsAppMessage(
+            messageSender,
+            undefined,
+            messageID,
+            displayPhoneNumber,
+            "We are processing your image(s)"
+          );
           setTimeout(async () => {
             // const formData = new FormData();
             // images[existingChat?.threadId].forEach((imageObj) => {
@@ -376,7 +396,6 @@ const whatsappMessages = async (req, res) => {
             //     contentType: fileType,
             //   });
             // });
-            
             const aiResponse = await handleUserMessage(
               existingChat?.threadId,
               null,
