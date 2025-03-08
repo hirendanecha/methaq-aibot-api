@@ -8,16 +8,17 @@ const openai = new OpenAI({
 async function processImage(formData, prompt) {
   try {
     const response22 = await axios.post(
-      `${process.env.OCR_API}/validate-document`,
+      `${process.env.OCR_API}/validate-document-from-urls`,
       formData,
       {
         headers: {
-          "Content-Type": "multipart/form-data",
+          "Content-Type": "application/json",
         },
       }
     );
     let extractedText;
-
+    console.log(response22,"response22response22");
+    
     const documentType = response22?.data?.document_types;
     const sideDetection = response22?.data?.side_detections;
 
@@ -48,7 +49,7 @@ async function processImage(formData, prompt) {
       message: documentInfo,
     };
   } catch (error) {
-    console.error("Error processing image:", error);
+    console.error("Error processing image:", error.message);
     return {
       status: "error",
       message: "Failed to process the image. Please try again later.",

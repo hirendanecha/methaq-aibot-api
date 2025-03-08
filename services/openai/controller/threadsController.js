@@ -11,7 +11,7 @@ exports.createThread = async () => {
     console.log("Thread Created:", thread.id);
     return thread.id;
   } catch (error) {
-    console.error("Error creating thread:", error);
+    console.error("Error creating thread:", error.message);
     throw new Error("Failed to create thread.");
   }
 };
@@ -46,7 +46,7 @@ exports.addUserMessageWithAttachment = async (
     console.log("Message added:", message);
     return message;
   } catch (error) {
-    console.error("Error adding message:", error);
+    console.error("Error adding message:", error.message);
     throw new Error("Failed to add message.");
   }
 };
@@ -70,14 +70,14 @@ exports.handleUserMessage = async (
 
     let messageContent = userMessage || "";
     if (fileUrl) {
-      messageContent += ` Analyze the file at this URL: ${fileUrl}`;
+      messageContent += ` Analyze the file at this URL: ${fileUrl?.map(file => file.url)?.join(", ")}`;
     }
     // Construct the message payload
     const messagePayload = {
       role: "user",
       content: messageContent,
     };
-
+    console.log(messagePayload,"messagePayload")
     // Add attachment if fileUrl is provided
     // if (fileUrl) {
     //   messagePayload.attachments = [{ file_url: fileUrl }];
@@ -205,7 +205,7 @@ exports.handleUserMessage = async (
       return "Processing your request...";
     }
   } catch (error) {
-    console.error("Error handling user message:", error);
+    console.error("Error handling user message:", error.message);
     throw new Error("Failed to handle user message.");
   }
 };
@@ -257,7 +257,7 @@ exports.createVectorStore = async (vectorName, files) => {
       };
     }
   } catch (error) {
-    console.error("Error:", error);
+    console.error("Error: createVectorStore", error.message);
     throw new Error(error.message);
   }
 };
@@ -279,7 +279,7 @@ exports.updateAssistantVectorStore = async (assistantId, vectorStoreId) => {
       vectorStoreId,
     };
   } catch (error) {
-    console.error("Error updating assistant:", error);
+    console.error("Error updating assistant:", error.message);
     throw new Error(`Failed to update assistant: ${error.message}`);
   }
 };
