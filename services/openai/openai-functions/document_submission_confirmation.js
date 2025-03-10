@@ -6,7 +6,7 @@ async function documentStatus(threadId) {
     // const chatDetails = await ChatModel.findOne({ threadId: threadId }).lean();
     const updatedChat = await ChatModel.findOneAndUpdate(
       { threadId: threadId },
-      { tags: { $push: "document_received" } },
+      { $push: { tags: "document_received" } },
       { new: true }
     );
     console.log(updatedChat, "documentStatus");
