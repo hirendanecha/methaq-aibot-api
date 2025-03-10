@@ -9,19 +9,20 @@ exports.getAllCustomers = async (req, res) => {
         search = search?.replace(/^[^a-zA-Z0-9]+/, "");
         const { limit, offset } = getPagination(page, size);
         const condition = search
-            ? {
-                name: { $regex: new RegExp(search), $options: "i" },
-                email: { $regex: new RegExp(search), $options: "i" },
-                phone: { $regex: new RegExp(search), $options: "i" },
-                note: { $regex: new RegExp(search), $options: "i" },
-            }
+            ? [
+                { name: { $regex: new RegExp(search), $options: "i" } },
+                { email: { $regex: new RegExp(search), $options: "i" } },
+                { phone: { $regex: new RegExp(search), $options: "i" } },
+                { note: { $regex: new RegExp(search), $options: "i" } },
+            ]
             : {};
-        const count = await CustomerModel.countDocuments(
-            condition,
-        );
+        const count = await CustomerModel.countDocuments({
+            $or: condition
+        });
         const customers = await CustomerModel.find(
-            condition,
-            {},
+            {
+                $or: condition
+            },
         ).skip(offset).limit(limit).sort({ createdAt: -1 }).lean();
         return sendSuccessResponse(
             res,
