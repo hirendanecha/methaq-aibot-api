@@ -12,6 +12,7 @@ const {
   downloadMedia,
   markMessageAsRead,
   sendListMessage,
+  sendWhatsAppMessageFromalMessage,
 } = require("../../services/whatsaap.service");
 const CustomerModel = require("../../models/customer.model");
 const ChatModel = require("../../models/chat.model");
@@ -384,11 +385,7 @@ const whatsappMessages = async (req, res) => {
             receiverType: "user",
             content: "We are processing your image(s)",
           };
-          sendMessageToAdmins(
-            socketObj,
-            mess,
-            existingChat?.department?._id
-          );
+          sendMessageToAdmins(socketObj, mess, existingChat?.department?._id);
           await sendWhatsAppMessage(
             messageSender,
             undefined,
@@ -736,6 +733,19 @@ const whatsappMessages = async (req, res) => {
             );
           }
         }
+      } else if (
+        message?.type === "video" ||
+        message?.type === "location" ||
+        message?.type === "contacts" ||
+        message?.type === "unsupported"
+      ) {
+        const formalMessage =
+          "We are sorry, but we cannot process this type of content.";
+        await sendWhatsAppMessageFromalMessage(
+          messageSender,
+          messageID,
+          formalMessage
+        );
       }
     }
 
