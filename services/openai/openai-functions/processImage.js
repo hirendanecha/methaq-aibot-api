@@ -17,7 +17,7 @@ async function processImage(formData, prompt) {
       }
     );
     let extractedText;
-    console.log(response22,"response22response22");
+    //console.log(response22,"response22response22");
     
     const documentType = response22?.data?.document_types;
     const sideDetection = response22?.data?.side_detections;
