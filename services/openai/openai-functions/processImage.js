@@ -5,21 +5,22 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
 
-async function processImage(formData, prompt, formattedHistory) {
+async function processImage(formData, prompt) {
   try {
     const response22 = await axios.post(
-      `${process.env.OCR_API}/validate-document`,
+      `${process.env.OCR_API}/validate-document-from-urls`,
       formData,
       {
         headers: {
-          "Content-Type": "multipart/form-data",
+          "Content-Type": "application/json",
         },
       }
     );
     let extractedText;
-
-    const documentType = response22?.data?.document_type;
-    const sideDetection = response22?.data?.side_detection;
+    //console.log(response22,"response22response22");
+    
+    const documentType = response22?.data?.document_types;
+    const sideDetection = response22?.data?.side_detections;
 
     const documentInfo = {
       documentType,
@@ -31,26 +32,24 @@ async function processImage(formData, prompt, formattedHistory) {
     } else {
       extractedText =
         `You uploaded a document of type: _${documentType}_.\n` +
-        `*Front side:* ${
-          sideDetection.front ? "_Detected ✅_" : "_Not Detected ❌_"
+        `*Front side:* ${sideDetection.front ? "_Detected ✅_" : "_Not Detected ❌_"
         }.\n` +
-        `*Back side:* ${
-          sideDetection.back ? "_Detected ✅_" : "_Not Detected ❌_"
+        `*Back side:* ${sideDetection.back ? "_Detected ✅_" : "_Not Detected ❌_"
         }.`;
     }
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        { role: "system", content: prompt },
-        { role: "user", content: JSON.stringify(documentInfo) }, // Send as JSON string
-      ],
-    });
+    // const response = await openai.chat.completions.create({
+    //   model: "gpt-4o-mini",
+    //   messages: [
+    //     { role: "system", content: prompt },
+    //     { role: "user", content: JSON.stringify(documentInfo) }, // Send as JSON string
+    //   ],
+    // });
     return {
       status: "success",
-      message: response.choices[0].message.content,
+      message: documentInfo,
     };
   } catch (error) {
-    console.error("Error processing image:", error);
+    console.error("Error processing image:", error.message);
     return {
       status: "error",
       message: "Failed to process the image. Please try again later.",

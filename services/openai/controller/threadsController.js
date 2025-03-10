@@ -1,8 +1,10 @@
-
 const path = require("path");
 const multer = require("multer");
 const { openai } = require("../openai-config/openai-config");
 const fs = require("fs");
+const processImage = require("../openai-functions/processImage");
+const documentStatus = require("../openai-functions/document_submission_confirmation");
+const closeChat = require("../openai-functions/closeChat");
 // Create a new thread
 exports.createThread = async () => {
   try {
@@ -10,7 +12,7 @@ exports.createThread = async () => {
     console.log("Thread Created:", thread.id);
     return thread.id;
   } catch (error) {
-    console.error("Error creating thread:", error);
+    console.error("Error creating thread:", error.message);
     throw new Error("Failed to create thread.");
   }
 };
@@ -45,16 +47,21 @@ exports.addUserMessageWithAttachment = async (
     console.log("Message added:", message);
     return message;
   } catch (error) {
-    console.error("Error adding message:", error);
+    console.error("Error adding message:", error.message);
     throw new Error("Failed to add message.");
   }
 };
-
+const getActiveRun = async (threadId) => {
+  const activeRuns = await openai.beta.threads.runs.list(threadId);
+  return activeRuns.data.find((run) => run.status === "active");
+};
 exports.handleUserMessage = async (
   threadId,
   userMessage = null,
   assistantId,
-  fileUrl = null
+  fileUrl = null,
+  formData,
+  prompt
 ) => {
   try {
     // Validate inputs
@@ -64,31 +71,81 @@ exports.handleUserMessage = async (
 
     let messageContent = userMessage || "";
     if (fileUrl) {
-      messageContent += ` Analyze the file at this URL: ${fileUrl}`;
+      messageContent += ` Analyze the file at this URL: ${fileUrl
+        ?.map((file) => file.url)
+        ?.join(", ")}`;
     }
     // Construct the message payload
     const messagePayload = {
       role: "user",
       content: messageContent,
     };
+    console.log(messagePayload, "messagePayload");
 
-    // Add attachment if fileUrl is provided
-    // if (fileUrl) {
-    //   messagePayload.attachments = [{ file_url: fileUrl }];
-    // }
-
-    // Send the user message
     const userMessageResponse = await openai.beta.threads.messages.create(
       threadId,
       messagePayload
     );
     console.log("User message added:", userMessageResponse);
-
+    const activeRun = await getActiveRun(threadId);
+    if (activeRun) {
+      console.log(`Cancelling active run: ${activeRun.id}`);
+      await openai.beta.threads.runs.cancel(activeRun.id, {
+        thread_id: threadId,
+      });
+    }
     // Run the assistant
-    const run = await openai.beta.threads.runs.createAndPoll(threadId, {
+    let run = await openai.beta.threads.runs.createAndPoll(threadId, {
       assistant_id: assistantId,
     });
+    console.log(run.status, "run.status ankit");
 
+    if (run.status === "requires_action") {
+      const toolCalls = run.required_action.submit_tool_outputs.tool_calls;
+      console.log(toolCalls, "toolCallstoolCallstoolCalls");
+
+      const toolOutputs = await Promise.all(
+        toolCalls.map(async (toolCall) => {
+          const functionName = toolCall.function.name;
+          const functionArgs = JSON.parse(toolCall.function.arguments);
+
+          console.log(`Function to Call: ${functionName}`, functionArgs);
+
+          let output;
+
+          if (functionName === "processImage") {
+            // console.log('Fetching Temperature for:', functionArgs.location);
+            output = await processImage(formData, threadId, assistantId);
+            //console.log("output :>> ", output);
+          } else if (functionName === "checkUserUploadedAllDocs") {
+            output = await documentStatus(threadId);
+          } else if (functionName === "closeChat") {
+            output = await closeChat(threadId);
+          } else {
+            console.warn(`Unknown function called: ${functionName}`);
+            output = { error: "Unknown function" };
+          }
+          return {
+            tool_call_id: toolCall.id,
+            output: JSON.stringify(output?.message),
+          };
+        })
+      );
+
+      // Submit function response to OpenAI
+      await openai.beta.threads.runs.submitToolOutputs(threadId, run.id, {
+        tool_outputs: toolOutputs,
+      });
+
+      console.log("Tool outputs submitted. Waiting for final response...");
+
+      // Poll again until Assistant completes processing**
+      while (run.status !== "completed") {
+        console.log("Waiting for assistant to finish processing...");
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        run = await openai.beta.threads.runs.retrieve(threadId, run.id);
+      }
+    }
     if (run.status === "completed") {
       const messages = await openai.beta.threads.messages.list(threadId);
       const aiReply = messages.data.find((m) => m.role === "assistant");
@@ -97,7 +154,7 @@ exports.handleUserMessage = async (
       return "Processing your request...";
     }
   } catch (error) {
-    console.error("Error handling user message:", error);
+    console.error("Error handling user message:", error.message);
     throw new Error("Failed to handle user message.");
   }
 };
@@ -123,8 +180,8 @@ exports.createVectorStore = async (vectorName, files) => {
         const originalExtension = path.extname(file.originalname);
         const newFilePath = filePath + originalExtension;
         console.log("newFilePath", newFilePath, filePath);
-        const filePathT = filePath.replaceAll("\\", "/")
-        const newFilePathT = newFilePath.replaceAll("\\", "/")
+        const filePathT = filePath.replaceAll("\\", "/");
+        const newFilePathT = newFilePath.replaceAll("\\", "/");
         fs.renameSync(filePathT, newFilePathT);
 
         const fileStream = fs.createReadStream(newFilePath);
@@ -149,7 +206,7 @@ exports.createVectorStore = async (vectorName, files) => {
       };
     }
   } catch (error) {
-    console.error("Error:", error);
+    console.error("Error: createVectorStore", error.message);
     throw new Error(error.message);
   }
 };
@@ -171,7 +228,7 @@ exports.updateAssistantVectorStore = async (assistantId, vectorStoreId) => {
       vectorStoreId,
     };
   } catch (error) {
-    console.error("Error updating assistant:", error);
+    console.error("Error updating assistant:", error.message);
     throw new Error(`Failed to update assistant: ${error.message}`);
   }
 };

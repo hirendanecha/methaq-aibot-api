@@ -41,7 +41,7 @@ const fetchDepartmentsAndPrompts = async () => {
     const departments = await DepartmentModel.find().lean();
     return departments;
   } catch (error) {
-    console.error("Error fetching departments and prompts:", error);
+    console.error("Error fetching departments and prompts:", error.message);
     throw error;
   }
 };
@@ -209,7 +209,7 @@ async function generateAIResponse(
     }
     return response.choices[0].message.content;
   } catch (error) {
-    console.error("Error generating AI response:", error);
+    console.error("Error generating AI response:", error.message);
     return "Sorry, I am unable to process your request at the moment.";
   }
 }

@@ -30,4 +30,5 @@ module.exports = {
     },
   },
   chatStatus: ["active", "archived"],
+  chatTags: ["document_received", ""],
 };
