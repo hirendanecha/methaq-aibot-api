@@ -48,7 +48,7 @@ router.post(
     [
       {
         name: "file",
-        maxCount: 1,
+        maxCount: 1000,
       },
     ]
   ),
