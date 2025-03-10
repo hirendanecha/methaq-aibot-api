@@ -1,4 +1,4 @@
-const toolFunctions = {
+exports.toolFunctions = {
   processImage: {
     type: "function",
     function: {
@@ -19,8 +19,35 @@ const toolFunctions = {
       },
     },
   },
+  closeChat: {
+    type: "function",
+    function: {
+      name: "closeChat",
+      description: "Closes the chat session.",
+      strict: true,
+      parameters: {
+        type: "object",
+        properties: {},
+        additionalProperties: false,
+        required: [],
+      },
+    },
+  },
+  checkUserUploadedAllDocs: {
+    type: "function",
+    function: {
+      name: "checkUserUploadedAllDocs",
+      description:
+        "Retrieves all documents and prepares them for further processing",
+      strict: true,
+      parameters: {
+        type: "object",
+        properties: {},
+        additionalProperties: false,
+        required: [],
+      },
+    },
+  },
 
   // Add more function schemas here
 };
-// Export the toolFunctions object
-module.exports = toolFunctions;
