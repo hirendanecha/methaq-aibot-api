@@ -118,7 +118,7 @@ exports.handleUserMessage = async (
             output = await processImage(formData, threadId, assistantId);
             //console.log("output :>> ", output);
           } else if (functionName === "checkUserUploadedAllDocs") {
-            output = await documentStatus();
+            output = await documentStatus(threadId);
           } else if (functionName === "closeChat") {
             output = await closeChat(threadId);
           } else {

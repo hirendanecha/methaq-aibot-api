@@ -1,7 +1,16 @@
 const axios = require("axios");
+const ChatModel = require("../../../models/chat.model");
 
 async function documentStatus() {
   try {
+    // const chatDetails = await ChatModel.findOne({ threadId: threadId }).lean();
+    const updatedChat = await ChatModel.findOneAndUpdate(
+      { threadId: threadId },
+      { tags: { $push: "document_received" } },
+      { new: true }
+    );
+    console.log(updatedChat, "documentStatus");
+
     const documentInfo = "all  ducument uploaded successfully";
     return {
       status: "success",
