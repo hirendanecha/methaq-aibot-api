@@ -3,19 +3,22 @@ const ChatModel = require("../../../models/chat.model");
 
 async function closeChat(threadId) {
   try {
-    console.log(threadId,"rbbbjkb");
-    
+    console.log(threadId, "rbbbjkb");
+
     const chat = await ChatModel.findOne({ threadId: threadId }).lean();
     const updatedChat = await ChatModel.findOneAndUpdate(
       { _id: chat?._id },
       {
+        status: "archived",
         adminId: null,
         isHuman: false,
-        status: "archived",
         department: null,
       },
       { new: true }
     ).lean();
+
+    console.log(updatedChat, "updatedChat");
+
     const documentInfo = "close chat successfully";
     return {
       status: "success",
