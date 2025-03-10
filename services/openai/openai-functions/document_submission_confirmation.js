@@ -1,7 +1,7 @@
 const axios = require("axios");
 const ChatModel = require("../../../models/chat.model");
 
-async function documentStatus() {
+async function documentStatus(threadId) {
   try {
     // const chatDetails = await ChatModel.findOne({ threadId: threadId }).lean();
     const updatedChat = await ChatModel.findOneAndUpdate(
