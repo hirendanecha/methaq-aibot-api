@@ -1,9 +1,10 @@
-
 const path = require("path");
 const multer = require("multer");
 const { openai } = require("../openai-config/openai-config");
 const fs = require("fs");
 const processImage = require("../openai-functions/processImage");
+const documentStatus = require("../openai-functions/document_submission_confirmation");
+const closeChat = require("../openai-functions/closeChat");
 // Create a new thread
 exports.createThread = async () => {
   try {
@@ -52,7 +53,7 @@ exports.addUserMessageWithAttachment = async (
 };
 const getActiveRun = async (threadId) => {
   const activeRuns = await openai.beta.threads.runs.list(threadId);
-  return activeRuns.data.find(run => run.status === "active");
+  return activeRuns.data.find((run) => run.status === "active");
 };
 exports.handleUserMessage = async (
   threadId,
@@ -70,20 +71,17 @@ exports.handleUserMessage = async (
 
     let messageContent = userMessage || "";
     if (fileUrl) {
-      messageContent += ` Analyze the file at this URL: ${fileUrl?.map(file => file.url)?.join(", ")}`;
+      messageContent += ` Analyze the file at this URL: ${fileUrl
+        ?.map((file) => file.url)
+        ?.join(", ")}`;
     }
     // Construct the message payload
     const messagePayload = {
       role: "user",
       content: messageContent,
     };
-    console.log(messagePayload,"messagePayload")
-    // Add attachment if fileUrl is provided
-    // if (fileUrl) {
-    //   messagePayload.attachments = [{ file_url: fileUrl }];
-    // }
+    console.log(messagePayload, "messagePayload");
 
-    // Send the user message
     const userMessageResponse = await openai.beta.threads.messages.create(
       threadId,
       messagePayload
@@ -92,71 +90,19 @@ exports.handleUserMessage = async (
     const activeRun = await getActiveRun(threadId);
     if (activeRun) {
       console.log(`Cancelling active run: ${activeRun.id}`);
-      await openai.beta.threads.runs.cancel(activeRun.id, { thread_id: threadId });
+      await openai.beta.threads.runs.cancel(activeRun.id, {
+        thread_id: threadId,
+      });
     }
     // Run the assistant
     let run = await openai.beta.threads.runs.createAndPoll(threadId, {
       assistant_id: assistantId,
     });
-    console.log(run.status, "run.status");
-    // if (run.status === "requires_action") {
-    //   // Extract the required function call
-    //   const functionCall =
-    //     run.required_action.submit_tool_outputs.tool_calls[0];
-    //   let xyz = "";
-    //   if (functionCall) {
-    //     const functionName = functionCall.function.name;
-    //     const functionArgs = JSON.parse(functionCall.function.arguments);
+    console.log(run.status, "run.status ankit");
 
-    //     console.log(`Function to Call: ${functionName}`, functionArgs);
-    //     let functionResult;
-    //     switch (functionName) {
-    //       case "processImage":
-    //         console.log("hey i am function");
-
-    //         functionResult = await processImage(formData, threadId, assistantId);
-    //         xyz = {
-    //           tool_call_id: functionCall.id,
-    //           output: JSON.stringify(functionResult?.message),
-    //         };
-
-
-    //         // const messagePayload = {
-    //         //   role: "user",
-    //         //   content: functionResult?.message,
-    //         // };
-    //         // const userMessageResponse = await openai.beta.threads.messages.create(
-    //         //   threadId,
-    //         //   messagePayload
-    //         // );
-    //         // const run = await openai.beta.threads.runs.createAndPoll(threadId, {
-    //         //   assistant_id: assistantId,
-    //         // });
-    //         if (run.status === "completed") {
-    //           const messages = await openai.beta.threads.messages.list(threadId);
-    //           const aiReply = messages.data.find((m) => m.role === "assistant");
-    //           return aiReply.content[0].text.value;
-    //         }
-    //         break;
-    //       default:
-    //         console.error("Unknown function:", functionName);
-    //         return "Unknown function call.";
-    //     }
-    //     await openai.beta.threads.runs.submitToolOutputs(threadId, run.id, {
-    //       tool_outputs: [xyz],
-    //     });
-    //     while (run.status !== "completed") {
-    //       console.log("Waiting for assistant to finish processing...");
-    //       await new Promise((resolve) => setTimeout(resolve, 2000));
-    //       run = await openai.beta.threads.runs.retrieve(threadId, run.id);
-    //     }
-    //     // console.log(functionResult);
-    //     return functionResult?.message;
-    //     //aiResponse = functionResult;
-    //   }
-    // }
     if (run.status === "requires_action") {
       const toolCalls = run.required_action.submit_tool_outputs.tool_calls;
+      console.log(toolCalls, "toolCallstoolCallstoolCalls");
 
       const toolOutputs = await Promise.all(
         toolCalls.map(async (toolCall) => {
@@ -170,12 +116,15 @@ exports.handleUserMessage = async (
           if (functionName === "processImage") {
             // console.log('Fetching Temperature for:', functionArgs.location);
             output = await processImage(formData, threadId, assistantId);
-            console.log('output :>> ', output);
+            //console.log("output :>> ", output);
+          } else if (functionName === "checkUserUploadedAllDocs") {
+            output = await documentStatus(threadId);
+          } else if (functionName === "closeChat") {
+            output = await closeChat(threadId);
           } else {
             console.warn(`Unknown function called: ${functionName}`);
             output = { error: "Unknown function" };
           }
-
           return {
             tool_call_id: toolCall.id,
             output: JSON.stringify(output?.message),
@@ -231,8 +180,8 @@ exports.createVectorStore = async (vectorName, files) => {
         const originalExtension = path.extname(file.originalname);
         const newFilePath = filePath + originalExtension;
         console.log("newFilePath", newFilePath, filePath);
-        const filePathT = filePath.replaceAll("\\", "/")
-        const newFilePathT = newFilePath.replaceAll("\\", "/")
+        const filePathT = filePath.replaceAll("\\", "/");
+        const newFilePathT = newFilePath.replaceAll("\\", "/");
         fs.renameSync(filePathT, newFilePathT);
 
         const fileStream = fs.createReadStream(newFilePath);
