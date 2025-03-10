@@ -44,7 +44,8 @@ const {
 const {
   isDeparmentChange,
 } = require("../../services/openai/tool/deparmentChange");
-const { createReadStream } = require("fs");
+const { unlinkSync } = require("fs");
+const { deleteFileByPath } = require("../../helpers/files.helper");
 
 const fetchDepartmentsAndPrompts = async () => {
   try {
@@ -188,19 +189,30 @@ const uploadDocument = async (req, res) => {
   try {
     const file = req.files;
     console.log(req.files, "fileeee");
-    const uploadFile = req.files.file[0];
-    const path = uploadFile.path;
-    const npath = path.replaceAll("\\", "/");
-    const month = `${dayjs().year()}-${dayjs().month() + 1}`;
-    const url = await s3.uploadPublic(
-      npath,
-      uploadFile?.mimetype,
-      `${uploadFile?.filename}`,
-      `ChatDocuments/${month}`
+    // const finalURLs = []
+    const finalURLS = await Promise.all(
+      req.files.file.map(async (file) => {
+        const uploadFile = file;
+        const path = uploadFile.path;
+        const npath = path.replaceAll("\\", "/");
+        const month = `${dayjs().year()}-${dayjs().month() + 1}`;
+
+        const url = s3.uploadPublic(
+          npath,
+          uploadFile?.mimetype,
+          `${uploadFile?.filename}`,
+          `ChatDocuments/${month}`
+        );
+        unlinkSync(npath);
+      })
     );
+
+    console.log(finalURLS); // This will contain an array of URLs
+
+
     res
       .status(200)
-      .json({ url: url, message: "Document uploaded successfully" });
+      .json({ url: finalURLS, message: "Document uploaded successfully" });
   } catch (error) {
     console.log(error.message);
 
