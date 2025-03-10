@@ -360,13 +360,13 @@ exports.checkDepartmentAvailability = async (
   }
 };
 
-exports.getAssigneeAgent = async (department) => {
+exports.getAssigneeAgent = async (department, isOnline) => {
   try {
     console.log(department, "department in fun");
 
     const result = await UserModel.aggregate([
       // Step 1: Match agents based on the department
-      { $match: { department: department, role: "Agent", isOnline: true } },
+      { $match: { department: department, role: "Agent", ...(isOnline ? { isOnline: true } : {}) } },
 
       // Step 2: Join with the 'Chat' collection to count chats per agent
       {

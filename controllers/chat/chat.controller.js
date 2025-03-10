@@ -511,7 +511,8 @@ const whatsappMessages = async (req, res) => {
         console.log(isHumantrasfer, "isHumantrasfer in function");
         if (isHumantrasfer != existingChat?.isHuman) {
           const assigneeAgent = await getAssigneeAgent(
-            existingChat?.department?._id
+            existingChat?.department?._id,
+            true
           );
           if (assigneeAgent) {
             console.log(assigneeAgent, "assigneeAgent");
