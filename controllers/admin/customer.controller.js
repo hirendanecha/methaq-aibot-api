@@ -15,7 +15,7 @@ exports.getAllCustomers = async (req, res) => {
                 { phone: { $regex: new RegExp(search), $options: "i" } },
                 { note: { $regex: new RegExp(search), $options: "i" } },
             ]
-            : {};
+            : [];
         const count = await CustomerModel.countDocuments({
             $or: condition
         });
