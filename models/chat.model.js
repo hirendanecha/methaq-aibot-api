@@ -44,6 +44,11 @@ const ChatSchema = Schema(
       enum: constants.chatStatus,
       default: "active"
     },
+    tags: [{
+      type: String,
+      enum: constants.chatTags,
+      default: ""
+    }]
   }, {
   timestamps: true
 }

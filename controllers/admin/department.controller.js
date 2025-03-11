@@ -11,7 +11,9 @@ const {
 } = require("../../utils/response");
 const s3 = require("../../helpers/s3.helper");
 const dayjs = require("dayjs");
-const { createAssistant, updateAssistant, deleteAssistant } = require("../../services/openai/controller/openai.assistant.controller");
+const { createAssistant, updateAssistant, deleteAssistant, addToolToAssistant } = require("../../services/openai/controller/openai.assistant.controller");
+const { openai } = require("../../services/openai/openai-config/openai-config");
+const { toolFunctions } = require("../../services/openai/openai-functions/function-schema/functionsSchema");
 
 exports.getAllDepartment = async (req, res) => {
   try {
@@ -44,6 +46,61 @@ exports.getParticularDepartment = async (req, res) => {
   }
 };
 
+// exports.addDepartment = async (req, res) => {
+//   try {
+//     let columns = Object.keys(req.body);
+//     let columnNames = columns.map((val) => {
+//       return { [val]: req.body[val] };
+//     });
+
+//     const mergedObject = columnNames.reduce((result, currentObject) => {
+//       return { ...result, ...currentObject };
+//     }, {});
+
+//     if (req?.files?.logo) {
+//       const fileData = req.files.logo[0];
+//       const pathD = fileData?.path;
+//       const npathD = pathD.replaceAll("\\", "/");
+
+//       const month = `${dayjs().year()}-${dayjs().month() + 1}`;
+//       const url = await s3.uploadPublic(npathD, fileData?.mimetype, `${fileData?.filename}`, `DepartmentLogos/${month}`);
+//       console.log(url, "url ");
+
+//       await files
+//         .deleteFileByPath(`${npathD.replace("public/", "")}`)
+//         .catch((err) => console.log(err));
+
+//       mergedObject.logo = url;
+//     };
+
+//     const newDepartment = new DepartmentModel({
+//       ...mergedObject,
+//     });
+//     const savedDepartment = await newDepartment.save();
+
+//     if (savedDepartment) {
+//       console.log(savedDepartment, "savedDepartment");
+
+//       const newAssistant = await createAssistant(savedDepartment?.name, savedDepartment?.prompt);
+//       console.log(newAssistant, "newAssistant");
+//       const updatedDepartment = await DepartmentModel.findByIdAndUpdate(
+//         savedDepartment?._id,
+//         {
+//           assistantDetails: newAssistant?.assistantData,
+//         },
+//         {
+//           new: true,
+//         }
+//       )
+//     }
+
+//     return sendSuccessResponse(res, { data: newDepartment }, 201);
+//   } catch (error) {
+//     return sendErrorResponse(res, error.message);
+//   }
+// };
+
+
 exports.addDepartment = async (req, res) => {
   try {
     let columns = Object.keys(req.body);
@@ -69,18 +126,28 @@ exports.addDepartment = async (req, res) => {
         .catch((err) => console.log(err));
 
       mergedObject.logo = url;
-    };
+    }
 
     const newDepartment = new DepartmentModel({
       ...mergedObject,
     });
     const savedDepartment = await newDepartment.save();
-
+    const tools = []
     if (savedDepartment) {
       console.log(savedDepartment, "savedDepartment");
+      for (const id of savedDepartment?.functionId) {
+        const toolFunction = toolFunctions[id];
+        if (!toolFunction) {
+          return sendErrorResponse(res, `Tool function not found for ID: ${id}`);
+        }
+        tools.push(toolFunction);
+      }
+      console.log(tools, "tools");
 
-      const newAssistant = await createAssistant(savedDepartment?.name, savedDepartment?.prompt);
-      console.log(newAssistant, "newAssistant");
+      const newAssistant = await createAssistant(savedDepartment?.name, savedDepartment?.prompt, tools);
+      const updatedAssistant = await openai.beta.assistants.update(newAssistant?.assistantData?.id, {
+        tools: tools,
+      });
       const updatedDepartment = await DepartmentModel.findByIdAndUpdate(
         savedDepartment?._id,
         {
@@ -89,7 +156,19 @@ exports.addDepartment = async (req, res) => {
         {
           new: true,
         }
-      )
+      );
+
+      // Add tool functions if functionId is provided
+      // if (req.body.functionId && Array.isArray(req.body.functionId)) {
+      //   for (const functionId of req.body.functionId) {
+      //     await addToolToAssistant({
+      //       body: {
+      //         assistantId: newAssistant?.assistantData?.id,
+      //         functionId: functionId
+      //       }
+      //     }, res);
+      //   }
+      // }
     }
 
     return sendSuccessResponse(res, { data: newDepartment }, 201);
@@ -145,7 +224,7 @@ exports.updateDepartment = async (req, res) => {
 
     if (updatedDepartment) {
       // console.log(updatedDepartment, "updatedDepartment")
-      const updatedAssistant = await updateAssistant(updatedDepartment?.assistantDetails?.id, { name: updatedDepartment?.name, instructions: updatedDepartment?.prompt });
+      const updatedAssistant = await updateAssistant(updatedDepartment?.assistantDetails?.id, { name: updatedDepartment?.name, instructions: updatedDepartment?.prompt, tools: updatedDepartment?.functionId });
       console.log(updatedAssistant, "updatedAssistant");
 
     }
