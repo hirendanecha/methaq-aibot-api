@@ -2,6 +2,8 @@ const { default: mongoose } = require('mongoose');
 const CustomerModel = require('../../models/customer.model');
 const { getPagination, getPaginationData } = require('../../utils/fn');
 const { sendSuccessResponse, sendErrorResponse } = require('../../utils/response');
+const ChatModel = require('../../models/chat.model');
+const MessageModel = require('../../models/message.model');
 
 exports.getAllCustomers = async (req, res) => {
     try {
@@ -125,6 +127,11 @@ exports.deleteCustomer = async (req, res) => {
         const customer = await CustomerModel.findByIdAndDelete(customerId);
         if (!customer) {
             return sendErrorResponse(res, 'Customer not found', 404);
+        }
+        const chatDetails = await ChatModel.findOne({ customerId: customerId }).lean();
+        if (chatDetails) {
+            await MessageModel.deleteMany({ chatId: chatDetails._id });
+            await ChatModel.deleteMany({ customerId: customerId });
         }
         return sendSuccessResponse(res, 'Customer deleted successfully');
     } catch (error) {
