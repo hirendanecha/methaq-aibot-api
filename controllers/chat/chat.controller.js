@@ -210,7 +210,6 @@ const uploadDocument = async (req, res) => {
 
     console.log(finalURLS); // This will contain an array of URLs
 
-
     res
       .status(200)
       .json({ url: finalURLS, message: "Document uploaded successfully" });
@@ -508,7 +507,9 @@ const whatsappMessages = async (req, res) => {
           existingChat?.isHuman === false
             ? await isHumanChatRequest(message.text?.body)
             : true;
-        console.log(isHumantrasfer, "isHumantrasfer in function");
+
+        // const hhh = await isHumanChatRequest(message.text?.body);
+        // console.log(hhh, "isHumantrasfer in function");
         if (isHumantrasfer != existingChat?.isHuman) {
           const assigneeAgent = await getAssigneeAgent(
             existingChat?.department?._id,
