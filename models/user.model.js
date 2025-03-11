@@ -17,7 +17,7 @@ const UserSchema = new Schema(
     countryCode: { type: String, default: "971" },
     mobileNumber: {
       type: String,
-      required: true,
+      // required: true,
     },
     password: { type: String, select: false },
     isOnline: {
