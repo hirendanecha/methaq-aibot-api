@@ -364,7 +364,7 @@ const whatsappMessages = async (req, res) => {
         if (!isAvailable) {
           return res.status(200).send("Message processed");
         }
-        if (images[existingChat?.threadId]) {
+        if (images[existingChat?.threadId]?.length > 0) {
           images[existingChat?.threadId].push({
             mediaID,
             url,
