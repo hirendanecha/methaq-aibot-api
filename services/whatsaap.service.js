@@ -152,8 +152,8 @@ async function downloadMedia(fileID, existingChat) {
 
     // return response.data;
     writeFileSync(filePath, response.data);
-    console.log(response.data,"response.data");
-    
+   // console.log(response.data, "response.data");
+
     // const imageBuffer = readFileSync(filePath);
 
     // const base64Image = imageBuffer.toString("base64");
@@ -211,7 +211,10 @@ async function downloadMedia(fileID, existingChat) {
     // const extractedText = aiResponse;
 
     // unlinkSync(filePath);
-    return { status: "success", data: { url, filePath,fileType,file:response.data } };
+    return {
+      status: "success",
+      data: { url, filePath, fileType, file: response.data },
+    };
   } catch (e) {
     console.error("Error downloading media", e);
     return { status: "error", data: "Error downloading Media" };
@@ -308,10 +311,10 @@ const sendListMessage = async (messageSender, messageID, buttonPayload) => {
     type: "button",
     header: {
       type: "text",
-      text: "Choose an option", // Static header text
+      text: "Change Department", // Static header text
     },
     body: {
-      text: "Please select one of the options below:", // Static body text
+      text: "Choose the option Yes/No or to go to the main menu, choose Main-Menu.", // Updated body text
     },
     action: {
       buttons: [
@@ -394,7 +397,7 @@ const sendInteractiveMessage = async (messageSender, messageID, payload) => {
           rows: payload?.options.map((op) => ({
             id: op?._id,
             title: op?.name,
-            description: `let's discuss about ${op?.name}`, // Optional description
+            description: `${op?.description ?? ""}`, // Optional description
           })),
         },
       ],
