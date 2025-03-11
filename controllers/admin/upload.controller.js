@@ -158,11 +158,11 @@ const addDocument = async (req, res) => {
       status: constants.status.statusObj.success,
     });
     await newFile.save();
-    const newVector = await createVectorStore(departmentDetails?.name, file);
+    const newVector = await createVectorStore(departmentDetails, file);
     console.log(newVector, "departmentDetails");
 
-    const updatedAssistant = await updateAssistantVectorStore(departmentDetails?.assistantDetails?.id, newVector?.vectorStore?.id)
-    console.log("updatedAssistant", updatedAssistant);
+    // const updatedAssistant = await updateAssistantVectorStore(departmentDetails?.assistantDetails?.id, newVector?.vectorStore?.id)
+    // console.log("updatedAssistant", updatedAssistant);
 
     // let fileContent;
 
