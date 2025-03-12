@@ -415,6 +415,7 @@ const whatsappMessages = async (req, res) => {
               images[existingChat?.threadId]?.map((imageObj) => imageObj?.url),
               existingChat?.department?.prompt
             );
+            images[existingChat?.threadId] = [];
             console.log(aiResponse, "aiResponseaiResponse");
             if (mediaID) {
               await markMessageAsRead(messageID);
@@ -440,7 +441,6 @@ const whatsappMessages = async (req, res) => {
               displayPhoneNumber,
               userInputmessage
             );
-            images[existingChat?.threadId] = [];
           }, 5000);
         }
       } else if (message.type == "text") {
@@ -683,7 +683,7 @@ const whatsappMessages = async (req, res) => {
 
           if (!existingChat?.isHuman) {
             // const userInput = message?.interactive?.list_reply?.title;
-            const userInput = "Hi";
+            const userInput = "Hi, how you can help me today ?";
 
             const embeddings = new OpenAIEmbeddings({
               openAIApiKey: process.env.OPENAI_API_KEY,
