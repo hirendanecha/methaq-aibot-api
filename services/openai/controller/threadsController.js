@@ -83,6 +83,8 @@ exports.handleUserMessage = async (
       throw new Error("Thread ID and user message are required.");
     }
 
+    //console.log(assistantId, "assistantIdassistantId");
+
     let messageContent = userMessage || "";
     if (fileUrl) {
       messageContent += ` Analyze the file at this URL: ${fileUrl
@@ -190,22 +192,28 @@ exports.createVectorStore = async (departmentDetails, files) => {
         name: departmentDetails?.name,
       });
       console.log("Vector Store Created:", vectorStore);
-      await openai.beta.assistants.update(departmentDetails?.assistantDetails?.id, {
-        tool_resources: {
-          file_search: { vector_store_ids: [vectorStore?.id] },
-        },
-      });
-      vectorStoreId = vectorStore?.id
-      departmentDetails = await DepartmentModel.findByIdAndUpdate(departmentDetails?._id, {
-        assistantDetails: {
-          ...departmentDetails?.assistantDetails,
-          vectorId: vectorStoreId
+      await openai.beta.assistants.update(
+        departmentDetails?.assistantDetails?.id,
+        {
+          tool_resources: {
+            file_search: { vector_store_ids: [vectorStore?.id] },
+          },
         }
-      }, {
-        new: true
-      })
-    }
-    else {
+      );
+      vectorStoreId = vectorStore?.id;
+      departmentDetails = await DepartmentModel.findByIdAndUpdate(
+        departmentDetails?._id,
+        {
+          assistantDetails: {
+            ...departmentDetails?.assistantDetails,
+            vectorId: vectorStoreId,
+          },
+        },
+        {
+          new: true,
+        }
+      );
+    } else {
       vectorStoreId = departmentDetails?.assistantDetails?.vectorId;
     }
     if (vectorStoreId) {
@@ -234,14 +242,21 @@ exports.createVectorStore = async (departmentDetails, files) => {
         console.log(updated, `Uploaded File ID: ${response?.id}`);
         fs.unlinkSync(newFilePathT);
 
-        departmentDetails = await DepartmentModel.findByIdAndUpdate(departmentDetails?._id, {
-          assistantDetails: {
-            ...departmentDetails?.assistantDetails,
-            documentIds: [...departmentDetails?.assistantDetails?.documentIds || [], response?.id]
+        departmentDetails = await DepartmentModel.findByIdAndUpdate(
+          departmentDetails?._id,
+          {
+            assistantDetails: {
+              ...departmentDetails?.assistantDetails,
+              documentIds: [
+                ...(departmentDetails?.assistantDetails?.documentIds || []),
+                response?.id,
+              ],
+            },
+          },
+          {
+            new: true,
           }
-        }, {
-          new: true
-        })
+        );
         await openai.beta.vectorStores.files.createAndPoll(vectorStoreId, {
           file_id: response?.id,
         });
