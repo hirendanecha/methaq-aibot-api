@@ -83,7 +83,7 @@ exports.handleUserMessage = async (
       throw new Error("Thread ID and user message are required.");
     }
 
-    //console.log(assistantId, "assistantIdassistantId");
+    // console.log(assistantId, "assistantIdassistantId");
 
     let messageContent = userMessage || "";
     if (fileUrl) {
@@ -111,9 +111,11 @@ exports.handleUserMessage = async (
       });
     }
     // Run the assistant
+    console.log(assistantId, "assistantIdassistantId12march");
     let run = await openai.beta.threads.runs.createAndPoll(threadId, {
       assistant_id: assistantId,
     });
+
     console.log(run.status, "run.status ankit");
 
     if (run.status === "requires_action") {
