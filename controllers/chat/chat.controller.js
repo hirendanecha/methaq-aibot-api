@@ -415,6 +415,7 @@ const whatsappMessages = async (req, res) => {
               images[existingChat?.threadId]?.map((imageObj) => imageObj?.url),
               existingChat?.department?.prompt
             );
+            images[existingChat?.threadId] = [];
             console.log(aiResponse, "aiResponseaiResponse");
             if (mediaID) {
               await markMessageAsRead(messageID);
@@ -440,7 +441,6 @@ const whatsappMessages = async (req, res) => {
               displayPhoneNumber,
               userInputmessage
             );
-            images[existingChat?.threadId] = [];
           }, 5000);
         }
       } else if (message.type == "text") {
