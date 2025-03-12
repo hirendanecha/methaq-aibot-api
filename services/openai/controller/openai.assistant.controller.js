@@ -31,7 +31,7 @@ exports.createAssistant = async (name, instructions, toolNames = []) => {
     const assistant = await openai.beta.assistants.create({
       name,
       instructions,
-      model: process.env.OPENAI_MODEL || "gpt-4-turbo",
+      model: process.env.OPENAI_MODEL || "gpt-4o-mini",
       tools,
     });
 
