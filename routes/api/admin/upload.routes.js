@@ -15,8 +15,8 @@ router.post(
   "/",
   fileUpload(
     "documents",
-    ["pdf", "word", "text"],
-    [{ name: "file", maxCount: 1, optional: true }]
+    ["pdf", "word", "text", "json"],
+    [{ name: "file", maxCount: 10, optional: true }]
   ),
   uploadCtrl.addDocument
 );

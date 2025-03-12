@@ -267,7 +267,6 @@ socketObj.config = (server) => {
 
         const updatedChat = await ChatModel.findOneAndUpdate({ _id: params.chatId }, { latestMessage: final?._id }, { new: true }).populate('customerId').lean();
 
-        console.log(updatedChat, "Prayank");
         [...receivers, ...customers].forEach(receiver => {
           socketObj.io.to(receiver._id?.toString()).emit("message", { ...updatedChat, latestMessage: final });
         })

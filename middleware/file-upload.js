@@ -40,6 +40,8 @@ const mimeTypes = (mediaType) => {
       ];
     case "pdf":
       return ["application/pdf"];
+    case "json":
+      return ["application/json"]
     case "csv":
       return ["application/vnd.ms-excel", "text/csv", "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"];
     case "text":
@@ -80,6 +82,7 @@ const dest = (path) => {
 
 const fileFilter = (mimeTypeArray) => {
   const allowedMimes = mimeTypeArray.map((m) => mimeTypes(m));
+
   return (req, file, cb) => {
     if ([].concat.apply([], allowedMimes).includes(file.mimetype)) {
       cb(null, true);

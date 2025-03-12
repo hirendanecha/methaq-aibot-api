@@ -7,12 +7,24 @@ const documentStatus = require("../openai-functions/document_submission_confirma
 const closeChat = require("../openai-functions/closeChat");
 const DepartmentModel = require("../../../models/department.model");
 const { enableFIleSearch } = require("./openai.assistant.controller");
+const UploadModel = require("../../../models/uploade.model");
+const constants = require("../../../utils/constants");
 // Create a new thread
 exports.createThread = async () => {
   try {
     const thread = await openai.beta.threads.create();
     console.log("Thread Created:", thread.id);
     return thread.id;
+  } catch (error) {
+    console.error("Error creating thread:", error.message);
+    throw new Error("Failed to create thread.");
+  }
+};
+exports.deleteThread = async (threadId) => {
+  try {
+    const deletedThread = await openai.beta.threads.del(threadId);
+    console.log("Thread Created:", deletedThread);
+    return threadId;
   } catch (error) {
     console.error("Error creating thread:", error.message);
     throw new Error("Failed to create thread.");
@@ -178,25 +190,22 @@ exports.createVectorStore = async (departmentDetails, files) => {
         name: departmentDetails?.name,
       });
       console.log("Vector Store Created:", vectorStore);
-      await openai.beta.assistants.update(
-        departmentDetails?.assistantDetails?.id,
-        {
-          tool_resources: {
-            file_search: { vector_store_ids: [vectorStore?.id] },
-          },
+      await openai.beta.assistants.update(departmentDetails?.assistantDetails?.id, {
+        tool_resources: {
+          file_search: { vector_store_ids: [vectorStore?.id] },
+        },
+      });
+      vectorStoreId = vectorStore?.id
+      departmentDetails = await DepartmentModel.findByIdAndUpdate(departmentDetails?._id, {
+        assistantDetails: {
+          ...departmentDetails?.assistantDetails,
+          vectorId: vectorStoreId
         }
-      );
-      vectorStoreId = vectorStore?.id;
-      const updatedDepartment = await DepartmentModel.findByIdAndUpdate(
-        departmentDetails?._id,
-        {
-          assistantDetails: {
-            ...departmentDetails?.assistantDetails,
-            vectorId: vectorStoreId,
-          },
-        }
-      );
-    } else {
+      }, {
+        new: true
+      })
+    }
+    else {
       vectorStoreId = departmentDetails?.assistantDetails?.vectorId;
     }
     if (vectorStoreId) {
@@ -210,18 +219,34 @@ exports.createVectorStore = async (departmentDetails, files) => {
         fs.renameSync(filePathT, newFilePathT);
 
         const fileStream = fs.createReadStream(newFilePath);
-        const response = await openai.files.create({
+        let response = {};
+        response = await openai.files.create({
           file: fileStream,
           purpose: "assistants",
         });
+        const newFile = new UploadModel({
+          ...(file && { file: file }),
+          department: departmentDetails?._id,
+          assistantDocId: response.id,
+          status: constants.status.statusObj.success,
+        });
+        const updated = await newFile.save();
+        console.log(updated, `Uploaded File ID: ${response?.id}`);
+        fs.unlinkSync(newFilePathT);
 
-        console.log(`Uploaded File ID: ${response.id}`);
-
+        departmentDetails = await DepartmentModel.findByIdAndUpdate(departmentDetails?._id, {
+          assistantDetails: {
+            ...departmentDetails?.assistantDetails,
+            documentIds: [...departmentDetails?.assistantDetails?.documentIds || [], response?.id]
+          }
+        }, {
+          new: true
+        })
         await openai.beta.vectorStores.files.createAndPoll(vectorStoreId, {
-          file_id: response.id,
+          file_id: response?.id,
         });
 
-        console.log(`File ${response.id} attached to Vector Store!`);
+        console.log(`File ${response?.id} attached to Vector Store!`);
       }
 
       return {
@@ -235,56 +260,52 @@ exports.createVectorStore = async (departmentDetails, files) => {
   }
 };
 
-exports.updateAssistantVectorStore = async (assistantId, vectorStoreId) => {
-  if (!vectorStoreId) {
-    throw new Error("Vector Store ID is required!");
-  }
+// exports.updateAssistantVectorStore = async (assistantId, vectorStoreId) => {
+//   if (!vectorStoreId) {
+//     throw new Error("Vector Store ID is required!");
+//   }
 
-  try {
-    // Step 1: Fetch the existing assistant details
-    const assistant = await openai.beta.assistants.retrieve(assistantId);
+//   try {
+//     // Step 1: Fetch the existing assistant details
+//     const assistant = await openai.beta.assistants.retrieve(assistantId);
 
-    // Step 2: Get existing vector_store_ids or initialize an empty array
-    const existingVectorStoreIds =
-      assistant.tool_resources?.file_search?.vector_store_ids[0] || [];
+//     // Step 2: Get existing vector_store_ids or initialize an empty array
+//     const existingVectorStoreIds =
+//       assistant.tool_resources?.file_search?.vector_store_ids[0] || [];
 
-    // Step 3: Prevent duplicates by checking if vectorStoreId already exists
-    if (existingVectorStoreIds.includes(vectorStoreId)) {
-      return {
-        success: true,
-        message: "Vector Store is already assigned to Assistant!",
-        assistantId,
-        vectorStoreId,
-      };
-    }
-    console.log(
-      existingVectorStoreIds,
-      vectorStoreId,
-      "existingVectorStoreIds"
-    );
+//     // Step 3: Prevent duplicates by checking if vectorStoreId already exists
+//     if (existingVectorStoreIds.includes(vectorStoreId)) {
+//       return {
+//         success: true,
+//         message: "Vector Store is already assigned to Assistant!",
+//         assistantId,
+//         vectorStoreId,
+//       };
+//     }
+//     console.log(existingVectorStoreIds, vectorStoreId, "existingVectorStoreIds");
 
-    // Step 4: Append the new vectorStoreId
-    const updatedVectorStoreIds = [...existingVectorStoreIds, vectorStoreId];
-    console.log(updatedVectorStoreIds, "updatedVectorStoreIds");
+//     // Step 4: Append the new vectorStoreId
+//     const updatedVectorStoreIds = [...existingVectorStoreIds, vectorStoreId];
+//     console.log(updatedVectorStoreIds, "updatedVectorStoreIds");
 
-    // Step 5: Update the assistant with the new list
-    await openai.beta.assistants.update(assistantId, {
-      tool_resources: {
-        file_search: { vector_store_ids: updatedVectorStoreIds },
-      },
-    });
+//     // Step 5: Update the assistant with the new list
+//     await openai.beta.assistants.update(assistantId, {
+//       tool_resources: {
+//         file_search: { vector_store_ids: updatedVectorStoreIds },
+//       },
+//     });
 
-    return {
-      success: true,
-      message: "Vector Store successfully added to Assistant!",
-      assistantId,
-      vectorStoreId,
-    };
-  } catch (error) {
-    console.error("Error updating assistant:", error.message);
-    throw new Error(`Failed to update assistant: ${error.message}`);
-  }
-};
+//     return {
+//       success: true,
+//       message: "Vector Store successfully added to Assistant!",
+//       assistantId,
+//       vectorStoreId,
+//     };
+//   } catch (error) {
+//     console.error("Error updating assistant:", error.message);
+//     throw new Error(`Failed to update assistant: ${error.message}`);
+//   }
+// };
 // exports.updateAssistantVectorStore = async (assistantId, vectorStoreId) => {
 //   const { vectorStoreId, filePath } = req.body;
 

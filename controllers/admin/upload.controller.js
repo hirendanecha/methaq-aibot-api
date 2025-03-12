@@ -21,7 +21,7 @@ const {
   fetchAndStoreDocuments,
 } = require("../../helpers/pineconeupload.helper");
 const DepartmentModel = require("../../models/department.model");
-const { createVectorStore, updateAssistantVectorStore } = require("../../services/openai/controller/threadsController");
+const { createVectorStore } = require("../../services/openai/controller/threadsController");
 
 const openai = new OpenAIApi({
   apiKey: environment.openaiApiKey,
@@ -152,12 +152,7 @@ const addDocument = async (req, res) => {
 
   const { file = [] } = req.files || {};
   try {
-    const newFile = new UploadModel({
-      ...(file[0] && { file: file[0] }),
-      department,
-      status: constants.status.statusObj.success,
-    });
-    await newFile.save();
+
     const newVector = await createVectorStore(departmentDetails, file);
     console.log(newVector, "departmentDetails");
 

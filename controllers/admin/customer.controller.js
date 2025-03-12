@@ -4,6 +4,7 @@ const { getPagination, getPaginationData } = require('../../utils/fn');
 const { sendSuccessResponse, sendErrorResponse } = require('../../utils/response');
 const ChatModel = require('../../models/chat.model');
 const MessageModel = require('../../models/message.model');
+const { deleteThread } = require('../../services/openai/controller/threadsController');
 
 exports.getAllCustomers = async (req, res) => {
     try {
@@ -132,6 +133,7 @@ exports.deleteCustomer = async (req, res) => {
         if (chatDetails) {
             await MessageModel.deleteMany({ chatId: chatDetails._id });
             await ChatModel.deleteMany({ customerId: customerId });
+            await deleteThread(chatDetails.threadId);
         }
         return sendSuccessResponse(res, 'Customer deleted successfully');
     } catch (error) {
