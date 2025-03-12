@@ -683,7 +683,7 @@ const whatsappMessages = async (req, res) => {
 
           if (!existingChat?.isHuman) {
             // const userInput = message?.interactive?.list_reply?.title;
-            const userInput = "Hi";
+            const userInput = "Hi, how you can help me today ?";
 
             const embeddings = new OpenAIEmbeddings({
               openAIApiKey: process.env.OPENAI_API_KEY,
