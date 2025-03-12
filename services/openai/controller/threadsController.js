@@ -6,6 +6,7 @@ const processImage = require("../openai-functions/processImage");
 const documentStatus = require("../openai-functions/document_submission_confirmation");
 const closeChat = require("../openai-functions/closeChat");
 const DepartmentModel = require("../../../models/department.model");
+const { enableFIleSearch } = require("./openai.assistant.controller");
 // Create a new thread
 exports.createThread = async () => {
   try {
@@ -170,26 +171,32 @@ exports.createVectorStore = async (departmentDetails, files) => {
   }
 
   try {
-    let vectorStoreId = ""
+    await enableFIleSearch(departmentDetails?.assistantDetails?.id);
+    let vectorStoreId = "";
     if (!departmentDetails?.assistantDetails?.vectorId) {
       const vectorStore = await openai.beta.vectorStores.create({
         name: departmentDetails?.name,
       });
       console.log("Vector Store Created:", vectorStore);
-      await openai.beta.assistants.update(departmentDetails?.assistantDetails?.id, {
-        tool_resources: {
-          file_search: { vector_store_ids: [vectorStore?.id] },
-        },
-      });
-      vectorStoreId = vectorStore?.id
-      const updatedDepartment = await DepartmentModel.findByIdAndUpdate(departmentDetails?._id, {
-        assistantDetails: {
-          ...departmentDetails?.assistantDetails,
-          vectorId: vectorStoreId
+      await openai.beta.assistants.update(
+        departmentDetails?.assistantDetails?.id,
+        {
+          tool_resources: {
+            file_search: { vector_store_ids: [vectorStore?.id] },
+          },
         }
-      })
-    }
-    else {
+      );
+      vectorStoreId = vectorStore?.id;
+      const updatedDepartment = await DepartmentModel.findByIdAndUpdate(
+        departmentDetails?._id,
+        {
+          assistantDetails: {
+            ...departmentDetails?.assistantDetails,
+            vectorId: vectorStoreId,
+          },
+        }
+      );
+    } else {
       vectorStoreId = departmentDetails?.assistantDetails?.vectorId;
     }
     if (vectorStoreId) {
@@ -250,7 +257,11 @@ exports.updateAssistantVectorStore = async (assistantId, vectorStoreId) => {
         vectorStoreId,
       };
     }
-    console.log(existingVectorStoreIds, vectorStoreId, "existingVectorStoreIds");
+    console.log(
+      existingVectorStoreIds,
+      vectorStoreId,
+      "existingVectorStoreIds"
+    );
 
     // Step 4: Append the new vectorStoreId
     const updatedVectorStoreIds = [...existingVectorStoreIds, vectorStoreId];
