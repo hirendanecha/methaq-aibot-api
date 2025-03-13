@@ -11,9 +11,17 @@ const {
 } = require("../../utils/response");
 const s3 = require("../../helpers/s3.helper");
 const dayjs = require("dayjs");
-const { createAssistant, updateAssistant, deleteAssistant, addToolToAssistant } = require("../../services/openai/controller/openai.assistant.controller");
+const {
+  createAssistant,
+  updateAssistant,
+  deleteAssistant,
+  addToolToAssistant,
+  enableFIleSearch,
+} = require("../../services/openai/controller/openai.assistant.controller");
 const { openai } = require("../../services/openai/openai-config/openai-config");
-const { toolFunctions } = require("../../services/openai/openai-functions/function-schema/functionsSchema");
+const {
+  toolFunctions,
+} = require("../../services/openai/openai-functions/function-schema/functionsSchema");
 
 exports.getAllDepartment = async (req, res) => {
   try {
@@ -100,7 +108,6 @@ exports.getParticularDepartment = async (req, res) => {
 //   }
 // };
 
-
 exports.addDepartment = async (req, res) => {
   try {
     let columns = Object.keys(req.body);
@@ -118,7 +125,12 @@ exports.addDepartment = async (req, res) => {
       const npathD = pathD.replaceAll("\\", "/");
 
       const month = `${dayjs().year()}-${dayjs().month() + 1}`;
-      const url = await s3.uploadPublic(npathD, fileData?.mimetype, `${fileData?.filename}`, `DepartmentLogos/${month}`);
+      const url = await s3.uploadPublic(
+        npathD,
+        fileData?.mimetype,
+        `${fileData?.filename}`,
+        `DepartmentLogos/${month}`
+      );
       console.log(url, "url ");
 
       await files
@@ -132,22 +144,32 @@ exports.addDepartment = async (req, res) => {
       ...mergedObject,
     });
     const savedDepartment = await newDepartment.save();
-    const tools = []
+    const tools = [];
     if (savedDepartment) {
       console.log(savedDepartment, "savedDepartment");
       for (const id of savedDepartment?.functionId) {
         const toolFunction = toolFunctions[id];
         if (!toolFunction) {
-          return sendErrorResponse(res, `Tool function not found for ID: ${id}`);
+          return sendErrorResponse(
+            res,
+            `Tool function not found for ID: ${id}`
+          );
         }
         tools.push(toolFunction);
       }
       console.log(tools, "tools");
 
-      const newAssistant = await createAssistant(savedDepartment?.name, savedDepartment?.prompt, tools);
-      const updatedAssistant = await openai.beta.assistants.update(newAssistant?.assistantData?.id, {
-        tools: tools,
-      });
+      const newAssistant = await createAssistant(
+        savedDepartment?.name,
+        savedDepartment?.prompt,
+        tools
+      );
+      const updatedAssistant = await openai.beta.assistants.update(
+        newAssistant?.assistantData?.id,
+        {
+          tools: tools,
+        }
+      );
       const updatedDepartment = await DepartmentModel.findByIdAndUpdate(
         savedDepartment?._id,
         {
@@ -195,12 +217,17 @@ exports.updateDepartment = async (req, res) => {
 
     if (req?.files?.logo) {
       const fileData = req.files.logo[0];
-      console.log(fileData, "data")
+      console.log(fileData, "data");
       const pathD = fileData?.path;
       const npathD = pathD.replaceAll("\\", "/");
 
       const month = `${dayjs().year()}-${dayjs().month() + 1}`;
-      const url = await s3.uploadPublic(npathD, fileData?.mimetype, `${fileData?.filename}`, `DepartmentLogos/${month}`);
+      const url = await s3.uploadPublic(
+        npathD,
+        fileData?.mimetype,
+        `${fileData?.filename}`,
+        `DepartmentLogos/${month}`
+      );
       console.log(url, "url ");
 
       await files
@@ -210,25 +237,32 @@ exports.updateDepartment = async (req, res) => {
       mergedObject.logo = url;
 
       await s3.deleteFiles([department?.logo]);
-    };
+    }
 
     const updatedDepartment = await DepartmentModel.findByIdAndUpdate(
       id,
       {
-        ...mergedObject
+        ...mergedObject,
       },
       {
-        new: true
+        new: true,
       }
     );
 
     if (updatedDepartment) {
       // console.log(updatedDepartment, "updatedDepartment")
-      const updatedAssistant = await updateAssistant(updatedDepartment?.assistantDetails?.id, { name: updatedDepartment?.name, instructions: updatedDepartment?.prompt, tools: updatedDepartment?.functionId });
+      const updatedAssistant = await updateAssistant(
+        updatedDepartment?.assistantDetails?.id,
+        {
+          name: updatedDepartment?.name,
+          instructions: updatedDepartment?.prompt,
+          tools: updatedDepartment?.functionId,
+        }
+      );
       console.log(updatedAssistant, "updatedAssistant");
-
     }
 
+    await enableFIleSearch(updatedDepartment?.assistantDetails?.id);
     return sendSuccessResponse(res, { data: updatedDepartment });
   } catch (error) {
     return sendErrorResponse(res, error.message);
@@ -240,7 +274,9 @@ exports.deleteDepartment = async (req, res) => {
   try {
     const department = await DepartmentModel.findByIdAndDelete(id);
     console.log(department, "department");
-    const deletedAssistant = await deleteAssistant(department?.assistantDetails?.id);
+    const deletedAssistant = await deleteAssistant(
+      department?.assistantDetails?.id
+    );
     await QnaModel.deleteMany({ department: id });
     const uploadFiles = await UploadModel.find({ department: id });
     for (let i = 0; i < uploadFiles?.length; i++) {
