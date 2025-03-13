@@ -152,19 +152,7 @@ async function downloadMedia(fileID, existingChat) {
 
     // return response.data;
     writeFileSync(filePath, response.data);
-   // console.log(response.data, "response.data");
-
-    // const imageBuffer = readFileSync(filePath);
-
-    // const base64Image = imageBuffer.toString("base64");
-    //remove
-
-    // const imageUrl = `data:image/png;base64,${base64Image}`;
-
-    // console.log("AI Response:", aiResponse);
-
-    ///
-    // console.log("response22", response22?.data?.text);
+  
     const month = new Date().toLocaleString("default", { month: "long" });
     const url = await s3.uploadPublic(
       filePath,
@@ -174,43 +162,7 @@ async function downloadMedia(fileID, existingChat) {
     );
     console.log(url, "ppppp");
 
-    // const formData = new FormData();
-    // formData.append("files", createReadStream(filePath), {
-    //   filename: fileName,
-    //   contentType: fileType,
-    // });
-
-    // let aiResponse;
-    // if (formData) {
-    //   // functionResult = await processImage(formData, existingChat?.department?.prompt);
-    //   // aiResponse = functionResult;
-    //   // Ensure the function is invoked when formData is present
-    //   // aiResponse = await generateAIResponse(
-    //   //   null, // context
-    //   //   null,
-    //   //   existingChat,
-    //   //   url,
-    //   //   formData
-    //   // );
-
-    //   // console.log(existingChat, "existingChat for asdfdaf");
-
-    //   // console.log(existingChat?.threadId, null, existingChat?.department?.assistantDetails?.id, url, "details for image");
-    //   aiResponse = await handleUserMessage(
-    //     existingChat?.threadId,
-    //     null,
-    //     existingChat?.department?.assistantDetails?.id,
-    //     url,
-    //     formData,
-    //     existingChat?.department?.prompt
-    //   );
-    //   console.log(aiResponse, "aiResponsefdgdfgfh");
-    // }
-
-    // //const extractedText = aiResponse?.message;
-    // const extractedText = aiResponse;
-
-    // unlinkSync(filePath);
+   
     return {
       status: "success",
       data: { url, filePath, fileType, file: response.data },
