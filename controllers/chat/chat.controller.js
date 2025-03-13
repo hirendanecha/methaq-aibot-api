@@ -332,12 +332,36 @@ const whatsappMessages = async (req, res) => {
       //console.log(existingChat, "existingChatexistingChat");
 
       if (message.type === "image" || message.type === "document") {
-        const mediaID = message.image?.id || message.document?.id; // Get the media ID from the message
+        const mediaID = message.image?.id || message.document?.id;
         console.log(mediaID, "mediaID123456");
 
         const downloadResult = await downloadMedia(mediaID, existingChat);
 
         const { url, filePath, fileType, file } = downloadResult?.data || {};
+
+        // Send acknowledgment for each image received
+        const acknowledgmentMess = {
+          chatId: existingChat._id,
+          sender: null,
+          receiver: existingChat?.customerId?.toString(),
+          sendType: "assistant",
+          receiverType: "user",
+          content:
+            "Image received. We'll process it with any other images you've sent recently.",
+        };
+        sendMessageToAdmins(
+          socketObj,
+          acknowledgmentMess,
+          existingChat?.department?._id
+        );
+        await sendWhatsAppMessage(
+          messageSender,
+          undefined,
+          messageID,
+          displayPhoneNumber,
+          "Image received. We'll process it with any other images you've sent recently."
+        );
+
         const mess1 = {
           chatId: existingChat._id,
           wpId: message?.id,
@@ -349,6 +373,7 @@ const whatsappMessages = async (req, res) => {
           attachments: [url],
         };
         sendMessageToAdmins(socketObj, mess1, existingChat?.department?._id);
+
         const isDepartmentSelected = await sendInterectiveMessageConfirmation(
           socketObj,
           existingChat,
@@ -358,6 +383,7 @@ const whatsappMessages = async (req, res) => {
         if (!isDepartmentSelected) {
           return res.status(200).send("Message processed");
         }
+
         const isAvailable = await checkDepartmentAvailability(
           socketObj,
           existingChat,
@@ -366,47 +392,46 @@ const whatsappMessages = async (req, res) => {
         if (!isAvailable) {
           return res.status(200).send("Message processed");
         }
-        if (images[existingChat?.threadId]?.length > 0) {
-          images[existingChat?.threadId].push({
-            mediaID,
-            url,
-            filePath,
-            fileType,
-            file,
-          });
-        } else {
-          images[existingChat?.threadId] = [
-            { mediaID, url, filePath, fileType, file },
-          ];
-          // Send We are processing your images message here
-          const mess = {
-            chatId: existingChat._id,
-            sender: null,
-            receiver: existingChat?.customerId?.toString(),
-            sendType: "assistant",
-            receiverType: "user",
-            content: "We are processing your image(s)",
-          };
-          sendMessageToAdmins(socketObj, mess, existingChat?.department?._id);
-          await sendWhatsAppMessage(
-            messageSender,
-            undefined,
-            messageID,
-            displayPhoneNumber,
-            "We are processing your image(s)"
-          );
+
+        if (!images[existingChat?.threadId]) {
+          images[existingChat?.threadId] = [];
+        }
+        images[existingChat?.threadId].push({
+          mediaID,
+          url,
+          filePath,
+          fileType,
+          file,
+        });
+
+        if (images[existingChat?.threadId].length === 1) {
+          // Set timer only when the first image is added
           setTimeout(async () => {
-            // const formData = new FormData();
-            // images[existingChat?.threadId].forEach((imageObj) => {
-            //   const fileExtension = imageObj?.fileType?.split("/")[1];
-            //   const fileName = `${imageObj?.mediaID}.${fileExtension}`;
-            //   console.log(imageObj?.filePath, "imageObj?.filePath");
-            //   const fileStream = createReadStream(imageObj?.filePath);
-            //   formData.append("files", fileStream, {
-            //     filename: fileName,
-            //     contentType: fileType,
-            //   });
-            // });
+            const numImages = images[existingChat?.threadId].length;
+            // Send processing start notification
+            const processingMess = {
+              chatId: existingChat._id,
+              sender: null,
+              receiver: existingChat?.customerId?.toString(),
+              sendType: "assistant",
+              receiverType: "user",
+              content: `Processing your ${numImages} image${
+                numImages > 1 ? "s" : ""
+              }.`,
+            };
+            sendMessageToAdmins(
+              socketObj,
+              processingMess,
+              existingChat?.department?._id
+            );
+            await sendWhatsAppMessage(
+              messageSender,
+              undefined,
+              messageID,
+              displayPhoneNumber,
+              `Processing your ${numImages} image${numImages > 1 ? "s" : ""}.`
+            );
+
             const aiResponse = await handleUserMessage(
               existingChat?.threadId,
               null,
@@ -570,40 +595,22 @@ const whatsappMessages = async (req, res) => {
         if (!existingChat?.isHuman) {
           const userInput = message.text.body;
 
-          const embeddings = new OpenAIEmbeddings({
-            openAIApiKey: process.env.OPENAI_API_KEY,
-          });
-          const index = pinecone.Index(environment.pinecone.indexName);
-          const vectorStore = await PineconeStore.fromExistingIndex(
-            embeddings,
-            {
-              //@ts-ignore
-              pineconeIndex: index,
-            }
-          );
+       
+         
 
           // const results = await vectorStore.similaritySearch(userInput, 5);
-          const results = await vectorStore.similaritySearch(
-            (query = userInput),
-            (k = 5),
-            (filter = {
-              departmentName: { $eq: existingChat?.department?.name },
-            }),
-            (include_metadata = true)
-          );
+         
           //console.log(results, "resilrrfsgd");
 
-          let context = results.map((r) => r.pageContent).join("\n\n");
-          // const response = await generateAIResponse(
-          //   context,
-          //   userInput,
-          //   existingChat
-          // );
+        
 
           const response = await handleUserMessage(
             existingChat?.threadId,
             userInput,
-            existingChat?.department?.assistantDetails?.id
+            existingChat?.department?.assistantDetails?.id,
+            null,
+            null,
+            existingChat?.department?.prompt
           );
           console.log(response, "messageSendermessageSender");
           const mess = {
@@ -657,7 +664,9 @@ const whatsappMessages = async (req, res) => {
             sendType: "user",
             receiverType: "assistant",
             messageType: "text",
-            content: `${message?.interactive?.list_reply?.title}\n${message?.interactive?.list_reply?.description || ""}`,
+            content: `${message?.interactive?.list_reply?.title}\n${
+              message?.interactive?.list_reply?.description || ""
+            }`,
           };
           sendMessageToAdmins(socketObj, mess1, existingChat?.department?._id);
           const mess2 = {
@@ -717,7 +726,10 @@ const whatsappMessages = async (req, res) => {
             const response = await handleUserMessage(
               existingChat?.threadId,
               userInput,
-              existingChat?.department?.assistantDetails?.id
+              existingChat?.department?.assistantDetails?.id,
+              null,
+              null,
+              existingChat?.department?.prompt
             );
             console.log(response, "messageSendermessageSender");
             const mess = {
