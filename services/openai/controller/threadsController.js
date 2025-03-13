@@ -228,7 +228,10 @@ exports.handleUserMessage = async (
     }
 
     console.log(assistantId);
-
+    const newActiveRun = await getActiveRun(threadId);
+    if (newActiveRun) {
+      throw new Error(`Thread ${threadId} still has an active run ${newActiveRun?.id}.`);
+    }
     let run = await openai.beta.threads.runs.createAndPoll(threadId, {
       assistant_id: assistantId,
     });

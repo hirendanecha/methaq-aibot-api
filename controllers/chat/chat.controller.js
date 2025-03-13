@@ -267,10 +267,10 @@ const whatsappMessages = async (req, res) => {
       if (!updatedCus._id) {
         throw new Error("Error while adding new user!");
       }
-      const threadId = await createThread();
+      // const threadId = await createThread();
       const chat = new ChatModel({
         customerId: updatedCus._id,
-        threadId: threadId,
+        // threadId: threadId,
         source: "whatsapp",
       });
       const newChat = await chat.save();
@@ -326,6 +326,9 @@ const whatsappMessages = async (req, res) => {
       let existingChat = await ChatModel.findOne({
         customerId: user?._id,
       }).populate("department");
+      let departmentThread = existingChat.threads[existingChat?.department?._id?.toString()];
+      console.log(departmentThread, existingChat?.department, "departmentThread");
+
       if (!existingChat) {
         return res.status(200).send("Message processed");
       }
@@ -393,10 +396,10 @@ const whatsappMessages = async (req, res) => {
           return res.status(200).send("Message processed");
         }
 
-        if (!images[existingChat?.threadId]) {
-          images[existingChat?.threadId] = [];
+        if (!images[departmentThread]) {
+          images[departmentThread] = [];
         }
-        images[existingChat?.threadId].push({
+        images[departmentThread].push({
           mediaID,
           url,
           filePath,
@@ -404,10 +407,10 @@ const whatsappMessages = async (req, res) => {
           file,
         });
 
-        if (images[existingChat?.threadId].length === 1) {
+        if (images[departmentThread].length === 1) {
           // Set timer only when the first image is added
           setTimeout(async () => {
-            const numImages = images[existingChat?.threadId].length;
+            const numImages = images[departmentThread].length;
             // Send processing start notification
             const processingMess = {
               chatId: existingChat._id,
@@ -415,9 +418,8 @@ const whatsappMessages = async (req, res) => {
               receiver: existingChat?.customerId?.toString(),
               sendType: "assistant",
               receiverType: "user",
-              content: `Processing your ${numImages} image${
-                numImages > 1 ? "s" : ""
-              }.`,
+              content: `Processing your ${numImages} image${numImages > 1 ? "s" : ""
+                }.`,
             };
             sendMessageToAdmins(
               socketObj,
@@ -433,14 +435,14 @@ const whatsappMessages = async (req, res) => {
             );
 
             const aiResponse = await handleUserMessage(
-              existingChat?.threadId,
+              departmentThread,
               null,
               existingChat?.department?.assistantDetails?.id,
-              images[existingChat?.threadId],
-              images[existingChat?.threadId]?.map((imageObj) => imageObj?.url),
+              images[departmentThread],
+              images[departmentThread]?.map((imageObj) => imageObj?.url),
               existingChat?.department?.prompt
             );
-            images[existingChat?.threadId] = [];
+            images[departmentThread] = [];
             console.log(aiResponse, "aiResponseaiResponse");
             if (mediaID) {
               await markMessageAsRead(messageID);
@@ -595,17 +597,17 @@ const whatsappMessages = async (req, res) => {
         if (!existingChat?.isHuman) {
           const userInput = message.text.body;
 
-       
-         
+
+
 
           // const results = await vectorStore.similaritySearch(userInput, 5);
-         
+
           //console.log(results, "resilrrfsgd");
 
-        
+
 
           const response = await handleUserMessage(
-            existingChat?.threadId,
+            departmentThread,
             userInput,
             existingChat?.department?.assistantDetails?.id,
             null,
@@ -650,10 +652,16 @@ const whatsappMessages = async (req, res) => {
           }
           return res.status(200).send("Message processed");
         } else {
+          const oldThreads = existingChat?.threads || {};
+          if (!oldThreads[message?.interactive?.list_reply?.id]) {
+            const threadId = await createThread();
+            oldThreads[message?.interactive?.list_reply?.id] = threadId;
+          }
           const answer = message?.interactive?.list_reply?.id;
+          departmentThread = oldThreads[message?.interactive?.list_reply?.id];
           existingChat = await ChatModel.findOneAndUpdate(
             { _id: existingChat._id },
-            { department: answer },
+            { department: answer, threads: oldThreads },
             { new: true }
           ).populate("department");
           const mess1 = {
@@ -664,9 +672,8 @@ const whatsappMessages = async (req, res) => {
             sendType: "user",
             receiverType: "assistant",
             messageType: "text",
-            content: `${message?.interactive?.list_reply?.title}\n${
-              message?.interactive?.list_reply?.description || ""
-            }`,
+            content: `${message?.interactive?.list_reply?.title}\n${message?.interactive?.list_reply?.description || ""
+              }`,
           };
           sendMessageToAdmins(socketObj, mess1, existingChat?.department?._id);
           const mess2 = {
@@ -724,7 +731,7 @@ const whatsappMessages = async (req, res) => {
             //   existingChat
             // );
             const response = await handleUserMessage(
-              existingChat?.threadId,
+              departmentThread,
               userInput,
               existingChat?.department?.assistantDetails?.id,
               null,
