@@ -9,9 +9,9 @@ const ChatSchema = Schema(
       ref: "user",
       default: null
     },
-    threadId: {
-      type: String,
-      default: null
+    threads: {
+      type: Object,
+      default: {}
     },
     department: {
       type: Schema.Types.ObjectId,
