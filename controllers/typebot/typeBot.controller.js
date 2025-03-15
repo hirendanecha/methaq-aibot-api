@@ -79,7 +79,7 @@ const continueChat = async (sessionId, message) => {
       console.error("Error fetching TypeBots:", error.message);
       return "Axle broke!! Abort mission!!";
     }
-  };
+};
 
 module.exports = {
   getAllTypeBots,
