@@ -580,13 +580,15 @@ const whatsappMessages = async (req, res) => {
               mess2,
               existingChat?.department?._id
             );
-            await sendWhatsAppMessage(
-              messageSender,
-              undefined,
-              messageID,
-              displayPhoneNumber,
-              userInputmessage
-            );
+            if(userInputmessage){
+              await sendWhatsAppMessage(
+                messageSender,
+                undefined,
+                messageID,
+                displayPhoneNumber,
+                userInputmessage
+              );
+            }
           }, 5000);
         }
       } else if (message.type == "text") {

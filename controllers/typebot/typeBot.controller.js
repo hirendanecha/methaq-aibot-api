@@ -45,7 +45,7 @@ const startChat = async (botname, message) => {
       // }
     );
 
-    console.log("Start chat response:", response);
+    // console.log("Start chat response:", response);
     return response;
   } catch (error) {
     console.error("Error fetching TypeBots:", error.message);
@@ -66,21 +66,22 @@ const continueChat = async (sessionId, message, urls = null) => {
         ...(urls && { attachedFileUrls: urls }), // Conditionally add attachedFileUrls if urls is not null
       },
     };
-    console.log("requestBody", requestBody);
+    // console.log("requestBody", requestBody);
     const response = await axios.post(url, requestBody, {
       headers: {
         "Content-Type": "application/json",
         // Authorization: `Bearer ${process.env.TYPEBOT_API_TOKEN}`, // Ensure you have the correct token
       },
     });
-
+    // console.log(response?.data,"response?.data?.messages?.[0]?.content?.richText?.[0]?.children?.[0]");
+    
     const messageText =
       response?.data?.messages?.[0]?.content?.richText?.[0]?.children?.[0]
         ?.children?.[0]?.text;
     console.log("Extracted text:", messageText);
     return messageText;
   } catch (error) {
-    console.error("Error continuing chat:", error.message);
+    // console.error("Error continuing chat:", error.message);
     return "Axle broke!! Abort mission!!";
   }
 };
