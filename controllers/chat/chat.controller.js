@@ -276,7 +276,8 @@ const whatsappMessages = async (req, res) => {
           text: message.text?.body,
         }
       );
-      const sessionId = startChatResponse?.sessionId; // Adjust based on actual response structure
+      console.log("startChatResponse", startChatResponse.data);
+      const sessionId = startChatResponse?.data?.sessionId; // Adjust based on actual response structure
 
       const chat = new ChatModel({
         customerId: updatedCus._id,
@@ -299,7 +300,7 @@ const whatsappMessages = async (req, res) => {
       sendMessageToAdmins(socketObj, mess2, newChat?.department);
 
       const departments = await fetchDepartmentsAndPrompts();
-      console.log(departments, "departments");
+      //console.log(departments, "departments");
 
       // const interectiveMessageDetails = {
       //   options: departments,
@@ -309,20 +310,20 @@ const whatsappMessages = async (req, res) => {
       //   actionButtonText: "Select Department",
       //   actionSectionTitle: "Departments",
       // };
-      // const intmessage = {
-      //   chatId: newChat._id,
-      //   sender: null,
-      //   receiver: updatedCus._id,
-      //   sendType: "assistant",
-      //   receiverType: "user",
-      //   content:
-      //     "Hello! 👋 How can I assist you today with your insurance needs? Please select a department:",
-      //   messageType: "interective",
-      //   messageOptions: departments?.map((department) => ({
-      //     label: department.name,
-      //     value: department._id,
-      //   })),
-      // };
+      const intmessage = {
+        chatId: newChat._id,
+        sender: null,
+        receiver: updatedCus._id,
+        sendType: "assistant",
+        receiverType: "user",
+        content:
+          "Hello! 👋 How can I assist you today with your insurance needs? Please select a department:",
+        messageType: "interective",
+        messageOptions: departments?.map((department) => ({
+          label: department.name,
+          value: department._id,
+        })),
+      };
 
       // sendInteractiveMessage(
       //   messageSender,
@@ -338,13 +339,13 @@ const whatsappMessages = async (req, res) => {
         customerId: user?._id,
       }).populate("department");
 
-      let departmentThread =
-        existingChat.threads[existingChat?.department?._id?.toString()];
-      console.log(
-        departmentThread,
-        existingChat?.department,
-        "departmentThread"
-      );
+      // let departmentThread =
+      //   existingChat.threads[existingChat?.department?._id?.toString()];
+      // console.log(
+      //   departmentThread,
+      //   existingChat?.department,
+      //   "departmentThread"
+      // );
 
       if (!existingChat) {
         return res.status(200).send("Message processed");
@@ -413,10 +414,20 @@ const whatsappMessages = async (req, res) => {
           return res.status(200).send("Message processed");
         }
 
-        if (!images[departmentThread]) {
-          images[departmentThread] = [];
+        // if (!images[departmentThread]) {
+        //   images[departmentThread] = [];
+        // }
+        // images[departmentThread].push({
+        //   mediaID,
+        //   url,
+        //   filePath,
+        //   fileType,
+        //   file,
+        // });
+        if (!images[existingChat._id]) {
+          images[existingChat._id] = [];
         }
-        images[departmentThread].push({
+        images[existingChat._id].push({
           mediaID,
           url,
           filePath,
@@ -424,10 +435,14 @@ const whatsappMessages = async (req, res) => {
           file,
         });
 
-        if (images[departmentThread].length === 1) {
+
+        if (images[existingChat._id].length === 1) {
           // Set timer only when the first image is added
           setTimeout(async () => {
-            const numImages = images[departmentThread].length;
+
+            const numImages = images[existingChat._id].length;
+          
+           // const numImages = images[departmentThread].length;
             // Send processing start notification
             const processingMess = {
               chatId: existingChat._id,
@@ -451,20 +466,22 @@ const whatsappMessages = async (req, res) => {
               displayPhoneNumber,
               `Processing your ${numImages} image${numImages > 1 ? "s" : ""}.`
             );
+            const imageUrls = images[existingChat._id].map((imageObj) => imageObj.url);
 
-            const aiResponse = await handleUserMessage(
-              departmentThread,
-              null,
-              existingChat?.department?.assistantDetails?.id,
-              images[departmentThread],
-              images[departmentThread]?.map((imageObj) => imageObj?.url),
-              existingChat?.department?.prompt
-            );
-            images[departmentThread] = [];
-            console.log(aiResponse, "aiResponseaiResponse");
-            if (mediaID) {
-              await markMessageAsRead(messageID);
-            }
+            // const aiResponse = await handleUserMessage(
+            //   departmentThread,
+            //   null,
+            //   existingChat?.department?.assistantDetails?.id,
+            //   images[departmentThread],
+            //   images[departmentThread]?.map((imageObj) => imageObj?.url),
+            //   existingChat?.department?.prompt
+            // );
+            // images[departmentThread] = [];
+            // console.log(aiResponse, "aiResponseaiResponse");
+            // if (mediaID) {
+            //   await markMessageAsRead(messageID);
+            // }
+            const aiResponse=await continueChat(existingChat.sessionId,"",imageUrls);
             const userInputmessage = aiResponse || "";
             const mess2 = {
               chatId: existingChat._id,
@@ -619,9 +636,10 @@ const whatsappMessages = async (req, res) => {
             text: userInput,
             attachedFileUrls: [], // Add any file URLs if applicable
           };
-
-          const response = await continueChat(sessionId, messageObj);
-          const assistantMessage = response.messages[0]?.content?.richText[0]?.children[0]?.children[0]?.text;
+          console.log(sessionId, "response typebot");
+         const response = await continueChat(sessionId, userInput);
+         // console.log(response, "response typebot");
+         // const assistantMessage = response.data.messages[0]?.content?.richText[0]?.children[0]?.children[0]?.text;
 
 
           // const results = await vectorStore.similaritySearch(userInput, 5);
@@ -636,7 +654,7 @@ const whatsappMessages = async (req, res) => {
           //   null,
           //   existingChat?.department?.prompt
           // );
-          console.log(response, "messageSendermessageSender");
+          //console.log(assistantMessage, "messageSendermessageSender");
           const mess = {
             chatId: existingChat?._id,
             sender: null,
@@ -652,7 +670,7 @@ const whatsappMessages = async (req, res) => {
             undefined,
             messageID,
             displayPhoneNumber,
-            assistantMessage
+            response
           );
         }
       } else if (message?.type === "interactive") {
