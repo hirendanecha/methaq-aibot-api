@@ -48,6 +48,7 @@ const {
 const { unlinkSync } = require("fs");
 const { deleteFileByPath } = require("../../helpers/files.helper");
 const { startChat, continueChat } = require("../typebot/typeBot.controller");
+const { mongoose } = require("mongoose");
 
 const fetchDepartmentsAndPrompts = async () => {
   try {
@@ -290,6 +291,30 @@ const completedDocumentController = async (req, res) => {
   }catch(error){
     return res.status(500).json({ error: "Failed to delete document" });
   }
+}
+
+const assignDepartmentController = async (req, res) => {
+  try{
+    const { sessionId } = req.params;
+    const { department } = req.body;
+    // const chatDetails = await ChatModel.findOne({ sessionId: sessionId });
+    const assigneeAgent = await getAssigneeAgent(new mongoose.Types.ObjectId(department));
+    const updatedChat = await ChatModel.findOneAndUpdate(
+      { sessionId: sessionId },
+      {
+        adminId: assigneeAgent?._id, department: department, isHuman: true
+      },
+      {
+        new:true
+      }
+    )
+    console.log(updatedChat,"updatedChat");
+    
+    return res.status(200).json({ updatedChat, message: "Department assigned successfully" });
+  }catch(error){
+    return res.status(500).json({ error: "Failed to delete document" });
+  }
+
 }
 const images = {};
 const whatsappMessages = async (req, res) => {
@@ -942,5 +967,6 @@ module.exports = {
   deleteDocument,
   whatsappMessages,
   closeChatController,
-  completedDocumentController
+  completedDocumentController,
+  assignDepartmentController
 };
