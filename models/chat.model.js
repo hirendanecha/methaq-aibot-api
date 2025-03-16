@@ -22,6 +22,9 @@ const ChatSchema = Schema(
       ref: "departments",
       default: null,
     },
+    typeBotId: {
+      type: String,
+    },
     customerId: {
       type: Schema.Types.ObjectId,
       ref: "customers",

@@ -347,7 +347,7 @@ const sendInteractiveMessage = async (messageSender, messageID, payload) => {
         {
           title: payload?.actionSectionTitle, // Section title
           rows: payload?.options.map((op) => ({
-            id: op?._id,
+            id: op?.typeBotId||"y5laof1",
             title: op?.name,
             description: `${op?.description ?? ""}`, // Optional description
           })),
