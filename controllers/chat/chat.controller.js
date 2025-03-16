@@ -272,9 +272,21 @@ const closeChatController = async(req,res) => {
   }
 }
 
-const completedDocument = async (req, res) => {
+const completedDocumentController = async (req, res) => {
   try {
+    const { sessionId } = req.params;
+    const chatDetails = await ChatModel.findOne({ sessionId: sessionId });
+    const updatedChat = await ChatModel.findOneAndUpdate(
+      { sessionId: sessionId },
+      {
+        tags:[...chatDetails?.tags,"document_received"]
+      },
+      {
+        new:true
+      }
+    )
 
+    return res.status(200).json({ updatedChat, message: "All document received" });
   }catch(error){
     return res.status(500).json({ error: "Failed to delete document" });
   }
@@ -927,5 +939,6 @@ module.exports = {
   uploadDocument,
   deleteDocument,
   whatsappMessages,
-  closeChatController
+  closeChatController,
+  completedDocumentController
 };

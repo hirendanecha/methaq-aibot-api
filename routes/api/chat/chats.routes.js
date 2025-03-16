@@ -9,6 +9,7 @@ const {
   deleteDocument,
   whatsappMessages,
   closeChatController,
+  completedDocumentController,
 } = require("../../../controllers/chat/chat.controller");
 const {
   getAgentChats,
@@ -87,6 +88,8 @@ router.get("/getwhatsappmessages", (req, res) => {
 router.post("/getwhatsappmessages", whatsappMessages);
 
 router.get("/close-chat/:sessionId", closeChatController);
+
+router.get("/received-document/:sessionId", completedDocumentController);
 
 router.get("/get-tools", getToolFunctions);
 
