@@ -395,15 +395,15 @@ const whatsappMessages = async (req, res) => {
         };
         sendMessageToAdmins(socketObj, mess1, existingChat?.department?._id);
 
-        const isDepartmentSelected = await sendInterectiveMessageConfirmation(
-          socketObj,
-          existingChat,
-          messageSender,
-          messageID
-        );
-        if (!isDepartmentSelected) {
-          return res.status(200).send("Message processed");
-        }
+        // const isDepartmentSelected = await sendInterectiveMessageConfirmation(
+        //   socketObj,
+        //   existingChat,
+        //   messageSender,
+        //   messageID
+        // );
+        // if (!isDepartmentSelected) {
+        //   return res.status(200).send("Message processed");
+        // }
 
         const isAvailable = await checkDepartmentAvailability(
           socketObj,

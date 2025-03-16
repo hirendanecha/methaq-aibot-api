@@ -54,7 +54,7 @@ const startChat = async (botname, message) => {
 };
 
 const continueChat = async (sessionId, message, urls = null) => {
-  console.log("sessionId aaa", sessionId, message);
+  console.log("sessionId aaa", sessionId, message, urls);
   const url = `https://typebot-uqjtp-u35950.vm.elestio.app/api/v1/sessions/${sessionId}/continueChat`; // Use the specific URL
 
   try {
@@ -62,11 +62,11 @@ const continueChat = async (sessionId, message, urls = null) => {
       textBubbleContentFormat: "richText", // Set the text bubble content format
       message: {
         type: "text", // Set the message type
-        text: message, // Set the text message
+        text: urls ? "check this url" : message, // Set the text message
         ...(urls && { attachedFileUrls: urls }), // Conditionally add attachedFileUrls if urls is not null
       },
     };
-
+    console.log("requestBody", requestBody);
     const response = await axios.post(url, requestBody, {
       headers: {
         "Content-Type": "application/json",
