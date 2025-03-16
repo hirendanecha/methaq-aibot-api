@@ -74,14 +74,45 @@ const continueChat = async (sessionId, message, urls = null) => {
       },
     });
     // console.log(response?.data,"response?.data?.messages?.[0]?.content?.richText?.[0]?.children?.[0]");
-    
+    // new thing
+   
+    const formatRichText = (richText) => {
+      return richText.map(item => {
+          if (item.type === "p" || item.type === "li") {
+              return item.children.map(child => child.text || "").join("");
+          } else if (item.type === "ul" || item.type === "ol") {
+              return item.children.map(li => 
+                  "- " + li.children.map(lic => lic.children.map(text => text.text || "").join("")).join("")
+              ).join("\n");
+          } else if (item.type === "variable") {
+              // Handle the "variable" type by processing its children
+              return item.children.map(child => formatRichText([child])).join("\n");
+          }
+          return "";
+      }).join("\n"); 
+  };
+  
+  const getFormattedMessage = (messages) => {
+    //console.log("messages", messages);
+      //const messages = response.messages;
+      return messages.map(msg => {
+          if (msg.content && msg.content.richText) {
+              return formatRichText(msg.content.richText);
+          }
+          return "";
+      }).join("\n");
+  };
+  const finaloutput=getFormattedMessage(response?.data?.messages);
+    console.log("finaloutput",finaloutput);
+
+    ///
     const messageText =
       response?.data?.messages?.[0]?.content?.richText?.[0]?.children?.[0]
         ?.children?.[0]?.text;
-    console.log("Extracted text:", messageText);
-    return messageText;
+   // console.log("Extracted text:", messageText);
+    return finaloutput;
   } catch (error) {
-    // console.error("Error continuing chat:", error.message);
+    console.error("Error continuing chat:", error.message);
     return "Axle broke!! Abort mission!!";
   }
 };
