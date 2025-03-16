@@ -47,6 +47,7 @@ const {
 } = require("../../services/openai/tool/deparmentChange");
 const { unlinkSync } = require("fs");
 const { deleteFileByPath } = require("../../helpers/files.helper");
+const { startChat, continueChat } = require("../typebot/typeBot.controller");
 
 const fetchDepartmentsAndPrompts = async () => {
   try {
@@ -233,6 +234,43 @@ const deleteDocument = async (req, res) => {
     return res.status(500).json({ error: "Failed to delete document" });
   }
 };
+
+const closeChatController = async(req,res) => {
+  try {
+    // console.log(threadId, "rbbbjkb");
+    const {sessionId} = req.params||{};
+    console.log(sessionId,"sessionId");
+    
+    const chat = await ChatModel.findOne({ sessionId: sessionId }).populate("customerId department").lean();
+    const updatedChat = await ChatModel.findOneAndUpdate(
+      { _id: chat?._id },
+      {
+        status: "archived",
+        adminId: null,
+        isHuman: false,
+        department: null,
+      },
+      { new: true }
+    ).lean();
+    await sendWhatsAppMessage(
+      chat?.customerId?.phone,
+      undefined,
+      null,
+      chat?.customerId?.phone,
+      chat?.department?.messages?.chatClosingMessage
+    );
+
+    console.log(updatedChat, "updatedChat");
+
+    return res.status(200).json({ updatedChat, message: "Chat is closed" });
+  } catch (error) {
+    console.error("Error processing image:", error.message);
+    return {
+      status: "error",
+      message: "Failed to process the image. Please try again later.",
+    };
+  }
+}
 const images = {};
 const whatsappMessages = async (req, res) => {
   try {
@@ -268,8 +306,19 @@ const whatsappMessages = async (req, res) => {
         throw new Error("Error while adding new user!");
       }
       // const threadId = await createThread();
+
+      const startChatResponse = await startChat(
+        "open-ai-assistant-chat-y5laof1",
+        {
+          // text: message.text?.body,
+        }
+      );
+      const sessionId = startChatResponse?.data?.sessionId; // Adjust based on actual response structure
+      // const respoText = startChatResponse?.data?.messages?.[0]?.content?.richText?.[0]?.children?.[0]?.children?.[0]?.text;
+      // console.log("startChatResponse",respoText);
       const chat = new ChatModel({
         customerId: updatedCus._id,
+        sessionId: sessionId,
         // threadId: threadId,
         source: "whatsapp",
       });
@@ -286,9 +335,29 @@ const whatsappMessages = async (req, res) => {
         content: message.text?.body,
       };
       sendMessageToAdmins(socketObj, mess2, newChat?.department);
+      // const mess3 = {
+      //   chatId: newChat._id,
+      //   sender: null,
+      //   receiver: newChat?.customerId?.toString(),
+      //   sendType: "assistant",
+      //   receiverType: "user",
+      //   content: respoText,
+      // };
+      // sendMessageToAdmins(
+      //   socketObj,
+      //   mess3,
+      //   newChat?.department
+      // );
 
+      // await sendWhatsAppMessage(
+      //   messageSender,
+      //   undefined,
+      //   messageID,
+      //   displayPhoneNumber,
+      //   respoText
+      // );
       const departments = await fetchDepartmentsAndPrompts();
-      console.log(departments, "departments");
+      //console.log(departments, "departments");
 
       const interectiveMessageDetails = {
         options: departments,
@@ -326,8 +395,14 @@ const whatsappMessages = async (req, res) => {
       let existingChat = await ChatModel.findOne({
         customerId: user?._id,
       }).populate("department");
-      let departmentThread = existingChat.threads[existingChat?.department?._id?.toString()];
-      console.log(departmentThread, existingChat?.department, "departmentThread");
+
+      // let departmentThread =
+      //   existingChat.threads[existingChat?.department?._id?.toString()];
+      // console.log(
+      //   departmentThread,
+      //   existingChat?.department,
+      //   "departmentThread"
+      // );
 
       if (!existingChat) {
         return res.status(200).send("Message processed");
@@ -377,40 +452,59 @@ const whatsappMessages = async (req, res) => {
         };
         sendMessageToAdmins(socketObj, mess1, existingChat?.department?._id);
 
-        const isDepartmentSelected = await sendInterectiveMessageConfirmation(
-          socketObj,
-          existingChat,
-          messageSender,
-          messageID
-        );
-        if (!isDepartmentSelected) {
+        const isDepartmentSelected = existingChat?.department;
+        if(isDepartmentSelected){
+          await sendInterectiveMessageConfirmation(
+            socketObj,
+            existingChat,
+            messageSender,
+            messageID
+          );
           return res.status(200).send("Message processed");
         }
+        // if (!isDepartmentSelected) {
+        //   return res.status(200).send("Message processed");
+        // }
 
-        const isAvailable = await checkDepartmentAvailability(
-          socketObj,
-          existingChat,
-          messageSender
-        );
-        if (!isAvailable) {
-          return res.status(200).send("Message processed");
-        }
+        // const isAvailable = await checkDepartmentAvailability(
+        //   socketObj,
+        //   existingChat,
+        //   messageSender
+        // );
+        // if (!isAvailable) {
+        //   return res.status(200).send("Message processed");
+        // }
 
-        if (!images[departmentThread]) {
-          images[departmentThread] = [];
+        // if (!images[departmentThread]) {
+        //   images[departmentThread] = [];
+        // }
+        // images[departmentThread].push({
+        //   mediaID,
+        //   url,
+        //   filePath,
+        //   fileType,
+        //   file,
+        // });
+        if (!images[existingChat._id]) {
+          images[existingChat._id] = [];
         }
-        images[departmentThread].push({
+        images[existingChat._id].push({
           mediaID,
           url,
           filePath,
           fileType,
           file,
         });
+        console.log(images[existingChat._id],"imageUrlsefef");
 
-        if (images[departmentThread].length === 1) {
+
+        if (images[existingChat._id].length === 1) {
           // Set timer only when the first image is added
           setTimeout(async () => {
-            const numImages = images[departmentThread].length;
+
+            const numImages = images[existingChat._id].length;
+          
+           // const numImages = images[departmentThread].length;
             // Send processing start notification
             const processingMess = {
               chatId: existingChat._id,
@@ -418,8 +512,9 @@ const whatsappMessages = async (req, res) => {
               receiver: existingChat?.customerId?.toString(),
               sendType: "assistant",
               receiverType: "user",
-              content: `Processing your ${numImages} image${numImages > 1 ? "s" : ""
-                }.`,
+              content: `Processing your ${numImages} image${
+                numImages > 1 ? "s" : ""
+              }.`,
             };
             sendMessageToAdmins(
               socketObj,
@@ -433,20 +528,24 @@ const whatsappMessages = async (req, res) => {
               displayPhoneNumber,
               `Processing your ${numImages} image${numImages > 1 ? "s" : ""}.`
             );
-
-            const aiResponse = await handleUserMessage(
-              departmentThread,
-              null,
-              existingChat?.department?.assistantDetails?.id,
-              images[departmentThread],
-              images[departmentThread]?.map((imageObj) => imageObj?.url),
-              existingChat?.department?.prompt
-            );
-            images[departmentThread] = [];
-            console.log(aiResponse, "aiResponseaiResponse");
-            if (mediaID) {
-              await markMessageAsRead(messageID);
-            }
+            const imageUrls = images[existingChat._id].map((imageObj) => imageObj.url);
+            console.log(imageUrls,"imahesfrinfj");
+            
+            // const aiResponse = await handleUserMessage(
+            //   departmentThread,
+            //   null,
+            //   existingChat?.department?.assistantDetails?.id,
+            //   images[departmentThread],
+            //   images[departmentThread]?.map((imageObj) => imageObj?.url),
+            //   existingChat?.department?.prompt
+            // );
+            // images[departmentThread] = [];
+            // console.log(aiResponse, "aiResponseaiResponse");
+            // if (mediaID) {
+            //   await markMessageAsRead(messageID);
+            // }
+            // console.log(imageUrls, "imageUrlsss");
+            const aiResponse=await continueChat(existingChat.sessionId,"",imageUrls);
             const userInputmessage = aiResponse || "";
             const mess2 = {
               chatId: existingChat._id,
@@ -483,138 +582,144 @@ const whatsappMessages = async (req, res) => {
         console.log(mess, "message from userside");
 
         sendMessageToAdmins(socketObj, mess, existingChat?.department?._id);
-        const isDepartmentSelected = await sendInterectiveMessageConfirmation(
-          socketObj,
-          existingChat,
-          messageSender,
-          messageID
-        );
-        if (!isDepartmentSelected) {
+        const isDepartmentSelected = existingChat?.department;
+        if(!isDepartmentSelected){
+          await sendInterectiveMessageConfirmation(
+            socketObj,
+            existingChat,
+            messageSender,
+            messageID
+          );
           return res.status(200).send("Message processed");
         }
-        const isDeparmentChangeVal = await isDeparmentChange(
-          message.text?.body
-        );
-        console.log(isDeparmentChangeVal, "isDeparmentChangeVal");
+        // const isDeparmentChangeVal = await isDeparmentChange(
+        //   message.text?.body
+        // );
+        // console.log(isDeparmentChangeVal, "isDeparmentChangeVal");
 
-        if (isDeparmentChangeVal) {
-          const message = {
-            chatId: existingChat?._id?.toString(),
-            sender: null,
-            receiver: existingChat?.customerId?.toString(),
-            sendType: "assistant",
-            receiverType: "user",
-            content: "Please select one of the options below:",
-            messageType: "interective",
-            messageOptions: [
-              {
-                label: "Yes",
-                value: "yes_option",
-              },
-              {
-                label: "No",
-                value: "no_option",
-              },
-              {
-                label: "Main-Menu", // New button title
-                value: "main_menu_option",
-              },
-            ],
-          };
-          sendMessageToAdmins(socketObj, message, null);
-          sendListMessage(messageSender, messageID);
-          return res.status(200).send("Message processed");
-        }
-        const isAvailable = await checkDepartmentAvailability(
-          socketObj,
-          existingChat,
-          messageSender
-        );
-        if (!isAvailable) {
-          return res.status(200).send("Message processed");
-        }
-        const isHumantrasfer =
-          existingChat?.isHuman === false
-            ? await isHumanChatRequest(message.text?.body)
-            : true;
+        // if (isDeparmentChangeVal) {
+        //   const message = {
+        //     chatId: existingChat?._id?.toString(),
+        //     sender: null,
+        //     receiver: existingChat?.customerId?.toString(),
+        //     sendType: "assistant",
+        //     receiverType: "user",
+        //     content: "Please select one of the options below:",
+        //     messageType: "interective",
+        //     messageOptions: [
+        //       {
+        //         label: "Yes",
+        //         value: "yes_option",
+        //       },
+        //       {
+        //         label: "No",
+        //         value: "no_option",
+        //       },
+        //       {
+        //         label: "Main-Menu", // New button title
+        //         value: "main_menu_option",
+        //       },
+        //     ],
+        //   };
+        //   sendMessageToAdmins(socketObj, message, null);
+        //   sendListMessage(messageSender, messageID);
+        //   return res.status(200).send("Message processed");
+        // }
+        // const isAvailable = await checkDepartmentAvailability(
+        //   socketObj,
+        //   existingChat,
+        //   messageSender
+        // );
+        // if (!isAvailable) {
+        //   return res.status(200).send("Message processed");
+        // }
+        // const isHumantrasfer =
+        //   existingChat?.isHuman === false
+        //     ? await isHumanChatRequest(message.text?.body)
+        //     : true;
 
         // const hhh = await isHumanChatRequest(message.text?.body);
         // console.log(hhh, "isHumantrasfer in function");
-        if (isHumantrasfer != existingChat?.isHuman) {
-          const assigneeAgent = await getAssigneeAgent(
-            existingChat?.department?._id,
-            true
-          );
-          if (assigneeAgent) {
-            console.log(assigneeAgent, "assigneeAgent");
-            existingChat = await ChatModel.findOneAndUpdate(
-              { _id: existingChat._id },
-              { isHuman: isHumantrasfer, adminId: assigneeAgent?._id },
-              { new: true }
-            ).populate("department");
-            const mess = {
-              chatId: existingChat?._id,
-              sender: null,
-              receiver: existingChat?.customerId?.toString(),
-              sendType: "assistant",
-              receiverType: "user",
-              messageType: "tooltip",
-              content: `Chat is transferred to ${assigneeAgent?.fullName}`,
-            };
-            sendMessageToAdmins(socketObj, mess, existingChat?.department?._id);
-            await sendWhatsAppMessage(
-              messageSender,
-              undefined,
-              messageID,
-              displayPhoneNumber,
-              `We have transferred your chat to ${assigneeAgent?.fullName}`
-            );
+        // if (isHumantrasfer != existingChat?.isHuman) {
+        //   const assigneeAgent = await getAssigneeAgent(
+        //     existingChat?.department?._id,
+        //     true
+        //   );
+        //   if (assigneeAgent) {
+        //     console.log(assigneeAgent, "assigneeAgent");
+        //     existingChat = await ChatModel.findOneAndUpdate(
+        //       { _id: existingChat._id },
+        //       { isHuman: isHumantrasfer, adminId: assigneeAgent?._id },
+        //       { new: true }
+        //     ).populate("department");
+        //     const mess = {
+        //       chatId: existingChat?._id,
+        //       sender: null,
+        //       receiver: existingChat?.customerId?.toString(),
+        //       sendType: "assistant",
+        //       receiverType: "user",
+        //       messageType: "tooltip",
+        //       content: `Chat is transferred to ${assigneeAgent?.fullName}`,
+        //     };
+        //     sendMessageToAdmins(socketObj, mess, existingChat?.department?._id);
+        //     await sendWhatsAppMessage(
+        //       messageSender,
+        //       undefined,
+        //       messageID,
+        //       displayPhoneNumber,
+        //       `We have transferred your chat to ${assigneeAgent?.fullName}`
+        //     );
 
-            return res.status(200).send("Message processed");
-          } else {
-            const mess = {
-              chatId: existingChat?._id,
-              sender: null,
-              receiver: existingChat?.customerId?.toString(),
-              sendType: "assistant",
-              receiverType: "user",
-              messageType: "text",
-              content:
-                existingChat?.department?.messages?.allAgentsOfflineResponse,
-            };
-            sendMessageToAdmins(socketObj, mess, existingChat?.department?._id);
-            await sendWhatsAppMessage(
-              messageSender,
-              undefined,
-              messageID,
-              displayPhoneNumber,
-              existingChat?.department?.messages?.allAgentsOfflineResponse
-            );
+        //     return res.status(200).send("Message processed");
+        //   } else {
+        //     const mess = {
+        //       chatId: existingChat?._id,
+        //       sender: null,
+        //       receiver: existingChat?.customerId?.toString(),
+        //       sendType: "assistant",
+        //       receiverType: "user",
+        //       messageType: "text",
+        //       content:
+        //         existingChat?.department?.messages?.allAgentsOfflineResponse,
+        //     };
+        //     sendMessageToAdmins(socketObj, mess, existingChat?.department?._id);
+        //     await sendWhatsAppMessage(
+        //       messageSender,
+        //       undefined,
+        //       messageID,
+        //       displayPhoneNumber,
+        //       existingChat?.department?.messages?.allAgentsOfflineResponse
+        //     );
 
-            return res.status(200).send("Message processed");
-          }
-        }
+        //     return res.status(200).send("Message processed");
+        //   }
+        // }
         if (!existingChat?.isHuman) {
           const userInput = message.text.body;
-
-
+          const sessionId = existingChat?.sessionId; // Ensure sessionId is available
+          const messageObj = {
+            text: userInput,
+            attachedFileUrls: [], // Add any file URLs if applicable
+          };
+          console.log(sessionId, "response typebot");
+         const response = await continueChat(sessionId, userInput);
+         // console.log(response, "response typebot");
+         // const assistantMessage = response.data.messages[0]?.content?.richText[0]?.children[0]?.children[0]?.text;
 
 
           // const results = await vectorStore.similaritySearch(userInput, 5);
 
           //console.log(results, "resilrrfsgd");
 
-
-
-          const response = await handleUserMessage(
-            departmentThread,
-            userInput,
-            existingChat?.department?.assistantDetails?.id,
-            null,
-            null,
-            existingChat?.department?.prompt
-          );
-          console.log(response, "messageSendermessageSender");
+          // const response = await handleUserMessage(
+          //   departmentThread,
+          //   userInput,
+          //   existingChat?.department?.assistantDetails?.id,
+          //   null,
+          //   null,
+          //   existingChat?.department?.prompt
+          // );
+          //console.log(assistantMessage, "messageSendermessageSender");
           const mess = {
             chatId: existingChat?._id,
             sender: null,
@@ -624,6 +729,7 @@ const whatsappMessages = async (req, res) => {
             receiverType: "user",
           };
           sendMessageToAdmins(socketObj, mess, existingChat?.department?._id);
+
           await sendWhatsAppMessage(
             messageSender,
             undefined,
@@ -653,15 +759,18 @@ const whatsappMessages = async (req, res) => {
           return res.status(200).send("Message processed");
         } else {
           const oldThreads = existingChat?.threads || {};
-          if (!oldThreads[message?.interactive?.list_reply?.id]) {
-            const threadId = await createThread();
-            oldThreads[message?.interactive?.list_reply?.id] = threadId;
-          }
+          // if (!oldThreads[message?.interactive?.list_reply?.id]) {
+          //   const threadId = await createThread();
+          //   oldThreads[message?.interactive?.list_reply?.id] = threadId;
+          // }
           const answer = message?.interactive?.list_reply?.id;
           departmentThread = oldThreads[message?.interactive?.list_reply?.id];
+          const departmentDetails = await DepartmentModel.findOne({
+            typeBotId: answer,
+          })
           existingChat = await ChatModel.findOneAndUpdate(
             { _id: existingChat._id },
-            { department: answer, threads: oldThreads },
+            { department: departmentDetails?._id, typeBotId: answer, threads: oldThreads },
             { new: true }
           ).populate("department");
           const mess1 = {
@@ -672,8 +781,9 @@ const whatsappMessages = async (req, res) => {
             sendType: "user",
             receiverType: "assistant",
             messageType: "text",
-            content: `${message?.interactive?.list_reply?.title}\n${message?.interactive?.list_reply?.description || ""
-              }`,
+            content: `${message?.interactive?.list_reply?.title}\n${
+              message?.interactive?.list_reply?.description || ""
+            }`,
           };
           sendMessageToAdmins(socketObj, mess1, existingChat?.department?._id);
           const mess2 = {
@@ -686,75 +796,96 @@ const whatsappMessages = async (req, res) => {
             content: `Chat is transferred to ${message?.interactive?.list_reply?.title} department`,
           };
           sendMessageToAdmins(socketObj, mess2, existingChat?.department?._id);
-          const isAvailable = await checkDepartmentAvailability(
-            socketObj,
-            existingChat,
-            messageSender
-          );
-          console.log(isAvailable, "isAvailable in interactive");
+          // const isAvailable = await checkDepartmentAvailability(
+          //   socketObj,
+          //   existingChat,
+          //   messageSender
+          // );
+          // console.log(isAvailable, "isAvailable in interactive");
 
-          if (!isAvailable) {
-            return res.status(200).send("Message processed");
-          }
+          // if (!isAvailable) {
+          //   return res.status(200).send("Message processed");
+          // }
 
           if (!existingChat?.isHuman) {
             // const userInput = message?.interactive?.list_reply?.title;
             const userInput = "Hi, how you can help me today ?";
-
-            const embeddings = new OpenAIEmbeddings({
-              openAIApiKey: process.env.OPENAI_API_KEY,
-            });
-            const index = pinecone.Index(environment.pinecone.indexName);
-            const vectorStore = await PineconeStore.fromExistingIndex(
-              embeddings,
-              {
-                //@ts-ignore
-                pineconeIndex: index,
-              }
-            );
-
-            // const results = await vectorStore.similaritySearch(userInput, 5);
-            const results = await vectorStore.similaritySearch(
-              (query = userInput),
-              (k = 5),
-              (filter = {
-                departmentName: { $eq: existingChat?.department?.name },
-              }),
-              (include_metadata = true)
-            );
-            //console.log(results, "resilrrfsgd");
-
-            let context = results.map((r) => r.pageContent).join("\n\n");
-            // const response = await generateAIResponse(
-            //   context,
-            //   userInput,
-            //   existingChat
-            // );
-            const response = await handleUserMessage(
-              departmentThread,
-              userInput,
-              existingChat?.department?.assistantDetails?.id,
-              null,
-              null,
-              existingChat?.department?.prompt
-            );
-            console.log(response, "messageSendermessageSender");
-            const mess = {
-              chatId: existingChat?._id,
+            const aiResponse=await continueChat(existingChat.sessionId,userInput);
+            const userInputmessage = aiResponse || "";
+            const mess2 = {
+              chatId: existingChat._id,
               sender: null,
-              sendType: "assistant",
-              content: response,
               receiver: existingChat?.customerId?.toString(),
+              sendType: "assistant",
               receiverType: "user",
+              content: userInputmessage,
             };
-            sendMessageToAdmins(socketObj, mess, existingChat?.department?._id);
+            sendMessageToAdmins(
+              socketObj,
+              mess2,
+              existingChat?.department?._id
+            );
             await sendWhatsAppMessage(
               messageSender,
               undefined,
               messageID,
               displayPhoneNumber,
-              response
+              userInputmessage
             );
+            // const embeddings = new OpenAIEmbeddings({
+            //   openAIApiKey: process.env.OPENAI_API_KEY,
+            // });
+            // const index = pinecone.Index(environment.pinecone.indexName);
+            // const vectorStore = await PineconeStore.fromExistingIndex(
+            //   embeddings,
+            //   {
+            //     //@ts-ignore
+            //     pineconeIndex: index,
+            //   }
+            // );
+
+            // const results = await vectorStore.similaritySearch(userInput, 5);
+            // const results = await vectorStore.similaritySearch(
+            //   (query = userInput),
+            //   (k = 5),
+            //   (filter = {
+            //     departmentName: { $eq: existingChat?.department?.name },
+            //   }),
+            //   (include_metadata = true)
+            // );
+            //console.log(results, "resilrrfsgd");
+
+            // let context = results.map((r) => r.pageContent).join("\n\n");
+            // const response = await generateAIResponse(
+            //   context,
+            //   userInput,
+            //   existingChat
+            // );
+            // const response = await handleUserMessage(
+            //   departmentThread,
+            //   userInput,
+            //   existingChat?.department?.assistantDetails?.id,
+            //   null,
+            //   null,
+            //   existingChat?.department?.prompt
+            // );
+            // console.log(response, "messageSendermessageSender");
+            // const mess = {
+            //   chatId: existingChat?._id,
+            //   sender: null,
+            //   sendType: "assistant",
+            //   content: response,
+            //   receiver: existingChat?.customerId?.toString(),
+            //   receiverType: "user",
+            // };
+            // sendMessageToAdmins(socketObj, mess, existingChat?.department?._id);
+            // await sendWhatsAppMessage(
+            //   messageSender,
+            //   undefined,
+            //   messageID,
+            //   displayPhoneNumber,
+            //   response
+            // );
           }
         }
       } else if (
@@ -788,4 +919,5 @@ module.exports = {
   uploadDocument,
   deleteDocument,
   whatsappMessages,
+  closeChatController
 };

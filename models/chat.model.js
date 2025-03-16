@@ -7,51 +7,63 @@ const ChatSchema = Schema(
     adminId: {
       type: Schema.Types.ObjectId,
       ref: "user",
-      default: null
+      default: null,
+    },
+    sessionId: {
+      type: String,
+      default: null,
     },
     threads: {
       type: Object,
-      default: {}
+      default: {},
     },
     department: {
       type: Schema.Types.ObjectId,
       ref: "departments",
-      default: null
+      default: null,
+    },
+    typeBotId: {
+      type: String,
     },
     customerId: {
       type: Schema.Types.ObjectId,
-      ref: "customers"
+      ref: "customers",
     },
     latestMessage: {
       type: Schema.Types.ObjectId,
       ref: "Message",
-      default: null
+      default: null,
     },
     isHuman: {
       type: Boolean,
-      default: false
+      default: false,
     },
-    notes: [{
-      type: String
-    }],
+    notes: [
+      {
+        type: String,
+      },
+    ],
     source: {
       type: String,
       enum: ["whatsapp", "bot"],
-      default: "bot"
+      default: "bot",
     },
     status: {
       type: String,
       enum: constants.chatStatus,
-      default: "active"
+      default: "active",
     },
-    tags: [{
-      type: String,
-      enum: constants.chatTags,
-      default: ""
-    }]
-  }, {
-  timestamps: true
-}
+    tags: [
+      {
+        type: String,
+        enum: constants.chatTags,
+        default: "",
+      },
+    ],
+  },
+  {
+    timestamps: true,
+  }
 );
 
 const ChatModel = mongoose.model("chat", ChatSchema);
