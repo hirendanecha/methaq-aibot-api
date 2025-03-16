@@ -271,6 +271,14 @@ const closeChatController = async(req,res) => {
     };
   }
 }
+
+const completedDocument = async (req, res) => {
+  try {
+
+  }catch(error){
+    return res.status(500).json({ error: "Failed to delete document" });
+  }
+}
 const images = {};
 const whatsappMessages = async (req, res) => {
   try {
@@ -453,7 +461,7 @@ const whatsappMessages = async (req, res) => {
         sendMessageToAdmins(socketObj, mess1, existingChat?.department?._id);
 
         const isDepartmentSelected = existingChat?.department;
-        if(isDepartmentSelected){
+        if(!isDepartmentSelected){
           await sendInterectiveMessageConfirmation(
             socketObj,
             existingChat,
