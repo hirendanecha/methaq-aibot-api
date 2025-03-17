@@ -9,11 +9,11 @@ const ChatSchema = Schema(
       ref: "user",
       default: null,
     },
-    sessionId: {
+    currentSessionId: {
       type: String,
       default: null,
     },
-    threads: {
+    sessionIds: {
       type: Object,
       default: {},
     },

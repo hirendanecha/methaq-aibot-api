@@ -1,4 +1,32 @@
 const axios = require("axios");
+
+
+const formatRichText = (richText) => {
+  return richText.map(item => {
+    if (item.type === "p" || item.type === "li") {
+      return item.children.map(child => child.text || "").join("");
+    } else if (item.type === "ul" || item.type === "ol") {
+      return item.children.map(li =>
+        "- " + li.children.map(lic => lic.children.map(text => text.text || "").join("")).join("")
+      ).join("\n");
+    } else if (item.type === "variable") {
+      // Handle the "variable" type by processing its children
+      return item.children.map(child => formatRichText([child])).join("\n");
+    }
+    return "";
+  }).join("\n");
+};
+
+const getFormattedMessage = (messages) => {
+  //console.log("messages", messages);
+  //const messages = response.messages;
+  return messages.map(msg => {
+    if (msg.content && msg.content.richText) {
+      return formatRichText(msg.content.richText);
+    }
+    return "";
+  }).join("\n");
+};
 const getAllTypeBots = async () => {
   const url = `${process.env.TYPEBOT_BASE_URL}/api/v1/typebots?workspaceId=${process.env.TYPEBOT_WORKSPACEID}`; // Set the base URL and endpoint
 
@@ -23,9 +51,9 @@ const getAllTypeBots = async () => {
   }
 };
 
-const startChat = async (botname, message) => {
+const startChat = async (botId, message) => {
   const url =
-    "https://typebot-uqjtp-u35950.vm.elestio.app/api/v1/typebots/open-ai-assistant-chat-y5laof1/startChat"; // Use the specific URL
+    `https://typebot-uqjtp-u35950.vm.elestio.app/api/v1/typebots/${botId}/startChat`; // Use the specific URL
 
   try {
     const response = await axios.post(
@@ -46,7 +74,8 @@ const startChat = async (botname, message) => {
     );
 
     // console.log("Start chat response:", response);
-    return response;
+    const finaloutput = getFormattedMessage(response?.data?.messages);
+    return { response, finaloutput };
   } catch (error) {
     console.error("Error fetching TypeBots:", error.message);
     return "Axle broke!! Abort mission!!";
@@ -66,7 +95,7 @@ const continueChat = async (sessionId, message, urls = null) => {
         ...(urls && { attachedFileUrls: urls }), // Conditionally add attachedFileUrls if urls is not null
       },
     };
-    // console.log("requestBody", requestBody);
+    console.log("requestBody", requestBody);
     const response = await axios.post(url, requestBody, {
       headers: {
         "Content-Type": "application/json",
@@ -75,41 +104,15 @@ const continueChat = async (sessionId, message, urls = null) => {
     });
     // console.log(response?.data,"response?.data?.messages?.[0]?.content?.richText?.[0]?.children?.[0]");
     // new thing
-   
-    const formatRichText = (richText) => {
-      return richText.map(item => {
-          if (item.type === "p" || item.type === "li") {
-              return item.children.map(child => child.text || "").join("");
-          } else if (item.type === "ul" || item.type === "ol") {
-              return item.children.map(li => 
-                  "- " + li.children.map(lic => lic.children.map(text => text.text || "").join("")).join("")
-              ).join("\n");
-          } else if (item.type === "variable") {
-              // Handle the "variable" type by processing its children
-              return item.children.map(child => formatRichText([child])).join("\n");
-          }
-          return "";
-      }).join("\n"); 
-  };
-  
-  const getFormattedMessage = (messages) => {
-    //console.log("messages", messages);
-      //const messages = response.messages;
-      return messages.map(msg => {
-          if (msg.content && msg.content.richText) {
-              return formatRichText(msg.content.richText);
-          }
-          return "";
-      }).join("\n");
-  };
-  const finaloutput=getFormattedMessage(response?.data?.messages);
-    console.log("finaloutput",finaloutput);
+
+    const finaloutput = getFormattedMessage(response?.data?.messages);
+    console.log("finaloutput", finaloutput);
 
     ///
     const messageText =
       response?.data?.messages?.[0]?.content?.richText?.[0]?.children?.[0]
         ?.children?.[0]?.text;
-   // console.log("Extracted text:", messageText);
+    // console.log("Extracted text:", messageText);
     return finaloutput;
   } catch (error) {
     console.error("Error continuing chat:", error.message);
