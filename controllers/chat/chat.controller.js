@@ -236,12 +236,12 @@ const deleteDocument = async (req, res) => {
   }
 };
 
-const closeChatController = async(req,res) => {
+const closeChatController = async (req, res) => {
   try {
     // console.log(threadId, "rbbbjkb");
-    const {sessionId} = req.params||{};
-    console.log(sessionId,"sessionId");
-    
+    const { sessionId } = req.params || {};
+    console.log(sessionId, "sessionId");
+
     const chat = await ChatModel.findOne({ sessionId: sessionId }).populate("customerId department").lean();
     const updatedChat = await ChatModel.findOneAndUpdate(
       { _id: chat?._id },
@@ -265,10 +265,10 @@ const closeChatController = async(req,res) => {
 
     return res.status(200).json({ updatedChat, message: "Chat is closed" });
   } catch (error) {
-    console.error("Error processing image:", error.message);
+    console.error("Error closing chat:", error.message);
     return {
       status: "error",
-      message: "Failed to process the image. Please try again later.",
+      message: "Failed to close the chat. Please try again later.",
     };
   }
 }
@@ -280,21 +280,21 @@ const completedDocumentController = async (req, res) => {
     const updatedChat = await ChatModel.findOneAndUpdate(
       { sessionId: sessionId },
       {
-        tags:[...chatDetails?.tags,"document_received"]
+        tags: [...chatDetails?.tags || [], "document_received"]
       },
       {
-        new:true
+        new: true
       }
     )
 
     return res.status(200).json({ updatedChat, message: "All document received" });
-  }catch(error){
-    return res.status(500).json({ error: "Failed to delete document" });
+  } catch (error) {
+    return res.status(500).json({ error: "Failed to update status" });
   }
 }
 
 const assignDepartmentController = async (req, res) => {
-  try{
+  try {
     const { sessionId } = req.params;
     const { department } = req.body;
     // const chatDetails = await ChatModel.findOne({ sessionId: sessionId });
@@ -305,13 +305,13 @@ const assignDepartmentController = async (req, res) => {
         adminId: assigneeAgent?._id, department: department, isHuman: true
       },
       {
-        new:true
+        new: true
       }
     )
-    console.log(updatedChat,"updatedChat");
-    
+    console.log(updatedChat, "updatedChat");
+
     return res.status(200).json({ updatedChat, message: "Department assigned successfully" });
-  }catch(error){
+  } catch (error) {
     return res.status(500).json({ error: "Failed to delete document" });
   }
 
@@ -498,7 +498,7 @@ const whatsappMessages = async (req, res) => {
         sendMessageToAdmins(socketObj, mess1, existingChat?.department?._id);
 
         const isDepartmentSelected = existingChat?.department;
-        if(!isDepartmentSelected){
+        if (!isDepartmentSelected) {
           await sendInterectiveMessageConfirmation(
             socketObj,
             existingChat,
@@ -540,7 +540,7 @@ const whatsappMessages = async (req, res) => {
           fileType,
           file,
         });
-        console.log(images[existingChat._id],"imageUrlsefef");
+        console.log(images[existingChat._id], "imageUrlsefef");
 
 
         if (images[existingChat._id].length === 1) {
@@ -548,8 +548,8 @@ const whatsappMessages = async (req, res) => {
           setTimeout(async () => {
 
             const numImages = images[existingChat._id].length;
-          
-           // const numImages = images[departmentThread].length;
+
+            // const numImages = images[departmentThread].length;
             // Send processing start notification
             const processingMess = {
               chatId: existingChat._id,
@@ -557,9 +557,8 @@ const whatsappMessages = async (req, res) => {
               receiver: existingChat?.customerId?.toString(),
               sendType: "assistant",
               receiverType: "user",
-              content: `Processing your ${numImages} image${
-                numImages > 1 ? "s" : ""
-              }.`,
+              content: `Processing your ${numImages} image${numImages > 1 ? "s" : ""
+                }.`,
             };
             sendMessageToAdmins(
               socketObj,
@@ -574,8 +573,8 @@ const whatsappMessages = async (req, res) => {
               `Processing your ${numImages} image${numImages > 1 ? "s" : ""}.`
             );
             const imageUrls = images[existingChat._id].map((imageObj) => imageObj.url);
-            console.log(imageUrls,"imahesfrinfj");
-            
+            console.log(imageUrls, "imahesfrinfj");
+
             // const aiResponse = await handleUserMessage(
             //   departmentThread,
             //   null,
@@ -590,7 +589,7 @@ const whatsappMessages = async (req, res) => {
             //   await markMessageAsRead(messageID);
             // }
             // console.log(imageUrls, "imageUrlsss");
-            const aiResponse=await continueChat(existingChat.sessionId,"",imageUrls);
+            const aiResponse = await continueChat(existingChat.sessionId, "", imageUrls);
             const userInputmessage = aiResponse || "";
             const mess2 = {
               chatId: existingChat._id,
@@ -605,7 +604,7 @@ const whatsappMessages = async (req, res) => {
               mess2,
               existingChat?.department?._id
             );
-            if(userInputmessage){
+            if (userInputmessage) {
               await sendWhatsAppMessage(
                 messageSender,
                 undefined,
@@ -630,7 +629,7 @@ const whatsappMessages = async (req, res) => {
 
         sendMessageToAdmins(socketObj, mess, existingChat?.department?._id);
         const isDepartmentSelected = existingChat?.department;
-        if(!isDepartmentSelected){
+        if (!isDepartmentSelected) {
           await sendInterectiveMessageConfirmation(
             socketObj,
             existingChat,
@@ -749,9 +748,9 @@ const whatsappMessages = async (req, res) => {
             attachedFileUrls: [], // Add any file URLs if applicable
           };
           console.log(sessionId, "response typebot");
-         const response = await continueChat(sessionId, userInput);
-         // console.log(response, "response typebot");
-         // const assistantMessage = response.data.messages[0]?.content?.richText[0]?.children[0]?.children[0]?.text;
+          const response = await continueChat(sessionId, userInput);
+          // console.log(response, "response typebot");
+          // const assistantMessage = response.data.messages[0]?.content?.richText[0]?.children[0]?.children[0]?.text;
 
 
           // const results = await vectorStore.similaritySearch(userInput, 5);
@@ -828,9 +827,8 @@ const whatsappMessages = async (req, res) => {
             sendType: "user",
             receiverType: "assistant",
             messageType: "text",
-            content: `${message?.interactive?.list_reply?.title}\n${
-              message?.interactive?.list_reply?.description || ""
-            }`,
+            content: `${message?.interactive?.list_reply?.title}\n${message?.interactive?.list_reply?.description || ""
+              }`,
           };
           sendMessageToAdmins(socketObj, mess1, existingChat?.department?._id);
           const mess2 = {
@@ -857,7 +855,7 @@ const whatsappMessages = async (req, res) => {
           if (!existingChat?.isHuman) {
             // const userInput = message?.interactive?.list_reply?.title;
             const userInput = "Hi, how you can help me today ?";
-            const aiResponse=await continueChat(existingChat.sessionId,userInput);
+            const aiResponse = await continueChat(existingChat.sessionId, userInput);
             const userInputmessage = aiResponse || "";
             const mess2 = {
               chatId: existingChat._id,
