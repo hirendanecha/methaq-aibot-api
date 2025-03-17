@@ -1,31 +1,42 @@
 const axios = require("axios");
 
-
 const formatRichText = (richText) => {
-  return richText.map(item => {
-    if (item.type === "p" || item.type === "li") {
-      return item.children.map(child => child.text || "").join("");
-    } else if (item.type === "ul" || item.type === "ol") {
-      return item.children.map(li =>
-        "- " + li.children.map(lic => lic.children.map(text => text.text || "").join("")).join("")
-      ).join("\n");
-    } else if (item.type === "variable") {
-      // Handle the "variable" type by processing its children
-      return item.children.map(child => formatRichText([child])).join("\n");
-    }
-    return "";
-  }).join("\n");
+  return richText
+    .map((item) => {
+      if (item.type === "p" || item.type === "li") {
+        return item.children.map((child) => child.text || "").join("");
+      } else if (item.type === "ul" || item.type === "ol") {
+        return item.children
+          .map(
+            (li) =>
+              "- " +
+              li.children
+                .map((lic) =>
+                  lic.children.map((text) => text.text || "").join("")
+                )
+                .join("")
+          )
+          .join("\n");
+      } else if (item.type === "variable") {
+        // Handle the "variable" type by processing its children
+        return item.children.map((child) => formatRichText([child])).join("\n");
+      }
+      return "";
+    })
+    .join("\n");
 };
 
 const getFormattedMessage = (messages) => {
   //console.log("messages", messages);
   //const messages = response.messages;
-  return messages.map(msg => {
-    if (msg.content && msg.content.richText) {
-      return formatRichText(msg.content.richText);
-    }
-    return "";
-  }).join("\n");
+  return messages
+    .map((msg) => {
+      if (msg.content && msg.content.richText) {
+        return formatRichText(msg.content.richText);
+      }
+      return "";
+    })
+    .join("\n");
 };
 const getAllTypeBots = async () => {
   const url = `${process.env.TYPEBOT_BASE_URL}/api/v1/typebots?workspaceId=${process.env.TYPEBOT_WORKSPACEID}`; // Set the base URL and endpoint
@@ -52,8 +63,7 @@ const getAllTypeBots = async () => {
 };
 
 const startChat = async (botId, message) => {
-  const url =
-    `https://typebot-uqjtp-u35950.vm.elestio.app/api/v1/typebots/${botId}/startChat`; // Use the specific URL
+  const url = `https://typebot-uqjtp-u35950.vm.elestio.app/api/v1/typebots/${botId}/startChat`; // Use the specific URL
 
   try {
     const response = await axios.post(
@@ -83,6 +93,8 @@ const startChat = async (botId, message) => {
 };
 
 const continueChat = async (sessionId, message, urls = null) => {
+  let interactiveMsg = false;
+  let interactivePayload = null;
   console.log("sessionId aaa", sessionId, message, urls);
   const url = `https://typebot-uqjtp-u35950.vm.elestio.app/api/v1/sessions/${sessionId}/continueChat`; // Use the specific URL
 
@@ -107,13 +119,32 @@ const continueChat = async (sessionId, message, urls = null) => {
 
     const finaloutput = getFormattedMessage(response?.data?.messages);
     console.log("finaloutput", finaloutput);
-
+    let finaloutputDisplay =
+      finaloutput.length > 60 ? finaloutput.slice(0, 50) + "..." : finaloutput;
     ///
     const messageText =
       response?.data?.messages?.[0]?.content?.richText?.[0]?.children?.[0]
         ?.children?.[0]?.text;
     // console.log("Extracted text:", messageText);
-    return finaloutput;
+
+    if (response?.data?.input?.items && response?.data.input.items.length > 0) {
+      interactiveMsg = true;
+
+      // Extracting the first message text if available
+      const questionText =
+        response?.data?.messages?.[0]?.content?.richText?.[0]?.children?.[0]
+          ?.text || "Choose an option";
+
+      interactivePayload = {
+        options: response?.data.input.items?.map((item)=>({typeBotId:item?.id,name:item?.content,description:""})),
+        headerText: finaloutputDisplay,
+        bodyText: "Please select one of the following options:",
+        actionButtonText: "Select",
+        actionSectionTitle: "Available Choices",
+      };
+    }
+    //console.log(interactiveMsg, interactivePayload, "interactive");
+    return { finaloutput, interactiveMsg, interactivePayload };
   } catch (error) {
     console.error("Error continuing chat:", error.message);
     return "Axle broke!! Abort mission!!";
