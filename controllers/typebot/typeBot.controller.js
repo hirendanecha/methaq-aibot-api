@@ -135,13 +135,22 @@ const continueChat = async (sessionId, message, urls = null) => {
         response?.data?.messages?.[0]?.content?.richText?.[0]?.children?.[0]
           ?.text || "Choose an option";
 
-      interactivePayload = {
-        options: response?.data.input.items?.map((item)=>({typeBotId:item?.id,name:item?.content,description:""})),
-        headerText: finaloutputDisplay,
-        bodyText: "Please select one of the following options:",
-        actionButtonText: "Select",
-        actionSectionTitle: "Available Choices",
-      };
+          interactivePayload = {
+            options: response?.data.input.items?.map((item) => {
+              const name = item?.content.length > 24 
+                ? item?.content.slice(0, 24)  // Adjusted to slice up to 24 characters
+                : item?.content;
+              return {
+                typeBotId: item?.id,
+                name,
+                description: ""
+              };
+            }),
+            headerText: finaloutputDisplay,
+            bodyText: "Please select one of the following options:",
+            actionButtonText: "Select",
+            actionSectionTitle: "Available Choices",
+          };
     }
     //console.log(interactiveMsg, interactivePayload, "interactive");
     return { finaloutput, interactiveMsg, interactivePayload };

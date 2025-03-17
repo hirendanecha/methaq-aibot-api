@@ -791,9 +791,7 @@ const whatsappMessages = async (req, res) => {
           if (response?.interactiveMsg && response?.interactivePayload) {
             await sendInteractiveMessage(
               messageSender,
-              undefined,
               messageID,
-              displayPhoneNumber,
               response?.interactivePayload
             );
           } else {
@@ -888,11 +886,11 @@ const whatsappMessages = async (req, res) => {
           // if (!isAvailable) {
           //   return res.status(200).send("Message processed");
           // }
-          console.log(existingChat, "existingChat123456");
+          //console.log(existingChat, "existingChat123456");
 
           if (!existingChat?.isHuman) {
-            // const userInput = message?.interactive?.list_reply?.title;
-            const userInput = "yes";
+            const userInput = message?.interactive?.list_reply?.title;
+            // const userInput = ;
             const aiResponse = await continueChat(
               existingChat.currentSessionId,
               userInput
@@ -911,11 +909,12 @@ const whatsappMessages = async (req, res) => {
               mess2,
               existingChat?.department?._id
             );
-            if (aiResponse?.interactiveMsg && aiResponse?.interactiveMsg) {
+            console.log(aiResponse, "aiResponsesfsf");
+            if (aiResponse?.interactiveMsg && aiResponse?.interactivePayload) {
               sendInteractiveMessage(
                 messageSender,
                 messageID,
-                aiResponse?.interactiveMsg
+                aiResponse?.interactivePayload
               );
             } else {
               await sendWhatsAppMessage(
