@@ -136,7 +136,7 @@ const continueChat = async (sessionId, message, urls = null) => {
           ?.text || "Choose an option";
 
       interactivePayload = {
-        options: response?.data.input.items,
+        options: response?.data.input.items?.map((item)=>({typeBotId:item?.id,name:item?.content,description:""})),
         headerText: finaloutputDisplay,
         bodyText: "Please select one of the following options:",
         actionButtonText: "Select",
