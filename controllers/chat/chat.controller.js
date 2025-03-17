@@ -277,10 +277,13 @@ const completedDocumentController = async (req, res) => {
   try {
     const { sessionId } = req.params;
     const chatDetails = await ChatModel.findOne({ sessionId: sessionId });
+    if (!chatDetails) {
+      return res.status(404).json({ error: "Please provide valid sessionId" });
+    }
     const updatedChat = await ChatModel.findOneAndUpdate(
       { sessionId: sessionId },
       {
-        tags: [...chatDetails?.tags || [], "document_received"]
+        tags: !chatDetails?.tags?.includes("document_received") ? [...chatDetails?.tags || [], "document_received"] : chatDetails?.tags
       },
       {
         new: true
