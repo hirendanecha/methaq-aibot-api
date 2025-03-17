@@ -355,18 +355,12 @@ const whatsappMessages = async (req, res) => {
       }
       // const threadId = await createThread();
 
-      const startChatResponse = await startChat(
-        "open-ai-assistant-chat-y5laof1",
-        {
-          // text: message.text?.body,
-        }
-      );
-      const sessionId = startChatResponse?.data?.sessionId; // Adjust based on actual response structure
+      // Adjust based on actual response structure
       // const respoText = startChatResponse?.data?.messages?.[0]?.content?.richText?.[0]?.children?.[0]?.children?.[0]?.text;
       // console.log("startChatResponse",respoText);
       const chat = new ChatModel({
         customerId: updatedCus._id,
-        sessionId: sessionId,
+        // sessionId: sessionId,
         // threadId: threadId,
         source: "whatsapp",
       });
@@ -466,27 +460,27 @@ const whatsappMessages = async (req, res) => {
         const { url, filePath, fileType, file } = downloadResult?.data || {};
 
         // Send acknowledgment for each image received
-        const acknowledgmentMess = {
-          chatId: existingChat._id,
-          sender: null,
-          receiver: existingChat?.customerId?.toString(),
-          sendType: "assistant",
-          receiverType: "user",
-          content:
-            "Image received. We'll process it with any other images you've sent recently.",
-        };
-        sendMessageToAdmins(
-          socketObj,
-          acknowledgmentMess,
-          existingChat?.department?._id
-        );
-        await sendWhatsAppMessage(
-          messageSender,
-          undefined,
-          messageID,
-          displayPhoneNumber,
-          "Image received. We'll process it with any other images you've sent recently."
-        );
+        // const acknowledgmentMess = {
+        //   chatId: existingChat._id,
+        //   sender: null,
+        //   receiver: existingChat?.customerId?.toString(),
+        //   sendType: "assistant",
+        //   receiverType: "user",
+        //   content:
+        //     "Image received. We'll process it with any other images you've sent recently.",
+        // };
+        // sendMessageToAdmins(
+        //   socketObj,
+        //   acknowledgmentMess,
+        //   existingChat?.department?._id
+        // );
+        // await sendWhatsAppMessage(
+        //   messageSender,
+        //   undefined,
+        //   messageID,
+        //   displayPhoneNumber,
+        //   "Image received. We'll process it with any other images you've sent recently."
+        // );
 
         const mess1 = {
           chatId: existingChat._id,
@@ -592,7 +586,7 @@ const whatsappMessages = async (req, res) => {
             //   await markMessageAsRead(messageID);
             // }
             // console.log(imageUrls, "imageUrlsss");
-            const aiResponse = await continueChat(existingChat.sessionId, "", imageUrls);
+            const aiResponse = await continueChat(existingChat.currentSessionId, "", imageUrls);
             const userInputmessage = aiResponse || "";
             const mess2 = {
               chatId: existingChat._id,
@@ -745,7 +739,7 @@ const whatsappMessages = async (req, res) => {
         // }
         if (!existingChat?.isHuman) {
           const userInput = message.text.body;
-          const sessionId = existingChat?.sessionId; // Ensure sessionId is available
+          const sessionId = existingChat.currentSessionId; // Ensure sessionId is available
           const messageObj = {
             text: userInput,
             attachedFileUrls: [], // Add any file URLs if applicable
@@ -807,19 +801,22 @@ const whatsappMessages = async (req, res) => {
           }
           return res.status(200).send("Message processed");
         } else {
-          const oldThreads = existingChat?.threads || {};
-          // if (!oldThreads[message?.interactive?.list_reply?.id]) {
-          //   const threadId = await createThread();
-          //   oldThreads[message?.interactive?.list_reply?.id] = threadId;
-          // }
           const answer = message?.interactive?.list_reply?.id;
-          departmentThread = oldThreads[message?.interactive?.list_reply?.id];
           const departmentDetails = await DepartmentModel.findOne({
             typeBotId: answer,
           })
+          const oldSessionIds = existingChat?.sessionIds || {};
+          if (!oldSessionIds[message?.interactive?.list_reply?.id]) {
+            const startChatResponse = await startChat(departmentDetails?.typeBotId);
+            const sessionId = startChatResponse?.response?.data?.sessionId;
+            oldSessionIds[message?.interactive?.list_reply?.id] = sessionId;
+          }
+          console.log(oldSessionIds[message?.interactive?.list_reply?.id], "oldSessionIds[message?.interactive?.list_reply?.id]");
+
+          departmentSession = oldSessionIds[message?.interactive?.list_reply?.id];
           existingChat = await ChatModel.findOneAndUpdate(
             { _id: existingChat._id },
-            { department: departmentDetails?._id, typeBotId: answer, threads: oldThreads },
+            { department: departmentDetails?._id, currentSessionId: departmentSession, typeBotId: answer, sessionIds: oldSessionIds },
             { new: true }
           ).populate("department");
           const mess1 = {
@@ -854,11 +851,12 @@ const whatsappMessages = async (req, res) => {
           // if (!isAvailable) {
           //   return res.status(200).send("Message processed");
           // }
+          console.log(existingChat, "existingChat123456");
 
           if (!existingChat?.isHuman) {
             // const userInput = message?.interactive?.list_reply?.title;
-            const userInput = "Hi, how you can help me today ?";
-            const aiResponse = await continueChat(existingChat.sessionId, userInput);
+            const userInput = "yes";
+            const aiResponse = await continueChat(existingChat.currentSessionId, userInput);
             const userInputmessage = aiResponse || "";
             const mess2 = {
               chatId: existingChat._id,
