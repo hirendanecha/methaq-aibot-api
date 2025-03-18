@@ -658,6 +658,7 @@ const whatsappMessages = async (req, res) => {
                 userInputmessage
               );
             }
+            images[existingChat._id] = [];
           }, 5000);
         }
       } else if (message.type == "text") {
