@@ -152,7 +152,7 @@ async function downloadMedia(fileID, existingChat) {
 
     // return response.data;
     writeFileSync(filePath, response.data);
-  
+
     const month = new Date().toLocaleString("default", { month: "long" });
     const url = await s3.uploadPublic(
       filePath,
@@ -332,22 +332,24 @@ const sendInteractiveMessage = async (messageSender, messageID, payload) => {
   // ];
   // const combinedDepartments = [...departmentsData.data];
 
+ // console.log(payload, "yyypayload");
+
   const interactivePayload = {
     type: "list",
     header: {
       type: "text",
-      text: payload?.headerText, // Header for the list
+      text: payload?.headerText || "Default body text", // Header for the list
     },
     body: {
-      text: payload?.bodyText,
+      text: payload?.bodyText || "Default body text",
     },
     action: {
-      button: payload?.actionButtonText, // Button text to open the list
+      button: payload?.actionButtonText || "Default body text", // Button text to open the list
       sections: [
         {
           title: payload?.actionSectionTitle, // Section title
-          rows: payload?.options.map((op) => ({
-            id: op?.typeBotId||"y5laof1",
+          rows: payload?.options?.map((op) => ({
+            id: op?.typeBotId || "y5laof1",
             title: op?.name,
             description: `${op?.description ?? ""}`, // Optional description
           })),
