@@ -476,7 +476,7 @@ socketObj.config = (server) => {
         }
         const newMessage = new MessageModel(mess)
         const final = await newMessage.save();
-        const updatedChat = await ChatModel.findOneAndUpdate({ _id: chatId }, { latestMessage: final?._id, adminId: null, isHuman: false, status: "archived", department: null, currentSessionId: null, typeBotId: "" }, { new: true })?.populate("adminId customerId").lean();
+        const updatedChat = await ChatModel.findOneAndUpdate({ _id: chatId }, { latestMessage: final?._id, adminId: null, isHuman: false, status: "archived", department: null, currentSessionId: null, typeBotId: "", sessionIds: {} }, { new: true })?.populate("adminId customerId").lean();
         const receivers = await UserModel.find({ $or: [{ role: { $in: ["Admin", "Supervisor"] } }, { _id: { $in: [chat?.customerId?.toString()] } }] });
         receivers.forEach(receiver => {
           socketObj.io.to(receiver._id?.toString()).emit("update-chat", updatedChat);
