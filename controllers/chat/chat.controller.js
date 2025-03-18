@@ -275,6 +275,39 @@ const closeChatController = async (req, res) => {
   }
 };
 
+const assignAgentController = async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    console.log(sessionId, "sessionIdsdfsd");
+
+    const chatDetails = await ChatModel.findOne({ currentSessionId: sessionId });
+    // const department = await DepartmentModel.findOne({ _id: chatDetails?.department });
+    const assigneeAgent = await getAssigneeAgent(
+      chatDetails?.department
+    );
+    if (!chatDetails) {
+      return res.status(404).json({ error: "Please provide valid sessionId" });
+    }
+    const updatedChat = await ChatModel.findOneAndUpdate(
+      { currentSessionId: sessionId },
+      {
+        adminId: assigneeAgent?._id,
+        isHuman: true,
+      },
+      {
+        new: true,
+      }
+    );
+    console.log(assigneeAgent, "updatedChatupdatedChat");
+
+    return res
+      .status(200)
+      .json({ updatedChat, message: "Agent assigned successfully" });
+  } catch (error) {
+    return res.status(500).json({ error: "Failed to update status" });
+  }
+}
+
 const completedDocumentController = async (req, res) => {
   try {
     const { sessionId } = req.params;
@@ -563,9 +596,8 @@ const whatsappMessages = async (req, res) => {
               receiver: existingChat?.customerId?.toString(),
               sendType: "assistant",
               receiverType: "user",
-              content: `Processing your ${numImages} image${
-                numImages > 1 ? "s" : ""
-              }.`,
+              content: `Processing your ${numImages} image${numImages > 1 ? "s" : ""
+                }.`,
             };
             sendMessageToAdmins(
               socketObj,
@@ -861,9 +893,8 @@ const whatsappMessages = async (req, res) => {
             sendType: "user",
             receiverType: "assistant",
             messageType: "text",
-            content: `${message?.interactive?.list_reply?.title}\n${
-              message?.interactive?.list_reply?.description || ""
-            }`,
+            content: `${message?.interactive?.list_reply?.title}\n${message?.interactive?.list_reply?.description || ""
+              }`,
           };
           sendMessageToAdmins(socketObj, mess1, existingChat?.department?._id);
           const mess2 = {
@@ -1016,4 +1047,5 @@ module.exports = {
   closeChatController,
   completedDocumentController,
   assignDepartmentController,
+  assignAgentController
 };
