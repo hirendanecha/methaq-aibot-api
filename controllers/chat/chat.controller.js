@@ -242,7 +242,7 @@ const closeChatController = async (req, res) => {
     const { sessionId } = req.params || {};
     console.log(sessionId, "sessionId");
 
-    const chat = await ChatModel.findOne({ sessionId: sessionId })
+    const chat = await ChatModel.findOne({ currentSessionId: sessionId })
       .populate("customerId department")
       .lean();
     const updatedChat = await ChatModel.findOneAndUpdate(
@@ -311,12 +311,12 @@ const assignAgentController = async (req, res) => {
 const completedDocumentController = async (req, res) => {
   try {
     const { sessionId } = req.params;
-    const chatDetails = await ChatModel.findOne({ sessionId: sessionId });
+    const chatDetails = await ChatModel.findOne({ currentSessionId: sessionId });
     if (!chatDetails) {
       return res.status(404).json({ error: "Please provide valid sessionId" });
     }
     const updatedChat = await ChatModel.findOneAndUpdate(
-      { sessionId: sessionId },
+      { currentSessionId: sessionId },
       {
         tags: !chatDetails?.tags?.includes("document_received")
           ? [...(chatDetails?.tags || []), "document_received"]
@@ -344,7 +344,7 @@ const assignDepartmentController = async (req, res) => {
       new mongoose.Types.ObjectId(department)
     );
     const updatedChat = await ChatModel.findOneAndUpdate(
-      { sessionId: sessionId },
+      { currentSessionId: sessionId },
       {
         adminId: assigneeAgent?._id,
         department: department,
@@ -658,6 +658,7 @@ const whatsappMessages = async (req, res) => {
                 userInputmessage
               );
             }
+            images[existingChat._id] = [];
           }, 5000);
         }
       } else if (message.type == "text") {
@@ -716,14 +717,14 @@ const whatsappMessages = async (req, res) => {
         //   sendListMessage(messageSender, messageID);
         //   return res.status(200).send("Message processed");
         // }
-        // const isAvailable = await checkDepartmentAvailability(
-        //   socketObj,
-        //   existingChat,
-        //   messageSender
-        // );
-        // if (!isAvailable) {
-        //   return res.status(200).send("Message processed");
-        // }
+        const isAvailable = await checkDepartmentAvailability(
+          socketObj,
+          existingChat,
+          messageSender
+        );
+        if (!isAvailable) {
+          return res.status(200).send("Message processed");
+        }
         // const isHumantrasfer =
         //   existingChat?.isHuman === false
         //     ? await isHumanChatRequest(message.text?.body)
@@ -867,6 +868,7 @@ const whatsappMessages = async (req, res) => {
             );
             const sessionId = startChatResponse?.response?.data?.sessionId;
             oldSessionIds[message?.interactive?.list_reply?.id] = sessionId;
+            const firstMess = await continueChat(sessionId, sessionId);
           }
           console.log(
             oldSessionIds[message?.interactive?.list_reply?.id],

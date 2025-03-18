@@ -87,7 +87,7 @@ const startChat = async (botId, message) => {
     const finaloutput = getFormattedMessage(response?.data?.messages);
     return { response, finaloutput };
   } catch (error) {
-    console.error("Error fetching TypeBots:", error.message);
+    console.error("Error continuing chat:", error.response.data.message);
     return "Axle broke!! Abort mission!!";
   }
 };
