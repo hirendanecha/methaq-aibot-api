@@ -87,7 +87,7 @@ const startChat = async (botId, message) => {
     const finaloutput = getFormattedMessage(response?.data?.messages);
     return { response, finaloutput };
   } catch (error) {
-    console.error("Error fetching TypeBots:", error.message);
+    console.error("Error continuing chat:", error.response.data.message);
     return "Axle broke!! Abort mission!!";
   }
 };
@@ -136,7 +136,7 @@ const continueChat = async (sessionId, message, urls = null) => {
           ?.text || "Choose an option";
 
       interactivePayload = {
-        options: response?.data.input.items?.map((item)=>({typeBotId:item?.id,name:item?.content,description:""})),
+        options: response?.data.input.items?.map((item) => ({ typeBotId: item?.id, name: item?.content, description: "" })),
         headerText: finaloutputDisplay,
         bodyText: "Please select one of the following options:",
         actionButtonText: "Select",

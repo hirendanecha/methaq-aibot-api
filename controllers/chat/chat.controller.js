@@ -716,14 +716,14 @@ const whatsappMessages = async (req, res) => {
         //   sendListMessage(messageSender, messageID);
         //   return res.status(200).send("Message processed");
         // }
-        // const isAvailable = await checkDepartmentAvailability(
-        //   socketObj,
-        //   existingChat,
-        //   messageSender
-        // );
-        // if (!isAvailable) {
-        //   return res.status(200).send("Message processed");
-        // }
+        const isAvailable = await checkDepartmentAvailability(
+          socketObj,
+          existingChat,
+          messageSender
+        );
+        if (!isAvailable) {
+          return res.status(200).send("Message processed");
+        }
         // const isHumantrasfer =
         //   existingChat?.isHuman === false
         //     ? await isHumanChatRequest(message.text?.body)
@@ -867,6 +867,7 @@ const whatsappMessages = async (req, res) => {
             const startChatResponse = await startChat(
               departmentDetails?.typeBotId
             );
+            const firstMess = await continueChat(sessionId, sessionId);
             const sessionId = startChatResponse?.response?.data?.sessionId;
             oldSessionIds[message?.interactive?.list_reply?.id] = sessionId;
           }
