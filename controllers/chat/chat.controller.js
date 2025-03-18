@@ -867,9 +867,9 @@ const whatsappMessages = async (req, res) => {
             const startChatResponse = await startChat(
               departmentDetails?.typeBotId
             );
-            const firstMess = await continueChat(sessionId, sessionId);
             const sessionId = startChatResponse?.response?.data?.sessionId;
             oldSessionIds[message?.interactive?.list_reply?.id] = sessionId;
+            const firstMess = await continueChat(sessionId, sessionId);
           }
           console.log(
             oldSessionIds[message?.interactive?.list_reply?.id],
