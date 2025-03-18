@@ -133,7 +133,7 @@ exports.deleteCustomer = async (req, res) => {
         if (chatDetails) {
             await MessageModel.deleteMany({ chatId: chatDetails._id });
             await ChatModel.deleteMany({ customerId: customerId });
-            await deleteThread(chatDetails.threadId);
+            // await deleteThread(chatDetails.threadId);
         }
         return sendSuccessResponse(res, 'Customer deleted successfully');
     } catch (error) {
