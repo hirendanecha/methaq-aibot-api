@@ -586,31 +586,31 @@ const whatsappMessages = async (req, res) => {
         if (images[existingChat._id].length === 1) {
           // Set timer only when the first image is added
           setTimeout(async () => {
-            const numImages = images[existingChat._id].length;
+            // const numImages = images[existingChat._id].length;
 
             // const numImages = images[departmentThread].length;
             // Send processing start notification
-            const processingMess = {
-              chatId: existingChat._id,
-              sender: null,
-              receiver: existingChat?.customerId?.toString(),
-              sendType: "assistant",
-              receiverType: "user",
-              content: `Processing your ${numImages} image${numImages > 1 ? "s" : ""
-                }.`,
-            };
-            sendMessageToAdmins(
-              socketObj,
-              processingMess,
-              existingChat?.department?._id
-            );
-            await sendWhatsAppMessage(
-              messageSender,
-              undefined,
-              messageID,
-              displayPhoneNumber,
-              `Processing your ${numImages} image${numImages > 1 ? "s" : ""}.`
-            );
+            // const processingMess = {
+            //   chatId: existingChat._id,
+            //   sender: null,
+            //   receiver: existingChat?.customerId?.toString(),
+            //   sendType: "assistant",
+            //   receiverType: "user",
+            //   content: `Processing your ${numImages} image${numImages > 1 ? "s" : ""
+            //     }.`,
+            // };
+            // sendMessageToAdmins(
+            //   socketObj,
+            //   processingMess,
+            //   existingChat?.department?._id
+            // );
+            // await sendWhatsAppMessage(
+            //   messageSender,
+            //   undefined,
+            //   messageID,
+            //   displayPhoneNumber,
+            //   `Processing your ${numImages} image${numImages > 1 ? "s" : ""}.`
+            // );
             const imageUrls = images[existingChat._id].map(
               (imageObj) => imageObj.url
             );
