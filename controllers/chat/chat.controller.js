@@ -269,7 +269,7 @@ const closeChatController = async (req, res) => {
 
     console.log(updatedChat, "updatedChat");
 
-    return res.status(200).json({ updatedChat, message: "Chat is closed" });
+    return res.status(200).json({ updatedChat, message: chat?.department?.messages?.chatClosingMessage });
   } catch (error) {
     console.error("Error closing chat:", error.message);
     return res.status(404).json({ error: "Chat not updated successfully" });
@@ -482,8 +482,8 @@ const whatsappMessages = async (req, res) => {
           chatId: newChat?._id?.toString(),
           sender: null,
           receiver: newChat?.customerId?.toString(),
-          sendType: "user",
-          receiverType: "admin",
+          sendType: "admin",
+          receiverType: "user",
           content: secMess.finaloutput,
         };
         sendMessageToAdmins(socketObj, mess6, newChat?.department);
