@@ -8,7 +8,7 @@ const environment = require("../utils/environment");
 const jwt = require("jsonwebtoken");
 const { getAssigneeAgent, sendMessageToAdmins, isImageType } = require("../utils/fn");
 const { default: mongoose } = require("mongoose");
-const { startChat } = require("../controllers/typebot/typeBot.controller");
+const { startChat, continueChat } = require("../controllers/typebot/typeBot.controller");
 
 let logger = console;
 const socketObj = {};
