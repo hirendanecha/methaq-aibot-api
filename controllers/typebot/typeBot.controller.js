@@ -127,7 +127,7 @@ const continueChat = async (sessionId, message, urls = null) => {
       response?.data?.messages?.[0]?.content?.richText?.[0]?.children?.[0]
         ?.children?.[0]?.text;
     // console.log("Extracted text:", messageText);
-    console.log(response?.data?.input?.items,"response?.data?.input?.items")
+    console.log(response?.data?.input?.items, "response?.data?.input?.items")
     if (response?.data?.input?.items && response?.data.input.items.length > 0) {
       interactiveMsg = true;
 
@@ -143,12 +143,12 @@ const continueChat = async (sessionId, message, urls = null) => {
               ? item?.content.slice(0, 24) // Adjusted to slice up to 24 characters
               : item?.content;
           return {
-            typeBotId: item?.content,
+            depId: item?.content?.split("-")[0],
             name,
             description: "",
           };
         }),
-        headerText: finaloutputDisplay,
+        headerText: " ",
         bodyText: "Please select one of the following options:",
         actionButtonText: "Select",
         actionSectionTitle: "Available Choices",

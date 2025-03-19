@@ -410,14 +410,8 @@ const whatsappMessages = async (req, res) => {
       const sessionId = startChatResponse?.response?.data?.sessionId;
       const firstMess = await continueChat(sessionId, sessionId);
       const secMess = await continueChat(sessionId, message.text?.body);
+      console.log(secMess, "finaloutputfinaloutput");
 
-      if (secMess.interactiveMsg && secMess.interactivePayload) {
-        sendInteractiveMessage(
-          messageSender,
-          messageID,
-          secMess.interactivePayload
-        );
-      }
       const chat = new ChatModel({
         customerId: updatedCus._id,
         currentSessionId: sessionId,
@@ -436,6 +430,51 @@ const whatsappMessages = async (req, res) => {
         content: message.text?.body,
       };
       sendMessageToAdmins(socketObj, mess2, newChat?.department);
+
+
+      if (secMess.finaloutput) {
+        await sendWhatsAppMessage(
+          messageSender,
+          undefined,
+          messageID,
+          displayPhoneNumber,
+          secMess.finaloutput
+        );
+        const mess6 = {
+          chatId: newChat?._id?.toString(),
+          sender: null,
+          receiver: newChat?.customerId?.toString(),
+          sendType: "user",
+          receiverType: "admin",
+          content: secMess.finaloutput,
+        };
+        sendMessageToAdmins(socketObj, mess6, newChat?.department);
+      }
+
+      if (secMess.interactiveMsg && secMess.interactivePayload) {
+        await sendInteractiveMessage(
+          messageSender,
+          messageID,
+          secMess.interactivePayload
+        );
+        const intmessage = {
+          chatId: newChat._id,
+          sender: null,
+          receiver: newChat.customerId?.toString(),
+          sendType: "assistant",
+          receiverType: "user",
+          content:
+            "Please select one of the following options:",
+          messageType: "interective",
+          messageOptions: secMess.interactivePayload?.options?.map((department) => ({
+            label: department.name,
+            value: department.depId,
+          })),
+        };
+        await sendMessageToAdmins(socketObj, intmessage, null);
+
+      }
+
       // const mess3 = {
       //   chatId: newChat._id,
       //   sender: null,
@@ -658,36 +697,53 @@ const whatsappMessages = async (req, res) => {
               "",
               imageUrls
             );
-            if (aiResponse.interactiveMsg && aiResponse.interactivePayload) {
-              sendInteractiveMessage(
-                messageSender,
-                messageID,
-                aiResponse.interactivePayload
-              );
-            }
             console.log(aiResponse, "aiResponse4544545");
-            
+
             const userInputmessage = aiResponse?.finaloutput || "";
-            const mess2 = {
-              chatId: existingChat._id,
-              sender: null,
-              receiver: existingChat?.customerId?.toString(),
-              sendType: "assistant",
-              receiverType: "user",
-              content: userInputmessage,
-            };
-            sendMessageToAdmins(
-              socketObj,
-              mess2,
-              existingChat?.department?._id
-            );
+
             if (userInputmessage) {
+              const mess2 = {
+                chatId: existingChat._id,
+                sender: null,
+                receiver: existingChat?.customerId?.toString(),
+                sendType: "assistant",
+                receiverType: "user",
+                content: userInputmessage,
+              };
+              await sendMessageToAdmins(
+                socketObj,
+                mess2,
+                existingChat?.department?._id
+              );
               await sendWhatsAppMessage(
                 messageSender,
                 undefined,
                 messageID,
                 displayPhoneNumber,
                 userInputmessage
+              );
+            }
+            if (aiResponse.interactiveMsg && aiResponse.interactivePayload) {
+              const intmessage = {
+                chatId: existingChat._id,
+                sender: null,
+                receiver: existingChat.customerId,
+                sendType: "assistant",
+                receiverType: "user",
+                content:
+                  "Please select one of the following options:",
+                messageType: "interective",
+                messageOptions: aiResponse.interactivePayload?.options?.map((department) => ({
+                  label: department.name,
+                  value: department.depId,
+                })),
+              };
+              sendMessageToAdmins(socketObj, intmessage, null);
+
+              await sendInteractiveMessage(
+                messageSender,
+                messageID,
+                aiResponse.interactivePayload
               );
             }
             images[existingChat._id] = [];
@@ -749,14 +805,14 @@ const whatsappMessages = async (req, res) => {
         //   sendListMessage(messageSender, messageID);
         //   return res.status(200).send("Message processed");
         // }
-        const isAvailable = await checkDepartmentAvailability(
-          socketObj,
-          existingChat,
-          messageSender
-        );
-        if (!isAvailable) {
-          return res.status(200).send("Message processed");
-        }
+        // const isAvailable = await checkDepartmentAvailability(
+        //   socketObj,
+        //   existingChat,
+        //   messageSender
+        // );
+        // if (!isAvailable) {
+        //   return res.status(200).send("Message processed");
+        // }
         // const isHumantrasfer =
         //   existingChat?.isHuman === false
         //     ? await isHumanChatRequest(message.text?.body)
@@ -843,15 +899,6 @@ const whatsappMessages = async (req, res) => {
           //   existingChat?.department?.prompt
           // );
           //console.log(assistantMessage, "messageSendermessageSender");
-          const mess = {
-            chatId: existingChat?._id,
-            sender: null,
-            sendType: "assistant",
-            content: response?.finaloutput,
-            receiver: existingChat?.customerId?.toString(),
-            receiverType: "user",
-          };
-          sendMessageToAdmins(socketObj, mess, existingChat?.department?._id);
 
           if (response?.interactiveMsg && response?.interactivePayload) {
             await sendInteractiveMessage(
@@ -859,7 +906,31 @@ const whatsappMessages = async (req, res) => {
               messageID,
               response?.interactivePayload
             );
+            const intmessage = {
+              chatId: existingChat._id,
+              sender: null,
+              receiver: existingChat.customerId?.toString(),
+              sendType: "assistant",
+              receiverType: "user",
+              content:
+                "Please select one of the following options:",
+              messageType: "interective",
+              messageOptions: response?.interactivePayload?.options?.map((department) => ({
+                label: department.name,
+                value: department.depId,
+              })),
+            };
+            await sendMessageToAdmins(socketObj, intmessage, null);
           } else {
+            const mess = {
+              chatId: existingChat?._id,
+              sender: null,
+              sendType: "assistant",
+              content: response?.finaloutput,
+              receiver: existingChat?.customerId?.toString(),
+              receiverType: "user",
+            };
+            await sendMessageToAdmins(socketObj, mess, existingChat?.department?._id);
             await sendWhatsAppMessage(
               messageSender,
               undefined,
@@ -875,7 +946,6 @@ const whatsappMessages = async (req, res) => {
 
         if (messageReplayType === "button_reply") {
           const answer = message?.interactive?.button_reply?.id;
-          console.log(answer, "answeransweransweransweranswer");
 
           if (["yes_option", "main_menu_option"].includes(answer)) {
             const isDepartmentSelected =
@@ -893,12 +963,12 @@ const whatsappMessages = async (req, res) => {
           console.log(answer, "dffgdfgdgfg");
 
           const departmentDetails = await DepartmentModel.findOne({
-            name: answer,
+            depId: answer,
           });
           // const oldSessionIds = existingChat?.sessionIds || {};
           // if (!oldSessionIds[message?.interactive?.list_reply?.id]) {
           //   const startChatResponse = await startChat(
-          //     departmentDetails?.typeBotId
+          //     departmentDetails?.depId
           //   );
           //   const sessionId = startChatResponse?.response?.data?.sessionId;
           //   oldSessionIds[message?.interactive?.list_reply?.id] = sessionId;
@@ -916,7 +986,7 @@ const whatsappMessages = async (req, res) => {
             {
               department: departmentDetails?._id,
               // currentSessionId: departmentSession,
-              typeBotId: departmentDetails?.typeBotId,
+              depId: departmentDetails?.depId,
               // sessionIds: oldSessionIds,
             },
             { new: true }
@@ -929,9 +999,8 @@ const whatsappMessages = async (req, res) => {
             sendType: "user",
             receiverType: "assistant",
             messageType: "text",
-            content: `${message?.interactive?.list_reply?.title}\n${
-              message?.interactive?.list_reply?.description || ""
-            }`,
+            content: `${message?.interactive?.list_reply?.title}\n${message?.interactive?.list_reply?.description || ""
+              }`,
           };
           sendMessageToAdmins(socketObj, mess1, existingChat?.department?._id);
           const mess2 = {

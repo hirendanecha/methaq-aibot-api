@@ -162,7 +162,6 @@ async function downloadMedia(fileID, existingChat) {
     );
     console.log(url, "ppppp");
 
-   
     return {
       status: "success",
       data: { url, filePath, fileType, file: response.data },
@@ -332,7 +331,7 @@ const sendInteractiveMessage = async (messageSender, messageID, payload) => {
   // ];
   // const combinedDepartments = [...departmentsData.data];
 
- // console.log(payload, "yyypayload");
+  // console.log(payload, "yyypayload");
 
   const interactivePayload = {
     type: "list",
@@ -349,7 +348,7 @@ const sendInteractiveMessage = async (messageSender, messageID, payload) => {
         {
           title: payload?.actionSectionTitle, // Section title
           rows: payload?.options?.map((op) => ({
-            id: op?.typeBotId || "y5laof1",
+            id: op?.depId || "y5laof1",
             title: op?.name,
             description: `${op?.description ?? ""}`, // Optional description
           })),

@@ -22,7 +22,7 @@ const ChatSchema = Schema(
       ref: "departments",
       default: null,
     },
-    typeBotId: {
+    depId: {
       type: String,
     },
     customerId: {
