@@ -337,6 +337,26 @@ const completedDocumentController = async (req, res) => {
   }
 };
 
+
+const getDepartmentAvailability = async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const chatDetails = await ChatModel.findOne({
+      currentSessionId: sessionId,
+    }).populate("department");
+    if (!chatDetails?.department) {
+      return res.status(200).json({ message: "Please select department" });
+    }
+    const availableMess = await checkDepartmentAvailability(chatDetails);
+    console.log(availableMess, "availableMess");
+
+    return res.status(200).json(availableMess);
+
+  } catch (error) {
+    return res.status(500).json({ error: "Failed to update status" });
+  }
+}
+
 const assignDepartmentController = async (req, res) => {
   try {
     const { sessionId } = req.params;
@@ -1154,4 +1174,5 @@ module.exports = {
   completedDocumentController,
   assignDepartmentController,
   assignAgentController,
+  getDepartmentAvailability
 };

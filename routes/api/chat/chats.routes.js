@@ -12,6 +12,7 @@ const {
   completedDocumentController,
   assignDepartmentController,
   assignAgentController,
+  getDepartmentAvailability,
 } = require("../../../controllers/chat/chat.controller");
 const {
   getAgentChats,
@@ -96,6 +97,8 @@ router.get("/received-document/:sessionId", completedDocumentController);
 router.post("/assign-department/:sessionId", assignDepartmentController);
 
 router.get("/assign-agent/:sessionId", assignAgentController);
+
+router.get("/check-department-availability/:sessionId", getDepartmentAvailability);
 
 router.get("/get-tools", getToolFunctions);
 

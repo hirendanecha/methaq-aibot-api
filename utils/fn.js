@@ -300,9 +300,7 @@ exports.sendMessageToAdmins = async (socketObj, message, department) => {
 };
 
 exports.checkDepartmentAvailability = async (
-  socketObj,
-  existingChat,
-  messageSender
+  existingChat
 ) => {
   try {
     if (existingChat?.department?.workingHours?.startTime) {
@@ -330,30 +328,30 @@ exports.checkDepartmentAvailability = async (
       console.log(endHour, "endHour");
 
       if (currentHour < startHour || currentHour > endHour) {
-        const message = {
-          chatId: existingChat?._id,
-          sender: null,
-          receiver: existingChat.customerId?.toString(),
-          sendType: "assistant",
-          receiverType: "user",
-          content: existingChat?.department?.messages?.afterHoursResponse,
-        };
-        exports.sendMessageToAdmins(
-          socketObj,
-          message,
-          existingChat?.department?._id
-        );
-        await sendWhatsAppMessage(
-          messageSender,
-          undefined,
-          undefined,
-          undefined,
-          existingChat?.department?.messages?.afterHoursResponse
-        );
-        return false;
+        // const message = {
+        //   chatId: existingChat?._id,
+        //   sender: null,
+        //   receiver: existingChat.customerId?.toString(),
+        //   sendType: "assistant",
+        //   receiverType: "user",
+        //   content: existingChat?.department?.messages?.afterHoursResponse,
+        // };
+        // exports.sendMessageToAdmins(
+        //   socketObj,
+        //   message,
+        //   existingChat?.department?._id
+        // );
+        // await sendWhatsAppMessage(
+        //   messageSender,
+        //   undefined,
+        //   undefined,
+        //   undefined,
+        //   existingChat?.department?.messages?.afterHoursResponse
+        // );
+        return existingChat?.department?.messages?.afterHoursResponse;
       }
     }
-    return true;
+    return "True";
   } catch (error) {
     console.error("Error checking department availability:", error);
     throw error;
