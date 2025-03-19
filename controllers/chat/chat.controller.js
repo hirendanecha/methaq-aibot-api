@@ -409,7 +409,9 @@ const whatsappMessages = async (req, res) => {
       const startChatResponse = await startChat("");
       const sessionId = startChatResponse?.response?.data?.sessionId;
       const firstMess = await continueChat(sessionId, sessionId);
-      if (firstMess.interactiveMsg && firstMess.interactivePayload) {
+      const secMess = await continueChat(sessionId, message.text?.body);
+
+      if (secMess.interactiveMsg && secMess.interactivePayload) {
         sendInteractiveMessage(
           messageSender,
           messageID,
