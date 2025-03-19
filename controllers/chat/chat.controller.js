@@ -924,30 +924,7 @@ const whatsappMessages = async (req, res) => {
           //   existingChat?.department?.prompt
           // );
           //console.log(assistantMessage, "messageSendermessageSender");
-          const userInputmessage = response?.finaloutput || "";
 
-          if (userInputmessage) {
-            const mess2 = {
-              chatId: existingChat._id,
-              sender: null,
-              receiver: existingChat?.customerId?.toString(),
-              sendType: "assistant",
-              receiverType: "user",
-              content: userInputmessage,
-            };
-            await sendMessageToAdmins(
-              socketObj,
-              mess2,
-              existingChat?.department?._id
-            );
-            await sendWhatsAppMessage(
-              messageSender,
-              undefined,
-              messageID,
-              displayPhoneNumber,
-              userInputmessage
-            );
-          }
           if (response?.interactiveMsg && response?.interactivePayload) {
             await sendInteractiveMessage(
               messageSender,
