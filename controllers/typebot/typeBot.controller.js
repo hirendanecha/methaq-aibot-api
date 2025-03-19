@@ -127,7 +127,7 @@ const continueChat = async (sessionId, message, urls = null) => {
       response?.data?.messages?.[0]?.content?.richText?.[0]?.children?.[0]
         ?.children?.[0]?.text;
     // console.log("Extracted text:", messageText);
-
+    console.log(response?.data?.input?.items,"response?.data?.input?.items")
     if (response?.data?.input?.items && response?.data.input.items.length > 0) {
       interactiveMsg = true;
 

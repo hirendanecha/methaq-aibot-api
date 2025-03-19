@@ -415,7 +415,7 @@ const whatsappMessages = async (req, res) => {
         sendInteractiveMessage(
           messageSender,
           messageID,
-          firstMess.interactivePayload
+          secMess.interactivePayload
         );
       }
       const chat = new ChatModel({
