@@ -245,6 +245,9 @@ const closeChatController = async (req, res) => {
     const chat = await ChatModel.findOne({ currentSessionId: sessionId })
       .populate("customerId department")
       .lean();
+    if (!chat) {
+      return res.status(404).json({ error: "Chat not found" });
+    }
     const updatedChat = await ChatModel.findOneAndUpdate(
       { _id: chat?._id },
       {
@@ -269,10 +272,7 @@ const closeChatController = async (req, res) => {
     return res.status(200).json({ updatedChat, message: "Chat is closed" });
   } catch (error) {
     console.error("Error closing chat:", error.message);
-    return {
-      status: "error",
-      message: "Failed to close the chat. Please try again later.",
-    };
+    return res.status(404).json({ error: "Chat not updated successfully" });
   }
 };
 
@@ -332,6 +332,19 @@ const completedDocumentController = async (req, res) => {
         new: true,
       }
     );
+
+    const mess2 = {
+      chatId: updatedChat?._id,
+      sender: null,
+      receiver: null,
+      sendType: "assistant",
+      receiverType: "admin",
+      messageType: "tooltip",
+      content: `All document received`,
+    };
+    console.log(mess2, "dfsgdgdgh123456");
+
+    await sendMessageToAdmins(socketObj, mess2, updatedChat?.department);
 
     return res
       .status(200)

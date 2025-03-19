@@ -68,7 +68,7 @@ const sendWhatsAppMessage = async (
       Authorization: `Bearer ${environment.whatsaap.whatAuthT}`,
     },
   });
-  await markMessageAsRead(messageID);
+  messageID && await markMessageAsRead(messageID);
 };
 
 const sendWhatsAppMessageFromalMessage = async (
