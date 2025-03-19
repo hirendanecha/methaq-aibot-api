@@ -302,7 +302,7 @@ const assignAgentController = async (req, res) => {
         new: true,
       }
     );
-    console.log(assigneeAgent, "updatedChatupdatedChat");
+    console.log(updatedChat, "updatedChatupdatedChat");
 
     return res
       .status(200)
