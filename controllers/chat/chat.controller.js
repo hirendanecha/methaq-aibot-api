@@ -249,6 +249,7 @@ const closeChatController = async (req, res) => {
       { _id: chat?._id },
       {
         status: "archived",
+        currentSessionId: null,
         adminId: null,
         isHuman: false,
         department: null,
@@ -283,6 +284,8 @@ const assignAgentController = async (req, res) => {
     const chatDetails = await ChatModel.findOne({
       currentSessionId: sessionId,
     });
+    console.log(chatDetails, "chatDetails123456");
+
     // const department = await DepartmentModel.findOne({ _id: chatDetails?.department });
     const assigneeAgent = await getAssigneeAgent(chatDetails?.department);
     if (!chatDetails) {
@@ -292,6 +295,7 @@ const assignAgentController = async (req, res) => {
       { currentSessionId: sessionId },
       {
         adminId: assigneeAgent?._id,
+        currentSessionId: null,
         isHuman: true,
       },
       {
@@ -345,7 +349,7 @@ const getDepartmentAvailability = async (req, res) => {
       currentSessionId: sessionId,
     }).populate("department");
     if (!chatDetails?.department) {
-      return res.status(200).json({ message: "Please select department" });
+      return res.status(200).json("Please select department");
     }
     const availableMess = await checkDepartmentAvailability(chatDetails);
     console.log(availableMess, "availableMess");
@@ -370,6 +374,7 @@ const assignDepartmentController = async (req, res) => {
       {
         adminId: assigneeAgent?._id,
         department: department,
+        currentSessionId: null,
         isHuman: true,
       },
       {

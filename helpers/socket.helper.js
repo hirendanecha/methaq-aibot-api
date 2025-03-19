@@ -8,6 +8,7 @@ const environment = require("../utils/environment");
 const jwt = require("jsonwebtoken");
 const { getAssigneeAgent, sendMessageToAdmins, isImageType } = require("../utils/fn");
 const { default: mongoose } = require("mongoose");
+const { startChat } = require("../controllers/typebot/typeBot.controller");
 
 let logger = console;
 const socketObj = {};
@@ -175,7 +176,11 @@ socketObj.config = (server) => {
       }
       const newMessage = new MessageModel(mess)
       const final = await newMessage.save();
-      const updatedChat = await ChatModel.findOneAndUpdate({ _id: chatDetails?._id }, { latestMessage: final?._id, isHuman: false, adminId: null }, { new: true }).lean();
+      const startChatResponse = await startChat("");
+      const sessionId = startChatResponse?.response?.data?.sessionId;
+      const firstMess = await continueChat(sessionId, sessionId);
+      // const secMess = await continueChat(sessionId, message.text?.body);
+      const updatedChat = await ChatModel.findOneAndUpdate({ _id: chatDetails?._id }, { latestMessage: final?._id, isHuman: false, adminId: null, currentSessionId: sessionId, department: null }, { new: true }).lean();
       const receivers = await UserModel.find({ $or: [{ role: { $in: ["Admin", "Supervisor"] } }, { _id: { $in: [chatDetails?.customerId?._id?.toString()] } }] });
       receivers.forEach(receiver => {
         socketObj.io.to(receiver._id?.toString()).emit("update-chat", updatedChat);
