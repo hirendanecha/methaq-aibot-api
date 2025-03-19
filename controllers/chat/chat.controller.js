@@ -592,6 +592,7 @@ const whatsappMessages = async (req, res) => {
         existingChat.currentSessionId = sessionId;
         existingChat = await existingChat.save();
         const firstMess = await continueChat(sessionId, sessionId);
+        // const secMess = await continueChat(sessionId, message.text?.body || "Hi");
         // oldSessionIds[message?.interactive?.list_reply?.id] = sessionId;
       }
 
