@@ -230,6 +230,8 @@ socketObj.config = (server) => {
         const authHeader = socket.handshake.headers.authorization || '';
         const token = (authHeader && authHeader.split(' ')[1]);
         let decoded = jwt.decode(token);
+        console.log(authHeader, "authHeaderauthHeader");
+
         const adminDetails = await UserModel.findById(decoded?._id).lean();
         console.log(decoded, "decodeddecoded");
         const mess = {
@@ -472,7 +474,7 @@ socketObj.config = (server) => {
           chatId: chatId,
           sender: null,
           sendType: "admin",
-          content: chat?.department?.messages?.chatClosingMessage || `Chat archived by ${adminDetails?.fullName}`,
+          content: chat?.department?.messages?.chatClosingMessage || `Chat archived ${adminDetails?.fullName ? "by" + adminDetails?.fullName : ""}`,
           attachments: [],
           timestamp: new Date(),
           receiver: chat?.customerId?.toString(),
