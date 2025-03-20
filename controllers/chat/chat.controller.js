@@ -269,7 +269,10 @@ const closeChatController = async (req, res) => {
 
     console.log(updatedChat, "updatedChat");
 
-    return res.status(200).json({ updatedChat, message: chat?.department?.messages?.chatClosingMessage });
+    return res.status(200).json({
+      updatedChat,
+      message: chat?.department?.messages?.chatClosingMessage,
+    });
   } catch (error) {
     console.error("Error closing chat:", error.message);
     return res.status(404).json({ error: "Chat not updated successfully" });
@@ -302,7 +305,7 @@ const assignAgentController = async (req, res) => {
         new: true,
       }
     );
-    console.log(updatedChat, "updatedChatupdatedChat");
+    //console.log(updatedChat, "updatedChatupdatedChat");
 
     return res
       .status(200)
@@ -354,7 +357,6 @@ const completedDocumentController = async (req, res) => {
   }
 };
 
-
 const getDepartmentAvailability = async (req, res) => {
   try {
     const { sessionId } = req.params;
@@ -368,11 +370,10 @@ const getDepartmentAvailability = async (req, res) => {
     console.log(availableMess, "availableMess");
 
     return res.status(200).json(availableMess);
-
   } catch (error) {
     return res.status(500).json({ error: "Failed to update status" });
   }
-}
+};
 
 const assignDepartmentController = async (req, res) => {
   try {
@@ -407,6 +408,7 @@ const images = {};
 const whatsappMessages = async (req, res) => {
   try {
     // Added async
+
     const { messages, metadata, contacts } =
       req.body.entry?.[0]?.changes?.[0].value ?? {};
     const displayPhoneNumber = metadata?.phone_number_id;
@@ -469,7 +471,6 @@ const whatsappMessages = async (req, res) => {
       };
       sendMessageToAdmins(socketObj, mess2, newChat?.department);
 
-
       if (secMess.finaloutput) {
         await sendWhatsAppMessage(
           messageSender,
@@ -501,72 +502,17 @@ const whatsappMessages = async (req, res) => {
           receiver: newChat.customerId?.toString(),
           sendType: "assistant",
           receiverType: "user",
-          content:
-            "Please select one of the following options:",
+          content: "Please select one of the following options:",
           messageType: "interective",
-          messageOptions: secMess.interactivePayload?.options?.map((department) => ({
-            label: department.name,
-            value: department.depId,
-          })),
+          messageOptions: secMess.interactivePayload?.options?.map(
+            (department) => ({
+              label: department.name,
+              value: department.depId,
+            })
+          ),
         };
         await sendMessageToAdmins(socketObj, intmessage, null);
-
       }
-
-      // const mess3 = {
-      //   chatId: newChat._id,
-      //   sender: null,
-      //   receiver: newChat?.customerId?.toString(),
-      //   sendType: "assistant",
-      //   receiverType: "user",
-      //   content: respoText,
-      // };
-      // sendMessageToAdmins(
-      //   socketObj,
-      //   mess3,
-      //   newChat?.department
-      // );
-
-      // await sendWhatsAppMessage(
-      //   messageSender,
-      //   undefined,
-      //   messageID,
-      //   displayPhoneNumber,
-      //   respoText
-      // );
-      // const departments = await fetchDepartmentsAndPrompts();
-      //console.log(departments, "departments");
-
-      // const interectiveMessageDetails = {
-      //   options: departments,
-      //   headerText: "Insurance Options",
-      //   bodyText:
-      //     "Hello! 👋 How can I assist you today with your insurance needs? Please select a department:",
-      //   actionButtonText: "Select Department",
-      //   actionSectionTitle: "Departments",
-      // };
-      // const intmessage = {
-      //   chatId: newChat._id,
-      //   sender: null,
-      //   receiver: updatedCus._id,
-      //   sendType: "assistant",
-      //   receiverType: "user",
-      //   content:
-      //     "Hello! 👋 How can I assist you today with your insurance needs? Please select a department:",
-      //   messageType: "interective",
-      //   messageOptions: departments?.map((department) => ({
-      //     label: department.name,
-      //     value: department._id,
-      //   })),
-      // };
-
-      // sendInteractiveMessage(
-      //   messageSender,
-      //   messageID,
-      //   interectiveMessageDetails
-      // );
-
-      // sendMessageToAdmins(socketObj, intmessage, null);
     } else {
       //console.log(message, "message for checking");
 
@@ -574,13 +520,7 @@ const whatsappMessages = async (req, res) => {
         customerId: user?._id,
       }).populate("department");
 
-      // let departmentThread =
-      //   existingChat.threads[existingChat?.department?._id?.toString()];
-      // console.log(
-      //   departmentThread,
-      //   existingChat?.department,
-      //   "departmentThread"
-      // );
+      // console.log("jjjjjjjj")
 
       if (!existingChat) {
         return res.status(200).send("Message processed");
@@ -598,7 +538,6 @@ const whatsappMessages = async (req, res) => {
 
       if (message.type === "image" || message.type === "document") {
         const mediaID = message.image?.id || message.document?.id;
-        console.log(mediaID, "mediaID123456");
 
         const downloadResult = await downloadMedia(mediaID, existingChat);
 
@@ -769,13 +708,14 @@ const whatsappMessages = async (req, res) => {
                 receiver: existingChat.customerId,
                 sendType: "assistant",
                 receiverType: "user",
-                content:
-                  "Please select one of the following options:",
+                content: "Please select one of the following options:",
                 messageType: "interective",
-                messageOptions: aiResponse.interactivePayload?.options?.map((department) => ({
-                  label: department.name,
-                  value: department.depId,
-                })),
+                messageOptions: aiResponse.interactivePayload?.options?.map(
+                  (department) => ({
+                    label: department.name,
+                    value: department.depId,
+                  })
+                ),
               };
               sendMessageToAdmins(socketObj, intmessage, null);
 
@@ -940,6 +880,13 @@ const whatsappMessages = async (req, res) => {
           //console.log(assistantMessage, "messageSendermessageSender");
 
           if (response?.interactiveMsg && response?.interactivePayload) {
+            await sendWhatsAppMessage(
+              messageSender,
+              "",
+              messageID,
+              "",
+              response?.finaloutput
+            );
             await sendInteractiveMessage(
               messageSender,
               messageID,
@@ -951,13 +898,14 @@ const whatsappMessages = async (req, res) => {
               receiver: existingChat.customerId?.toString(),
               sendType: "assistant",
               receiverType: "user",
-              content:
-                "Please select one of the following options:",
+              content: "Please select one of the following options:",
               messageType: "interective",
-              messageOptions: response?.interactivePayload?.options?.map((department) => ({
-                label: department.name,
-                value: department.depId,
-              })),
+              messageOptions: response?.interactivePayload?.options?.map(
+                (department) => ({
+                  label: department.name,
+                  value: department.depId,
+                })
+              ),
             };
             await sendMessageToAdmins(socketObj, intmessage, null);
           } else {
@@ -969,7 +917,11 @@ const whatsappMessages = async (req, res) => {
               receiver: existingChat?.customerId?.toString(),
               receiverType: "user",
             };
-            await sendMessageToAdmins(socketObj, mess, existingChat?.department?._id);
+            await sendMessageToAdmins(
+              socketObj,
+              mess,
+              existingChat?.department?._id
+            );
             await sendWhatsAppMessage(
               messageSender,
               undefined,
@@ -1038,8 +990,9 @@ const whatsappMessages = async (req, res) => {
             sendType: "user",
             receiverType: "assistant",
             messageType: "text",
-            content: `${message?.interactive?.list_reply?.title}\n${message?.interactive?.list_reply?.description || ""
-              }`,
+            content: `${message?.interactive?.list_reply?.title}\n${
+              message?.interactive?.list_reply?.description || ""
+            }`,
           };
           sendMessageToAdmins(socketObj, mess1, existingChat?.department?._id);
           const mess2 = {
@@ -1193,5 +1146,5 @@ module.exports = {
   completedDocumentController,
   assignDepartmentController,
   assignAgentController,
-  getDepartmentAvailability
+  getDepartmentAvailability,
 };
