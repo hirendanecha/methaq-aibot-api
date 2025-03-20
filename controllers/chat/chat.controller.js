@@ -207,7 +207,7 @@ const uploadDocument = async (req, res) => {
           `ChatDocuments/${month}`
         );
         // console.log(npath, "npath");
-
+        unlinkSync(npath);
         // unlinkSync("D:/Projects/MethaqChatbotBackend/methaq-aibot-api/public/images/file/2025-03/1741693745271-Diagram_1.pdf");
         return url;
       })
@@ -990,9 +990,8 @@ const whatsappMessages = async (req, res) => {
             sendType: "user",
             receiverType: "assistant",
             messageType: "text",
-            content: `${message?.interactive?.list_reply?.title}\n${
-              message?.interactive?.list_reply?.description || ""
-            }`,
+            content: `${message?.interactive?.list_reply?.title}\n${message?.interactive?.list_reply?.description || ""
+              }`,
           };
           sendMessageToAdmins(socketObj, mess1, existingChat?.department?._id);
           const mess2 = {
@@ -1040,6 +1039,16 @@ const whatsappMessages = async (req, res) => {
             );
             console.log(aiResponse, "aiResponsesfsf");
             if (aiResponse?.interactiveMsg && aiResponse?.interactivePayload) {
+              if (aiResponse?.finaloutput) {
+                await sendWhatsAppMessage(
+                  messageSender,
+                  undefined,
+                  messageID,
+                  displayPhoneNumber,
+                  aiResponse?.finaloutput
+                )
+              }
+
               sendInteractiveMessage(
                 messageSender,
                 messageID,

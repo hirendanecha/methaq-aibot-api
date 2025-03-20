@@ -161,7 +161,7 @@ async function downloadMedia(fileID, existingChat) {
       `WhatsappImages/${month}`
     );
     console.log(url, "ppppp");
-
+    unlinkSync(filePath);
     return {
       status: "success",
       data: { url, filePath, fileType, file: response.data },
