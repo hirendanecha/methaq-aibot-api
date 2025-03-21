@@ -95,6 +95,8 @@ const startChat = async (botId, message) => {
 
 const continueChat = async (sessionId, message, urls = null) => {
   let interactiveMsg = false;
+  let interactiveListButton = false;
+  let interactiveListPayload = false;
   let interactivePayload = null;
   console.log("sessionId aaa", sessionId, message, urls);
   const url = `https://typebot-uqjtp-u35950.vm.elestio.app/api/v1/sessions/${sessionId}/continueChat`; // Use the specific URL
@@ -132,33 +134,59 @@ const continueChat = async (sessionId, message, urls = null) => {
     // console.log("Extracted text:", messageText);
     console.log(response?.data?.input?.items, "response?.data?.input?.items");
     if (response?.data?.input?.items && response?.data.input.items.length > 0) {
-      interactiveMsg = true;
+      if (response?.data.input.items.length === 2) {
+        interactiveListButton = true;
+        interactiveListPayload = {
+          type: "button",
+          header: {
+            type: "text",
+            text: "Choose an option", // Example header text
+          },
+          body: {
+            text: "Please select one of the options below:", // Example body text
+          },
+          action: {
+            buttons: response?.data.input.items.map((item, index) => ({
+              type: "reply",
+              reply: {
+                id: `option_${index}`,
+                title: item.content, // Use the item content as the button title
+              },
+            })),
+          },
+        };
+      } else {
+        interactiveMsg = true;
 
-      // Extracting the first message text if available
-      const questionText =
-        response?.data?.messages?.[0]?.content?.richText?.[0]?.children?.[0]
-          ?.text || "Choose an option";
+        // Extracting the first message text if available
 
-      interactivePayload = {
-        options: response?.data.input.items?.map((item) => {
-          const name =
-            item?.content.length > 24
-              ? item?.content.slice(0, 24) // Adjusted to slice up to 24 characters
-              : item?.content;
-          return {
-            depId: item?.content?.split("-")[0],
-            name,
-            description: "",
-          };
-        }),
-        headerText: " ",
-        bodyText: "Please select one of the following options:",
-        actionButtonText: "Select",
-        actionSectionTitle: "Available Choices",
-      };
+        interactivePayload = {
+          options: response?.data.input.items?.map((item) => {
+            const name =
+              item?.content.length > 24
+                ? item?.content.slice(0, 24) // Adjusted to slice up to 24 characters
+                : item?.content;
+            return {
+              depId: item?.content?.split("-")[0],
+              name,
+              description: "",
+            };
+          }),
+          headerText: " ",
+          bodyText: "Please select one of the following options:",
+          actionButtonText: "Select",
+          actionSectionTitle: "Available Choices",
+        };
+      }
     }
-    console.log(interactiveMsg, interactivePayload, "interactive");
-    return { finaloutput, interactiveMsg, interactivePayload };
+    console.log(interactiveMsg, interactivePayload,interactiveListButton, interactiveListPayload,"interactive");
+    return {
+      finaloutput,
+      interactiveMsg,
+      interactivePayload,
+      interactiveListButton,
+      interactiveListPayload,
+    };
   } catch (error) {
     console.error("Error continuing chat:", error.response.data.message);
     return "Axle broke!! Abort mission!!";
