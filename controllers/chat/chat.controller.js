@@ -281,7 +281,7 @@ const closeChatController = async (req, res) => {
       receiverType: "user",
       messageType: "tooltip"
     }
-    await sendMessageToAdmins(socketObj, mess, chat?.department)
+    await sendMessageToAdmins(socketObj, mess, chat?.department?._id)
     // await sendWhatsAppMessage(
     //   chat?.customerId?.phone,
     //   undefined,
@@ -294,7 +294,7 @@ const closeChatController = async (req, res) => {
 
     return res.status(200).json({
       updatedChat,
-      message: chat?.department?.messages?.chatClosingMessage,
+      message: chat?.department?.messages?.chatClosingMessage || `This conversation has ended, thank you for contacting Methaq Takaful Insuance. We hope we were able to serve you`,
     });
   } catch (error) {
     console.error("Error closing chat:", error.message);
