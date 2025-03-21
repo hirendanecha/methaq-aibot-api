@@ -50,7 +50,7 @@ router.post(
   "/uploadDocument",
   fileUpload(
     "file",
-    ["pdf", "image"],
+    ["pdf", "word", "text", "json", "csv", ""],
     [
       {
         name: "file",

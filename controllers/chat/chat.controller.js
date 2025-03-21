@@ -45,7 +45,7 @@ const {
 const {
   isDeparmentChange,
 } = require("../../services/openai/tool/deparmentChange");
-const { unlinkSync } = require("fs");
+const { unlinkSync, existsSync } = require("fs");
 const { deleteFileByPath } = require("../../helpers/files.helper");
 const { startChat, continueChat } = require("../typebot/typeBot.controller");
 const { mongoose } = require("mongoose");
@@ -200,14 +200,22 @@ const uploadDocument = async (req, res) => {
         const npath = path.replaceAll("\\", "/");
         const month = `${dayjs().year()}-${dayjs().month() + 1}`;
 
-        const url = s3.uploadPublic(
+        const url = await s3.uploadPublic(
           npath,
           uploadFile?.mimetype,
           `${uploadFile?.filename}`,
           `ChatDocuments/${month}`
         );
-        // console.log(npath, "npath");
-        unlinkSync(npath);
+        console.log(url, "urlurlurl");
+
+        console.log(npath, "npath");
+        if (existsSync(npath)) {
+          console.log("File exists, attempting to delete...");
+          unlinkSync(npath);
+          console.log("File deleted successfully");
+        } else {
+          console.error("File does NOT exist at deletion time:", filePath);
+        }
         // unlinkSync("D:/Projects/MethaqChatbotBackend/methaq-aibot-api/public/images/file/2025-03/1741693745271-Diagram_1.pdf");
         return url;
       })
@@ -219,7 +227,7 @@ const uploadDocument = async (req, res) => {
       .status(200)
       .json({ url: finalURLS, message: "Document uploaded successfully" });
   } catch (error) {
-    console.log(error.message);
+    console.log("dfsdf", error.message);
 
     return res.status(500).json({ error: "Failed to upload document" });
   }
@@ -259,13 +267,26 @@ const closeChatController = async (req, res) => {
       },
       { new: true }
     ).lean();
-    await sendWhatsAppMessage(
-      chat?.customerId?.phone,
-      undefined,
-      null,
-      chat?.customerId?.phone,
-      chat?.department?.messages?.chatClosingMessage
-    );
+
+    const mess = {
+      chatId: chat?._id?.toString(),
+      sender: null,
+      sendType: "admin",
+      content: chat?.department?.messages?.chatClosingMessage || `Chat closed by user`,
+      attachments: [],
+      timestamp: new Date(),
+      receiver: chat?.customerId?.toString(),
+      receiverType: "user",
+      messageType: "tooltip"
+    }
+    await sendMessageToAdmins(socketObj, mess, chat?.department)
+    // await sendWhatsAppMessage(
+    //   chat?.customerId?.phone,
+    //   undefined,
+    //   null,
+    //   chat?.customerId?.phone,
+    //   chat?.department?.messages?.chatClosingMessage
+    // );
 
     console.log(updatedChat, "updatedChat");
 
