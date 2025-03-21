@@ -13,6 +13,7 @@ const {
   assignDepartmentController,
   assignAgentController,
   getDepartmentAvailability,
+  isDocumentReceived,
 } = require("../../../controllers/chat/chat.controller");
 const {
   getAgentChats,
@@ -95,6 +96,8 @@ router.get("/close-chat/:sessionId", closeChatController);
 router.get("/received-document/:sessionId", completedDocumentController);
 
 router.post("/assign-department/:sessionId", assignDepartmentController);
+
+router.get("/check-document-received/:sessionId", isDocumentReceived);
 
 router.get("/assign-agent/:sessionId", assignAgentController);
 

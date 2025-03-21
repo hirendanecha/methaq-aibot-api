@@ -404,6 +404,26 @@ const assignDepartmentController = async (req, res) => {
     return res.status(500).json({ error: "Failed to delete document" });
   }
 };
+
+const isDocumentReceived = async (req, res) => {
+  try {
+    const { sessionId } = req.params;
+    const chatDetails = await ChatModel.findOne({
+      currentSessionId: sessionId,
+    });
+    if (!chatDetails) {
+      return res.status(404).json({ error: "Please provide valid sessionId" });
+    }
+    if (chatDetails?.tags?.includes("document_received")) {
+      return res.status(200).json({ status: "True" });
+    }
+    else {
+      return res.status(200).json({ status: "False" });
+    }
+  } catch (error) {
+    return res.status(500).json({ error: "Failed to fetch document details" });
+  }
+}
 const images = {};
 const whatsappMessages = async (req, res) => {
   try {
@@ -1140,5 +1160,6 @@ module.exports = {
   completedDocumentController,
   assignDepartmentController,
   assignAgentController,
+  isDocumentReceived,
   getDepartmentAvailability,
 };
