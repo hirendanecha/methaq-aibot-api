@@ -952,58 +952,43 @@ const whatsappMessages = async (req, res) => {
         } else {
           const answer = message?.interactive?.list_reply?.id;
           console.log(answer, "dffgdfgdgfg");
+          if (["1", "2", "3", "4", "5"].includes(answer)) {
+            const departmentDetails = await DepartmentModel.findOne({
+              depId: answer,
+            });
 
-          const departmentDetails = await DepartmentModel.findOne({
-            depId: answer,
-          });
-          // const oldSessionIds = existingChat?.sessionIds || {};
-          // if (!oldSessionIds[message?.interactive?.list_reply?.id]) {
-          //   const startChatResponse = await startChat(
-          //     departmentDetails?.depId
-          //   );
-          //   const sessionId = startChatResponse?.response?.data?.sessionId;
-          //   oldSessionIds[message?.interactive?.list_reply?.id] = sessionId;
-          //   //const firstMess = await continueChat(sessionId, sessionId);
-
-          // }
-          // console.log(
-          //   oldSessionIds[message?.interactive?.list_reply?.id],
-          //   "oldSessionIds[message?.interactive?.list_reply?.id]"
-          // );
-
-          departmentSession = existingChat?.currentSessionId;
-          existingChat = await ChatModel.findOneAndUpdate(
-            { _id: existingChat._id },
-            {
-              department: departmentDetails?._id,
-              // currentSessionId: departmentSession,
-              depId: departmentDetails?.depId,
-              // sessionIds: oldSessionIds,
-            },
-            { new: true }
-          ).populate("department");
-          const mess1 = {
-            chatId: existingChat?._id,
-            wpId: message?.id,
-            sender: existingChat?.customerId?.toString(),
-            receiver: null,
-            sendType: "user",
-            receiverType: "assistant",
-            messageType: "text",
-            content: `${message?.interactive?.list_reply?.title}\n${message?.interactive?.list_reply?.description || ""
-              }`,
-          };
-          sendMessageToAdmins(socketObj, mess1, existingChat?.department?._id);
-          const mess2 = {
-            chatId: existingChat?._id,
-            sender: null,
-            receiver: null,
-            sendType: "assistant",
-            receiverType: "admin",
-            messageType: "tooltip",
-            content: `Chat is transferred to ${message?.interactive?.list_reply?.title} department`,
-          };
-          sendMessageToAdmins(socketObj, mess2, existingChat?.department?._id);
+            departmentSession = existingChat?.currentSessionId;
+            existingChat = await ChatModel.findOneAndUpdate(
+              { _id: existingChat._id },
+              {
+                department: departmentDetails?._id,
+                depId: departmentDetails?.depId,
+              },
+              { new: true }
+            ).populate("department");
+            const mess1 = {
+              chatId: existingChat?._id,
+              wpId: message?.id,
+              sender: existingChat?.customerId?.toString(),
+              receiver: null,
+              sendType: "user",
+              receiverType: "assistant",
+              messageType: "text",
+              content: `${message?.interactive?.list_reply?.title}\n${message?.interactive?.list_reply?.description || ""
+                }`,
+            };
+            sendMessageToAdmins(socketObj, mess1, existingChat?.department?._id);
+            const mess2 = {
+              chatId: existingChat?._id,
+              sender: null,
+              receiver: null,
+              sendType: "assistant",
+              receiverType: "admin",
+              messageType: "tooltip",
+              content: `Chat is transferred to ${message?.interactive?.list_reply?.title} department`,
+            };
+            sendMessageToAdmins(socketObj, mess2, existingChat?.department?._id);
+          }
           // const isAvailable = await checkDepartmentAvailability(
           //   socketObj,
           //   existingChat,
