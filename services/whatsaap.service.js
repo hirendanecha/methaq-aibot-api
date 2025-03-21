@@ -68,7 +68,7 @@ const sendWhatsAppMessage = async (
       Authorization: `Bearer ${environment.whatsaap.whatAuthT}`,
     },
   });
-  messageID && await markMessageAsRead(messageID);
+  messageID && (await markMessageAsRead(messageID));
 };
 
 const sendWhatsAppMessageFromalMessage = async (
@@ -299,16 +299,19 @@ const sendListMessage = async (messageSender, messageID, buttonPayload) => {
     recipient_type: "individual",
     to: messageSender,
     type: "interactive",
-    interactive: buttonInteractivePayload,
+    interactive: buttonPayload,
   });
 
   try {
     const response = await axios.post(url, data, config);
     console.log("Button interactive message sent:", response.data);
-    await markMessageAsRead(messageID);
+    messageID && (await markMessageAsRead(messageID));
     return response.data; // Return the response data
   } catch (error) {
-    console.error("Error sending button interactive message:", error.message);
+    console.error(
+      "Error sending button interactive message:",
+      error.response.data.message
+    );
     throw error; // Rethrow the error to be handled by the caller
   }
 };

@@ -416,14 +416,13 @@ const isDocumentReceived = async (req, res) => {
     }
     if (chatDetails?.tags?.includes("document_received")) {
       return res.status(200).json({ status: "True" });
-    }
-    else {
+    } else {
       return res.status(200).json({ status: "False" });
     }
   } catch (error) {
     return res.status(500).json({ error: "Failed to fetch document details" });
   }
-}
+};
 const images = {};
 const whatsappMessages = async (req, res) => {
   try {
@@ -928,6 +927,22 @@ const whatsappMessages = async (req, res) => {
               ),
             };
             await sendMessageToAdmins(socketObj, intmessage, null);
+          } else if (
+            response?.interactiveListButton &&
+            response?.interactiveListPayload
+          ) {
+            await sendWhatsAppMessage(
+              messageSender,
+              "",
+              messageID,
+              "",
+              response?.finaloutput
+            );
+            await sendListMessage(
+              messageSender,
+              messageID,
+              response?.interactiveListPayload
+            );
           } else {
             const mess = {
               chatId: existingChat?._id,
@@ -994,10 +1009,15 @@ const whatsappMessages = async (req, res) => {
               sendType: "user",
               receiverType: "assistant",
               messageType: "text",
-              content: `${message?.interactive?.list_reply?.title}\n${message?.interactive?.list_reply?.description || ""
-                }`,
+              content: `${message?.interactive?.list_reply?.title}\n${
+                message?.interactive?.list_reply?.description || ""
+              }`,
             };
-            sendMessageToAdmins(socketObj, mess1, existingChat?.department?._id);
+            sendMessageToAdmins(
+              socketObj,
+              mess1,
+              existingChat?.department?._id
+            );
             const mess2 = {
               chatId: existingChat?._id,
               sender: null,
@@ -1007,7 +1027,11 @@ const whatsappMessages = async (req, res) => {
               messageType: "tooltip",
               content: `Chat is transferred to ${message?.interactive?.list_reply?.title} department`,
             };
-            sendMessageToAdmins(socketObj, mess2, existingChat?.department?._id);
+            sendMessageToAdmins(
+              socketObj,
+              mess2,
+              existingChat?.department?._id
+            );
           }
           // const isAvailable = await checkDepartmentAvailability(
           //   socketObj,
@@ -1051,7 +1075,7 @@ const whatsappMessages = async (req, res) => {
                   messageID,
                   displayPhoneNumber,
                   aiResponse?.finaloutput
-                )
+                );
               }
 
               sendInteractiveMessage(
