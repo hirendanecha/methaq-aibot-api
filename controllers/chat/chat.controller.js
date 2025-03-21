@@ -274,14 +274,15 @@ const closeChatController = async (req, res) => {
       chatId: chat?._id?.toString(),
       sender: null,
       sendType: "admin",
-      content: chat?.department?.messages?.chatClosingMessage || `Chat closed by user`,
+      content:
+        chat?.department?.messages?.chatClosingMessage || `Chat closed by user`,
       attachments: [],
       timestamp: new Date(),
       receiver: chat?.customerId?._id?.toString(),
       receiverType: "user",
-      messageType: "tooltip"
-    }
-    await sendMessageToAdmins(socketObj, mess, chat?.department?._id)
+      messageType: "tooltip",
+    };
+    await sendMessageToAdmins(socketObj, mess, chat?.department?._id);
     // await sendWhatsAppMessage(
     //   chat?.customerId?.phone,
     //   undefined,
@@ -922,13 +923,14 @@ const whatsappMessages = async (req, res) => {
           //console.log(assistantMessage, "messageSendermessageSender");
 
           if (response?.interactiveMsg && response?.interactivePayload) {
-            response?.finaloutput && await sendWhatsAppMessage(
-              messageSender,
-              "",
-              messageID,
-              "",
-              response?.finaloutput
-            );
+            response?.finaloutput &&
+              (await sendWhatsAppMessage(
+                messageSender,
+                "",
+                messageID,
+                "",
+                response?.finaloutput
+              ));
             await sendInteractiveMessage(
               messageSender,
               messageID,
@@ -954,13 +956,14 @@ const whatsappMessages = async (req, res) => {
             response?.interactiveListButton &&
             response?.interactiveListPayload
           ) {
-            response?.finaloutput && await sendWhatsAppMessage(
-              messageSender,
-              "",
-              messageID,
-              "",
-              response?.finaloutput
-            );
+            response?.finaloutput &&
+              (await sendWhatsAppMessage(
+                messageSender,
+                "",
+                messageID,
+                "",
+                response?.finaloutput
+              ));
             await sendListMessage(
               messageSender,
               messageID,
@@ -974,12 +977,13 @@ const whatsappMessages = async (req, res) => {
               receiverType: "user",
               content: "Please select one of the following options:",
               messageType: "interective",
-              messageOptions: response?.interactiveListPayload?.action?.buttons?.map(
-                (btn) => ({
-                  label: btn.title,
-                  value: department.depId,
-                })
-              ),
+              messageOptions:
+                response?.interactiveListPayload?.action?.buttons?.map(
+                  (btn) => ({
+                    label: btn.title,
+                    value: department.depId,
+                  })
+                ),
             };
             await sendMessageToAdmins(socketObj, intmessage, null);
           } else {
@@ -1024,7 +1028,9 @@ const whatsappMessages = async (req, res) => {
         //   }
         //   return res.status(200).send("Message processed");
         // } else {
-        const answer = message?.interactive?.list_reply?.id || message?.interactive?.button_reply?.id;
+        const answer =
+          message?.interactive?.list_reply?.id ||
+          message?.interactive?.button_reply?.id;
         console.log(answer, "dffgdfgdgfg");
         if (["1", "2", "3", "4", "5"].includes(answer)) {
           const departmentDetails = await DepartmentModel.findOne({
@@ -1048,14 +1054,11 @@ const whatsappMessages = async (req, res) => {
             sendType: "user",
             receiverType: "assistant",
             messageType: "text",
-            content: `${message?.interactive?.list_reply?.title}\n${message?.interactive?.list_reply?.description || ""
-              }`,
+            content: `${message?.interactive?.list_reply?.title}\n${
+              message?.interactive?.list_reply?.description || ""
+            }`,
           };
-          sendMessageToAdmins(
-            socketObj,
-            mess1,
-            existingChat?.department?._id
-          );
+          sendMessageToAdmins(socketObj, mess1, existingChat?.department?._id);
           const mess2 = {
             chatId: existingChat?._id,
             sender: null,
@@ -1065,11 +1068,7 @@ const whatsappMessages = async (req, res) => {
             messageType: "tooltip",
             content: `Chat is transferred to ${message?.interactive?.list_reply?.title} department`,
           };
-          sendMessageToAdmins(
-            socketObj,
-            mess2,
-            existingChat?.department?._id
-          );
+          sendMessageToAdmins(socketObj, mess2, existingChat?.department?._id);
         }
         // const isAvailable = await checkDepartmentAvailability(
         //   socketObj,
@@ -1084,7 +1083,9 @@ const whatsappMessages = async (req, res) => {
         //console.log(existingChat, "existingChat123456");
 
         if (!existingChat?.isHuman) {
-          const userInput = message?.interactive?.list_reply?.title || message?.interactive?.button_reply?.title;
+          const userInput =
+            message?.interactive?.list_reply?.title ||
+            message?.interactive?.button_reply?.title;
           // const userInput = ;
           const aiResponse = await continueChat(
             existingChat.currentSessionId,
@@ -1099,11 +1100,7 @@ const whatsappMessages = async (req, res) => {
             receiverType: "user",
             content: userInputmessage,
           };
-          sendMessageToAdmins(
-            socketObj,
-            mess2,
-            existingChat?.department?._id
-          );
+          sendMessageToAdmins(socketObj, mess2, existingChat?.department?._id);
           console.log(aiResponse, "aiResponsesfsf");
           if (aiResponse?.interactiveMsg && aiResponse?.interactivePayload) {
             if (aiResponse?.finaloutput) {
@@ -1121,6 +1118,40 @@ const whatsappMessages = async (req, res) => {
               messageID,
               aiResponse?.interactivePayload
             );
+          } else if (
+            aiResponse?.interactiveListButton &&
+            aiResponse?.interactiveListPayload
+          ) {
+            aiResponse?.finaloutput &&
+              (await sendWhatsAppMessage(
+                messageSender,
+                "",
+                messageID,
+                "",
+                aiResponse?.finaloutput
+              ));
+            await sendListMessage(
+              messageSender,
+              messageID,
+              aiResponse?.interactiveListPayload
+            );
+            const intmessage = {
+              chatId: existingChat._id,
+              sender: null,
+              receiver: existingChat.customerId?.toString(),
+              sendType: "assistant",
+              receiverType: "user",
+              content: "Please select one of the following options:",
+              messageType: "interective",
+              messageOptions:
+                aiResponse?.interactiveListPayload?.action?.buttons?.map(
+                  (btn) => ({
+                    label: btn.title,
+                    value: department.depId,
+                  })
+                ),
+            };
+            await sendMessageToAdmins(socketObj, intmessage, null);
           } else {
             await sendWhatsAppMessage(
               messageSender,
