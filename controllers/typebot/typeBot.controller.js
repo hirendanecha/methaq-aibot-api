@@ -105,9 +105,12 @@ const continueChat = async (sessionId, message, urls = null) => {
       message: {
         type: "text", // Set the message type
         text: urls ? "Check this document" : message, // Set the text message
-        ...(urls && { attachedFileUrls: urls }), // Conditionally add attachedFileUrls if urls is not null
+        ...(urls && {
+          attachedFileUrls: urls.length === 1 ? [urls[0], urls[0]] : urls, // Duplicate the URL if only one is provided
+        }),
       },
     };
+
     console.log("requestBody", requestBody);
     const response = await axios.post(url, requestBody, {
       headers: {
@@ -127,7 +130,7 @@ const continueChat = async (sessionId, message, urls = null) => {
       response?.data?.messages?.[0]?.content?.richText?.[0]?.children?.[0]
         ?.children?.[0]?.text;
     // console.log("Extracted text:", messageText);
-    console.log(response?.data?.input?.items, "response?.data?.input?.items")
+    console.log(response?.data?.input?.items, "response?.data?.input?.items");
     if (response?.data?.input?.items && response?.data.input.items.length > 0) {
       interactiveMsg = true;
 
@@ -157,7 +160,7 @@ const continueChat = async (sessionId, message, urls = null) => {
     console.log(interactiveMsg, interactivePayload, "interactive");
     return { finaloutput, interactiveMsg, interactivePayload };
   } catch (error) {
-    console.error("Error continuing chat:", error.message);
+    console.error("Error continuing chat:", error.response.data.message);
     return "Axle broke!! Abort mission!!";
   }
 };
