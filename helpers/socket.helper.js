@@ -474,7 +474,7 @@ socketObj.config = (server) => {
           chatId: chatId,
           sender: null,
           sendType: "admin",
-          content: chat?.department?.messages?.chatClosingMessage || `Chat archived ${adminDetails?.fullName ? "by" + adminDetails?.fullName : ""}`,
+          content: chat?.department?.messages?.chatClosingMessage || `This conversation has ended, thank you for contacting Methaq Takaful Insuance ${chat?.department?.name ? chat?.department?.name : ""}. We hope we were able to serve you`,
           attachments: [],
           timestamp: new Date(),
           receiver: chat?.customerId?.toString(),

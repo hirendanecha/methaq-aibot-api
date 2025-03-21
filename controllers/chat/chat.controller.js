@@ -256,6 +256,8 @@ const closeChatController = async (req, res) => {
     if (!chat) {
       return res.status(404).json({ error: "Chat not found" });
     }
+    console.log(chat, "chatdf");
+
     const updatedChat = await ChatModel.findOneAndUpdate(
       { _id: chat?._id },
       {
@@ -275,7 +277,7 @@ const closeChatController = async (req, res) => {
       content: chat?.department?.messages?.chatClosingMessage || `Chat closed by user`,
       attachments: [],
       timestamp: new Date(),
-      receiver: chat?.customerId?.toString(),
+      receiver: chat?.customerId?._id?.toString(),
       receiverType: "user",
       messageType: "tooltip"
     }
@@ -920,7 +922,7 @@ const whatsappMessages = async (req, res) => {
           //console.log(assistantMessage, "messageSendermessageSender");
 
           if (response?.interactiveMsg && response?.interactivePayload) {
-            await sendWhatsAppMessage(
+            response?.finaloutput && await sendWhatsAppMessage(
               messageSender,
               "",
               messageID,
@@ -952,7 +954,7 @@ const whatsappMessages = async (req, res) => {
             response?.interactiveListButton &&
             response?.interactiveListPayload
           ) {
-            await sendWhatsAppMessage(
+            response?.finaloutput && await sendWhatsAppMessage(
               messageSender,
               "",
               messageID,
@@ -964,6 +966,22 @@ const whatsappMessages = async (req, res) => {
               messageID,
               response?.interactiveListPayload
             );
+            const intmessage = {
+              chatId: existingChat._id,
+              sender: null,
+              receiver: existingChat.customerId?.toString(),
+              sendType: "assistant",
+              receiverType: "user",
+              content: "Please select one of the following options:",
+              messageType: "interective",
+              messageOptions: response?.interactiveListPayload?.action?.buttons?.map(
+                (btn) => ({
+                  label: btn.title,
+                  value: department.depId,
+                })
+              ),
+            };
+            await sendMessageToAdmins(socketObj, intmessage, null);
           } else {
             const mess = {
               chatId: existingChat?._id,
@@ -991,185 +1009,184 @@ const whatsappMessages = async (req, res) => {
         console.log(message, "message in interactive");
         const messageReplayType = message?.interactive?.type;
 
-        if (messageReplayType === "button_reply") {
-          const answer = message?.interactive?.button_reply?.id;
+        // if (messageReplayType === "button_reply") {
+        //   const answer = message?.interactive?.button_reply?.id;
 
-          if (["yes_option", "main_menu_option"].includes(answer)) {
-            const isDepartmentSelected =
-              await sendInterectiveMessageConfirmation(
-                socketObj,
-                existingChat,
-                messageSender,
-                messageID,
-                true
-              );
-          }
-          return res.status(200).send("Message processed");
-        } else {
-          const answer = message?.interactive?.list_reply?.id;
-          console.log(answer, "dffgdfgdgfg");
-          if (["1", "2", "3", "4", "5"].includes(answer)) {
-            const departmentDetails = await DepartmentModel.findOne({
-              depId: answer,
-            });
+        //   if (["yes_option", "main_menu_option"].includes(answer)) {
+        //     const isDepartmentSelected =
+        //       await sendInterectiveMessageConfirmation(
+        //         socketObj,
+        //         existingChat,
+        //         messageSender,
+        //         messageID,
+        //         true
+        //       );
+        //   }
+        //   return res.status(200).send("Message processed");
+        // } else {
+        const answer = message?.interactive?.list_reply?.id || message?.interactive?.button_reply?.id;
+        console.log(answer, "dffgdfgdgfg");
+        if (["1", "2", "3", "4", "5"].includes(answer)) {
+          const departmentDetails = await DepartmentModel.findOne({
+            depId: answer,
+          });
 
-            departmentSession = existingChat?.currentSessionId;
-            existingChat = await ChatModel.findOneAndUpdate(
-              { _id: existingChat._id },
-              {
-                department: departmentDetails?._id,
-                depId: departmentDetails?.depId,
-              },
-              { new: true }
-            ).populate("department");
-            const mess1 = {
-              chatId: existingChat?._id,
-              wpId: message?.id,
-              sender: existingChat?.customerId?.toString(),
-              receiver: null,
-              sendType: "user",
-              receiverType: "assistant",
-              messageType: "text",
-              content: `${message?.interactive?.list_reply?.title}\n${
-                message?.interactive?.list_reply?.description || ""
+          departmentSession = existingChat?.currentSessionId;
+          existingChat = await ChatModel.findOneAndUpdate(
+            { _id: existingChat._id },
+            {
+              department: departmentDetails?._id,
+              depId: departmentDetails?.depId,
+            },
+            { new: true }
+          ).populate("department");
+          const mess1 = {
+            chatId: existingChat?._id,
+            wpId: message?.id,
+            sender: existingChat?.customerId?.toString(),
+            receiver: null,
+            sendType: "user",
+            receiverType: "assistant",
+            messageType: "text",
+            content: `${message?.interactive?.list_reply?.title}\n${message?.interactive?.list_reply?.description || ""
               }`,
-            };
-            sendMessageToAdmins(
-              socketObj,
-              mess1,
-              existingChat?.department?._id
-            );
-            const mess2 = {
-              chatId: existingChat?._id,
-              sender: null,
-              receiver: null,
-              sendType: "assistant",
-              receiverType: "admin",
-              messageType: "tooltip",
-              content: `Chat is transferred to ${message?.interactive?.list_reply?.title} department`,
-            };
-            sendMessageToAdmins(
-              socketObj,
-              mess2,
-              existingChat?.department?._id
-            );
-          }
-          // const isAvailable = await checkDepartmentAvailability(
-          //   socketObj,
-          //   existingChat,
-          //   messageSender
-          // );
-          // console.log(isAvailable, "isAvailable in interactive");
+          };
+          sendMessageToAdmins(
+            socketObj,
+            mess1,
+            existingChat?.department?._id
+          );
+          const mess2 = {
+            chatId: existingChat?._id,
+            sender: null,
+            receiver: null,
+            sendType: "assistant",
+            receiverType: "admin",
+            messageType: "tooltip",
+            content: `Chat is transferred to ${message?.interactive?.list_reply?.title} department`,
+          };
+          sendMessageToAdmins(
+            socketObj,
+            mess2,
+            existingChat?.department?._id
+          );
+        }
+        // const isAvailable = await checkDepartmentAvailability(
+        //   socketObj,
+        //   existingChat,
+        //   messageSender
+        // );
+        // console.log(isAvailable, "isAvailable in interactive");
 
-          // if (!isAvailable) {
-          //   return res.status(200).send("Message processed");
-          // }
-          //console.log(existingChat, "existingChat123456");
+        // if (!isAvailable) {
+        //   return res.status(200).send("Message processed");
+        // }
+        //console.log(existingChat, "existingChat123456");
 
-          if (!existingChat?.isHuman) {
-            const userInput = message?.interactive?.list_reply?.title;
-            // const userInput = ;
-            const aiResponse = await continueChat(
-              existingChat.currentSessionId,
-              userInput
-            );
-            const userInputmessage = aiResponse?.finaloutput || "";
-            const mess2 = {
-              chatId: existingChat._id,
-              sender: null,
-              receiver: existingChat?.customerId?.toString(),
-              sendType: "assistant",
-              receiverType: "user",
-              content: userInputmessage,
-            };
-            sendMessageToAdmins(
-              socketObj,
-              mess2,
-              existingChat?.department?._id
-            );
-            console.log(aiResponse, "aiResponsesfsf");
-            if (aiResponse?.interactiveMsg && aiResponse?.interactivePayload) {
-              if (aiResponse?.finaloutput) {
-                await sendWhatsAppMessage(
-                  messageSender,
-                  undefined,
-                  messageID,
-                  displayPhoneNumber,
-                  aiResponse?.finaloutput
-                );
-              }
-
-              sendInteractiveMessage(
-                messageSender,
-                messageID,
-                aiResponse?.interactivePayload
-              );
-            } else {
+        if (!existingChat?.isHuman) {
+          const userInput = message?.interactive?.list_reply?.title || message?.interactive?.button_reply?.title;
+          // const userInput = ;
+          const aiResponse = await continueChat(
+            existingChat.currentSessionId,
+            userInput
+          );
+          const userInputmessage = aiResponse?.finaloutput || "";
+          const mess2 = {
+            chatId: existingChat._id,
+            sender: null,
+            receiver: existingChat?.customerId?.toString(),
+            sendType: "assistant",
+            receiverType: "user",
+            content: userInputmessage,
+          };
+          sendMessageToAdmins(
+            socketObj,
+            mess2,
+            existingChat?.department?._id
+          );
+          console.log(aiResponse, "aiResponsesfsf");
+          if (aiResponse?.interactiveMsg && aiResponse?.interactivePayload) {
+            if (aiResponse?.finaloutput) {
               await sendWhatsAppMessage(
                 messageSender,
                 undefined,
                 messageID,
                 displayPhoneNumber,
-                userInputmessage
+                aiResponse?.finaloutput
               );
             }
 
-            // const embeddings = new OpenAIEmbeddings({
-            //   openAIApiKey: process.env.OPENAI_API_KEY,
-            // });
-            // const index = pinecone.Index(environment.pinecone.indexName);
-            // const vectorStore = await PineconeStore.fromExistingIndex(
-            //   embeddings,
-            //   {
-            //     //@ts-ignore
-            //     pineconeIndex: index,
-            //   }
-            // );
-
-            // const results = await vectorStore.similaritySearch(userInput, 5);
-            // const results = await vectorStore.similaritySearch(
-            //   (query = userInput),
-            //   (k = 5),
-            //   (filter = {
-            //     departmentName: { $eq: existingChat?.department?.name },
-            //   }),
-            //   (include_metadata = true)
-            // );
-            //console.log(results, "resilrrfsgd");
-
-            // let context = results.map((r) => r.pageContent).join("\n\n");
-            // const response = await generateAIResponse(
-            //   context,
-            //   userInput,
-            //   existingChat
-            // );
-            // const response = await handleUserMessage(
-            //   departmentThread,
-            //   userInput,
-            //   existingChat?.department?.assistantDetails?.id,
-            //   null,
-            //   null,
-            //   existingChat?.department?.prompt
-            // );
-            // console.log(response, "messageSendermessageSender");
-            // const mess = {
-            //   chatId: existingChat?._id,
-            //   sender: null,
-            //   sendType: "assistant",
-            //   content: response,
-            //   receiver: existingChat?.customerId?.toString(),
-            //   receiverType: "user",
-            // };
-            // sendMessageToAdmins(socketObj, mess, existingChat?.department?._id);
-            // await sendWhatsAppMessage(
-            //   messageSender,
-            //   undefined,
-            //   messageID,
-            //   displayPhoneNumber,
-            //   response
-            // );
+            sendInteractiveMessage(
+              messageSender,
+              messageID,
+              aiResponse?.interactivePayload
+            );
+          } else {
+            await sendWhatsAppMessage(
+              messageSender,
+              undefined,
+              messageID,
+              displayPhoneNumber,
+              userInputmessage
+            );
           }
+
+          // const embeddings = new OpenAIEmbeddings({
+          //   openAIApiKey: process.env.OPENAI_API_KEY,
+          // });
+          // const index = pinecone.Index(environment.pinecone.indexName);
+          // const vectorStore = await PineconeStore.fromExistingIndex(
+          //   embeddings,
+          //   {
+          //     //@ts-ignore
+          //     pineconeIndex: index,
+          //   }
+          // );
+
+          // const results = await vectorStore.similaritySearch(userInput, 5);
+          // const results = await vectorStore.similaritySearch(
+          //   (query = userInput),
+          //   (k = 5),
+          //   (filter = {
+          //     departmentName: { $eq: existingChat?.department?.name },
+          //   }),
+          //   (include_metadata = true)
+          // );
+          //console.log(results, "resilrrfsgd");
+
+          // let context = results.map((r) => r.pageContent).join("\n\n");
+          // const response = await generateAIResponse(
+          //   context,
+          //   userInput,
+          //   existingChat
+          // );
+          // const response = await handleUserMessage(
+          //   departmentThread,
+          //   userInput,
+          //   existingChat?.department?.assistantDetails?.id,
+          //   null,
+          //   null,
+          //   existingChat?.department?.prompt
+          // );
+          // console.log(response, "messageSendermessageSender");
+          // const mess = {
+          //   chatId: existingChat?._id,
+          //   sender: null,
+          //   sendType: "assistant",
+          //   content: response,
+          //   receiver: existingChat?.customerId?.toString(),
+          //   receiverType: "user",
+          // };
+          // sendMessageToAdmins(socketObj, mess, existingChat?.department?._id);
+          // await sendWhatsAppMessage(
+          //   messageSender,
+          //   undefined,
+          //   messageID,
+          //   displayPhoneNumber,
+          //   response
+          // );
         }
+        // }
       } else if (
         message?.type === "video" ||
         message?.type === "location" ||
