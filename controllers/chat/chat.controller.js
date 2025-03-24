@@ -1100,7 +1100,7 @@ const whatsappMessages = async (req, res) => {
             receiverType: "user",
             content: userInputmessage,
           };
-          sendMessageToAdmins(socketObj, mess2, existingChat?.department?._id);
+          userInputmessage&&sendMessageToAdmins(socketObj, mess2, existingChat?.department?._id);
           console.log(aiResponse, "aiResponsesfsf");
           if (aiResponse?.interactiveMsg && aiResponse?.interactivePayload) {
             if (aiResponse?.finaloutput) {
@@ -1122,14 +1122,14 @@ const whatsappMessages = async (req, res) => {
             aiResponse?.interactiveListButton &&
             aiResponse?.interactiveListPayload
           ) {
-            // aiResponse?.finaloutput &&
-            //   (await sendWhatsAppMessage(
-            //     messageSender,
-            //     "",
-            //     messageID,
-            //     "",
-            //     aiResponse?.finaloutput
-            //   ));
+            aiResponse?.finaloutput &&
+              (await sendWhatsAppMessage(
+                messageSender,
+                "",
+                messageID,
+                "",
+                aiResponse?.finaloutput
+              ));
             await sendListMessage(
               messageSender,
               messageID,
