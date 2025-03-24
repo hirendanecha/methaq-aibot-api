@@ -1122,14 +1122,14 @@ const whatsappMessages = async (req, res) => {
             aiResponse?.interactiveListButton &&
             aiResponse?.interactiveListPayload
           ) {
-            aiResponse?.finaloutput &&
-              (await sendWhatsAppMessage(
-                messageSender,
-                "",
-                messageID,
-                "",
-                aiResponse?.finaloutput
-              ));
+            // aiResponse?.finaloutput &&
+            //   (await sendWhatsAppMessage(
+            //     messageSender,
+            //     "",
+            //     messageID,
+            //     "",
+            //     aiResponse?.finaloutput
+            //   ));
             await sendListMessage(
               messageSender,
               messageID,
