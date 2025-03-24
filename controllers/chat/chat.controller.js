@@ -1146,8 +1146,8 @@ const whatsappMessages = async (req, res) => {
               messageOptions:
                 aiResponse?.interactiveListPayload?.action?.buttons?.map(
                   (btn) => ({
-                    label: btn.title,
-                    value: department.depId,
+                    label: btn.reply.title,
+                    value: btn.reply.id,
                   })
                 ),
             };
