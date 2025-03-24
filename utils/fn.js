@@ -275,11 +275,14 @@ exports.sendMessageToAdmins = async (socketObj, message, department) => {
   try {
     const newMessage = new MessageModel(message);
     const latestMess = await newMessage.save();
+    const conditions = [
+      { role: { $in: ["Admin", "Supervisor"] } },
+    ]
+    if(department){
+      conditions.push({ department: department })
+    }
     const receivers = await UserModel.find({
-      $or: [
-        { role: { $in: ["Admin", "Supervisor"] } },
-        { department: department },
-      ],
+      $or: conditions,
     }).lean();
     const updatedChat = await ChatModel.findOneAndUpdate(
       { _id: message?.chatId },

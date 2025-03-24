@@ -554,7 +554,7 @@ const whatsappMessages = async (req, res) => {
             })
           ),
         };
-        await sendMessageToAdmins(socketObj, intmessage, null);
+        await sendMessageToAdmins(socketObj, intmessage, newChat?.department);
       }
     } else {
       //console.log(message, "message for checking");
@@ -760,7 +760,7 @@ const whatsappMessages = async (req, res) => {
                   })
                 ),
               };
-              sendMessageToAdmins(socketObj, intmessage, null);
+              sendMessageToAdmins(socketObj, intmessage, existingChat?.department?._id);
 
               await sendInteractiveMessage(
                 messageSender,
@@ -951,7 +951,7 @@ const whatsappMessages = async (req, res) => {
                 })
               ),
             };
-            await sendMessageToAdmins(socketObj, intmessage, null);
+            await sendMessageToAdmins(socketObj, intmessage, existingChat?.department?._id);
           } else if (
             response?.interactiveListButton &&
             response?.interactiveListPayload
@@ -985,7 +985,7 @@ const whatsappMessages = async (req, res) => {
                   })
                 ),
             };
-            await sendMessageToAdmins(socketObj, intmessage, null);
+            await sendMessageToAdmins(socketObj, intmessage, existingChat?.department?._id);
           } else {
             const mess = {
               chatId: existingChat?._id,
@@ -1151,7 +1151,7 @@ const whatsappMessages = async (req, res) => {
                   })
                 ),
             };
-            await sendMessageToAdmins(socketObj, intmessage, null);
+            await sendMessageToAdmins(socketObj, intmessage, existingChat?.department?._id);
           } else {
             await sendWhatsAppMessage(
               messageSender,
