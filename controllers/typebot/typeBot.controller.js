@@ -1,4 +1,14 @@
 const axios = require("axios");
+const { ChatOpenAI } = require("@langchain/openai");
+
+const openai = new ChatOpenAI({
+  openAIApiKey: process.env.OPENAI_API_KEY,
+  modelName: "gpt-4o-mini", // Or gpt-3.5-turbo, gpt-4-0314, or your preferred model.
+  temperature: 0.0, // Set temperature low for more deterministic results.
+  timeout: 15000,
+  maxRetries: 3,
+  // cache: true, // Consider carefully if you want caching; it can lead to stale results.
+});
 
 const formatRichText = (richText) => {
   return richText
@@ -93,6 +103,37 @@ const startChat = async (botId, message) => {
   }
 };
 
+async function translateTextDynamic(inputText, finalOutput) {
+  // Detect language from finalOutput
+  //console.log(finalOutput, "translated");
+  const prompt = `
+    You are an expert translator with a strong focus on language detection and precise translation. 
+
+    **Task:**
+    1. Analyze the provided dataset carefully and identify the language of the **content field**.
+    2. Translate the given **input text** into the detected language, ensuring that the meaning remains unchanged.
+    3. If the language is **English**, return the input text as-is.
+    4. If the language is **not English**, provide the translated text without any extra formatting or information.
+
+    ✅ **User Dataset (Focus only on content field):**
+    ${JSON.stringify(finalOutput, null, 2)}
+
+    ✅ **Input Text to Translate:**
+    ${inputText}
+
+    ⚠️ **Strict Rules:**
+    - Return **only** the translated text without any explanations, variables, or extra formatting.
+    - Ensure high accuracy in language detection and translation.
+  `;
+
+  const response = await openai.invoke([{ role: "user", content: prompt }]);
+  console.log(response, "0303040");
+
+  // // Translate inputText to detected language
+
+  return response.content; // Return only the translated sentence
+}
+
 const continueChat = async (sessionId, message, urls = null) => {
   let interactiveMsg = false;
   let interactiveListButton = false;
@@ -124,29 +165,49 @@ const continueChat = async (sessionId, message, urls = null) => {
     // new thing
 
     const finaloutput = getFormattedMessage(response?.data?.messages);
-    console.log("finaloutput", finaloutput);
+    console.log("finaloutput333", finaloutput);
     let finaloutputDisplay =
       finaloutput.length > 60 ? finaloutput.slice(0, 50) + "..." : finaloutput;
     ///
-    const messageText =
-      response?.data?.messages?.[0]?.content?.richText?.[0]?.children?.[0]
-        ?.children?.[0]?.text;
+
+    // const messageText =
+    //   response?.data?.messages?.[0]?.content?.richText?.[0]?.children?.[0]
+    //     ?.children?.[0]?.text;
     // console.log("Extracted text:", messageText);
     console.log(response?.data?.input?.items, "response?.data?.input?.items");
-    if (response?.data?.input?.items && response?.data.input.items.length > 0) {
-      if (response?.data.input.items.length === 2) {
+    if (
+      response &&
+      response.data &&
+      response.data.input &&
+      response?.data?.input?.items &&
+      response?.data?.input?.items?.length > 0
+    ) {
+      if (response?.data?.input?.items?.length === 2) {
+        console.log(response?.data?.input.items, "iirirt");
+        let payload1 = response?.data?.input.items;
+        const result1 = await translateTextDynamic(
+          "Choose an option",
+          payload1
+        );
+        //console.log(result1, "ppppppppppp");
+
+        const result2 = await translateTextDynamic(
+          "Please select one of the options below:",
+          response?.data?.input.items
+        );
+
         interactiveListButton = true;
         interactiveListPayload = {
           type: "button",
           header: {
             type: "text",
-            text: "Choose an option", // Example header text
+            text: result1 ? result1 : "Choose an option", // Example header text
           },
           body: {
-            text: "Please select one of the options below:", // Example body text
+            text: result2 ? result2 : "Please select one of the options below:", // Example body text
           },
           action: {
-            buttons: response?.data.input.items.map((item, index) => ({
+            buttons: response?.data?.input.items.map((item, index) => ({
               type: "reply",
               reply: {
                 id: `option_${index}`,
@@ -159,6 +220,10 @@ const continueChat = async (sessionId, message, urls = null) => {
         interactiveMsg = true;
 
         // Extracting the first message text if available
+        const result2 = await translateTextDynamic(
+          "Please select one of the options below:",
+          response?.data?.input.items
+        );
 
         interactivePayload = {
           options: response?.data.input.items?.map((item) => {
@@ -173,13 +238,21 @@ const continueChat = async (sessionId, message, urls = null) => {
             };
           }),
           headerText: " ",
-          bodyText: "Please select one of the following options:",
+          bodyText: result2
+            ? result2
+            : "Please select one of the following options:",
           actionButtonText: "Select",
           actionSectionTitle: "Available Choices",
         };
       }
     }
-    console.log(interactiveMsg, interactivePayload,interactiveListButton, interactiveListPayload,"interactive");
+    console.log(
+      interactiveMsg,
+      interactivePayload,
+      interactiveListButton,
+      interactiveListPayload,
+      "interactive"
+    );
     return {
       finaloutput,
       interactiveMsg,
