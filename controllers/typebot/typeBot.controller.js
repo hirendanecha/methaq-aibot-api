@@ -106,26 +106,88 @@ const startChat = async (botId, message) => {
 async function translateTextDynamic(inputText, finalOutput) {
   // Detect language from finalOutput
   //console.log(finalOutput, "translated");
+  // const prompt = `
+  //   You are an expert translator with a strong focus on language detection and precise translation.
+
+  //   **Task:**
+  //   1. Analyze the provided dataset carefully and identify the language of the **content field**.
+  //   2. Translate the given **input text** into the detected language, ensuring that the meaning remains unchanged.
+  //   3. If the language is **English**, return the input text as-is.
+  //   4. If the language is **not English**, provide the translated text without any extra formatting or information.
+
+  //   ✅ **User Dataset (Focus only on content field):**
+  //   ${JSON.stringify(finalOutput, null, 2)}
+
+  //   ✅ **Input Text to Translate:**
+  //   ${inputText}
+
+  //   ⚠️ **Strict Rules:**
+  //   - Return **only** the translated text without any explanations, variables, or extra formatting.
+  //   - Ensure high accuracy in language detection and translation.
+  // `;
   const prompt = `
-    You are an expert translator with a strong focus on language detection and precise translation. 
-
-    **Task:**
-    1. Analyze the provided dataset carefully and identify the language of the **content field**.
-    2. Translate the given **input text** into the detected language, ensuring that the meaning remains unchanged.
-    3. If the language is **English**, return the input text as-is.
-    4. If the language is **not English**, provide the translated text without any extra formatting or information.
-
-    ✅ **User Dataset (Focus only on content field):**
-    ${JSON.stringify(finalOutput, null, 2)}
-
-    ✅ **Input Text to Translate:**
-    ${inputText}
-
-    ⚠️ **Strict Rules:**
-    - Return **only** the translated text without any explanations, variables, or extra formatting.
-    - Ensure high accuracy in language detection and translation.
+  You are an expert translator with a strong focus on language detection and precise translation.
+  
+  **Task:**
+  1. Analyze the provided dataset carefully and identify the language of the **content** field from each item in the dataset.
+  2. Translate the given **inputText** into the detected language, ensuring that the meaning remains unchanged.
+  3. If the detected language is **English**, return the inputText as-is.
+  4. If the detected language is **not English**, translate the inputText accurately without altering its meaning.
+  
+  ✅ **User Dataset (Focus only on content field):**
+  ${JSON.stringify(finalOutput, null, 2)}
+  
+  ✅ **Input Text to Translate:**
+  ${inputText}
+  
+  ⚠️ **Strict Rules:**
+  - Return **only** the translated text with no additional formatting, explanations, or extra information.
+  - Do **not** return any JSON, variables, or unnecessary text.
+  - Ensure high accuracy in language detection and translation.
+  
+  🎯 **Example Dataset and Expected Output:**
+  
+  **Dataset:**
+  [
+    {
+      "id": "xag2zin6zxjlsg04q7hxtb7s",
+      "outgoingEdgeId": "uoziftew4byhim10vyynn44k",
+      "content": "تأمين جديد"
+    },
+    {
+      "id": "odtfsuwzcw53fqwo6w0ioak5",
+      "outgoingEdgeId": "zqp1a5ufrja0wcvokggwayol",
+      "content": "تجديد تأميني"
+    }
+  ]
+  
+  **Input Text:**
+  "Please select one of the following options:"
+  
+  ✅ **Detected Language:** Arabic
+  
+  ✅ **Output Translation:**
+  "يرجى اختيار أحد الخيارات التالية:"
+  
+  ---
+  
+  **Dataset:**
+  [
+    {
+      "id": "abc123",
+      "outgoingEdgeId": "xyz456",
+      "content": "Welcome to the portal"
+    }
+  ]
+  
+  **Input Text:**
+  "Please select one of the following options:"
+  
+  ✅ **Detected Language:** English
+  
+  ✅ **Output Translation:**
+  "Please select one of the following options:"
   `;
-
   const response = await openai.invoke([{ role: "user", content: prompt }]);
   console.log(response, "0303040");
 
@@ -189,7 +251,7 @@ const continueChat = async (sessionId, message, urls = null) => {
           "Choose an option",
           payload1
         );
-        //console.log(result1, "ppppppppppp");
+        console.log(result1, "ppppppppppp");
 
         const result2 = await translateTextDynamic(
           "Please select one of the options below:",
@@ -201,7 +263,7 @@ const continueChat = async (sessionId, message, urls = null) => {
           type: "button",
           header: {
             type: "text",
-            text: result1 ? result1 : "Choose an option", // Example header text
+            text: "  ", // Example header text
           },
           body: {
             text: result2 ? result2 : "Please select one of the options below:", // Example body text
