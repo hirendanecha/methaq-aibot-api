@@ -189,7 +189,7 @@ async function translateTextDynamic(inputText, finalOutput) {
   "Please select one of the following options:"
   `;
   const response = await openai.invoke([{ role: "user", content: prompt }]);
-  console.log(response, "0303040");
+ // console.log(response, "0303040");
 
   // // Translate inputText to detected language
 
