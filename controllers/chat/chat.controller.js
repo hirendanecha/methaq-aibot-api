@@ -331,6 +331,18 @@ const assignAgentController = async (req, res) => {
         new: true,
       }
     );
+    const mess2 = {
+      chatId: chatDetails?._id,
+      sender: null,
+      receiver: null,
+      sendType: "assistant",
+      receiverType: "admin",
+      messageType: "tooltip",
+      content: `Chat is transferred to ${assigneeAgent?.fullName}`,
+    };
+
+    //console.log(mess2,"tttttttttttt")
+    sendMessageToAdmins(socketObj, mess2, chatDetails?.department);
     //console.log(updatedChat, "updatedChatupdatedChat");
 
     return res
