@@ -105,7 +105,7 @@ const startChat = async (botId, message) => {
 
 async function translateTextDynamic(inputText, finalOutput) {
   // Detect language from finalOutput
-  console.log(inputText, "translated");
+  //console.log(finalOutput, "translated");
   const prompt = `
     You are an expert translator with a strong focus on language detection and precise translation. 
 
@@ -127,9 +127,9 @@ async function translateTextDynamic(inputText, finalOutput) {
   `;
 
   const response = await openai.invoke([{ role: "user", content: prompt }]);
-  console.log(response.content, "0303040");
+  console.log(response, "0303040");
 
-  // Translate inputText to detected language
+  // // Translate inputText to detected language
 
   return response.content; // Return only the translated sentence
 }
@@ -170,18 +170,26 @@ const continueChat = async (sessionId, message, urls = null) => {
       finaloutput.length > 60 ? finaloutput.slice(0, 50) + "..." : finaloutput;
     ///
 
-    const messageText =
-      response?.data?.messages?.[0]?.content?.richText?.[0]?.children?.[0]
-        ?.children?.[0]?.text;
+    // const messageText =
+    //   response?.data?.messages?.[0]?.content?.richText?.[0]?.children?.[0]
+    //     ?.children?.[0]?.text;
     // console.log("Extracted text:", messageText);
     console.log(response?.data?.input?.items, "response?.data?.input?.items");
-    if (response?.data?.input?.items && response?.data.input.items.length > 0) {
-      if (response?.data?.input?.items.length === 2) {
+    if (
+      response &&
+      response.data &&
+      response.data.input &&
+      response?.data?.input?.items &&
+      response?.data?.input?.items?.length > 0
+    ) {
+      if (response?.data?.input?.items?.length === 2) {
+        console.log(response?.data?.input.items, "iirirt");
+        let payload1 = response?.data?.input.items;
         const result1 = await translateTextDynamic(
           "Choose an option",
-          response?.data?.input.items
+          payload1
         );
-        console.log(result1, "ppppppppppp");
+        //console.log(result1, "ppppppppppp");
 
         const result2 = await translateTextDynamic(
           "Please select one of the options below:",
@@ -193,10 +201,10 @@ const continueChat = async (sessionId, message, urls = null) => {
           type: "button",
           header: {
             type: "text",
-            text: result1 || "Choose an option", // Example header text
+            text: result1 ? result1 : "Choose an option", // Example header text
           },
           body: {
-            text: result2 || "Please select one of the options below:", // Example body text
+            text: result2 ? result2 : "Please select one of the options below:", // Example body text
           },
           action: {
             buttons: response?.data?.input.items.map((item, index) => ({
@@ -230,7 +238,9 @@ const continueChat = async (sessionId, message, urls = null) => {
             };
           }),
           headerText: " ",
-          bodyText: result2 || "Please select one of the following options:",
+          bodyText: result2
+            ? result2
+            : "Please select one of the following options:",
           actionButtonText: "Select",
           actionSectionTitle: "Available Choices",
         };
