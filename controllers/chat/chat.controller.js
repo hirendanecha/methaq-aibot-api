@@ -295,7 +295,9 @@ const closeChatController = async (req, res) => {
 
     return res.status(200).json({
       updatedChat,
-      message: chat?.department?.messages?.chatClosingMessage || `This conversation has ended, thank you for contacting Methaq Takaful Insuance. We hope we were able to serve you`,
+      message:
+        chat?.department?.messages?.chatClosingMessage ||
+        `This conversation has ended, thank you for contacting Methaq Takaful Insuance. We hope we were able to serve you`,
     });
   } catch (error) {
     console.error("Error closing chat:", error.message);
@@ -760,12 +762,54 @@ const whatsappMessages = async (req, res) => {
                   })
                 ),
               };
-              sendMessageToAdmins(socketObj, intmessage, existingChat?.department?._id);
+              sendMessageToAdmins(
+                socketObj,
+                intmessage,
+                existingChat?.department?._id
+              );
 
               await sendInteractiveMessage(
                 messageSender,
                 messageID,
                 aiResponse.interactivePayload
+              );
+            } else if (
+              aiResponse?.interactiveListButton &&
+              aiResponse?.interactiveListPayload
+            ) {
+              // aiResponse?.finaloutput &&
+              //   (await sendWhatsAppMessage(
+              //     messageSender,
+              //     "",
+              //     messageID,
+              //     "",
+              //     aiResponse?.finaloutput
+              //   ));
+              await sendListMessage(
+                messageSender,
+                messageID,
+                aiResponse?.interactiveListPayload
+              );
+              const intmessage = {
+                chatId: existingChat._id,
+                sender: null,
+                receiver: existingChat.customerId?.toString(),
+                sendType: "assistant",
+                receiverType: "user",
+                content: "Please select one of the following options:",
+                messageType: "interective",
+                messageOptions:
+                  aiResponse?.interactiveListPayload?.action?.buttons?.map(
+                    (btn) => ({
+                      label: btn.reply.title,
+                      value: btn.reply.id,
+                    })
+                  ),
+              };
+              await sendMessageToAdmins(
+                socketObj,
+                intmessage,
+                existingChat?.department?._id
               );
             }
             images[existingChat._id] = [];
@@ -951,7 +995,11 @@ const whatsappMessages = async (req, res) => {
                 })
               ),
             };
-            await sendMessageToAdmins(socketObj, intmessage, existingChat?.department?._id);
+            await sendMessageToAdmins(
+              socketObj,
+              intmessage,
+              existingChat?.department?._id
+            );
           } else if (
             response?.interactiveListButton &&
             response?.interactiveListPayload
@@ -1100,7 +1148,12 @@ const whatsappMessages = async (req, res) => {
             receiverType: "user",
             content: userInputmessage,
           };
-          userInputmessage&&sendMessageToAdmins(socketObj, mess2, existingChat?.department?._id);
+          userInputmessage &&
+            sendMessageToAdmins(
+              socketObj,
+              mess2,
+              existingChat?.department?._id
+            );
           console.log(aiResponse, "aiResponsesfsf");
           if (aiResponse?.interactiveMsg && aiResponse?.interactivePayload) {
             if (aiResponse?.finaloutput) {
@@ -1151,7 +1204,11 @@ const whatsappMessages = async (req, res) => {
                   })
                 ),
             };
-            await sendMessageToAdmins(socketObj, intmessage, existingChat?.department?._id);
+            await sendMessageToAdmins(
+              socketObj,
+              intmessage,
+              existingChat?.department?._id
+            );
           } else {
             await sendWhatsAppMessage(
               messageSender,
