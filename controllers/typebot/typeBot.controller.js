@@ -272,7 +272,7 @@ const continueChat = async (sessionId, message, urls = null) => {
             buttons: response?.data?.input.items.map((item, index) => ({
               type: "reply",
               reply: {
-                id: `option_${index}`,
+                id: `${item.content}`,
                 title: item.content, // Use the item content as the button title
               },
             })),

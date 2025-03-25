@@ -581,6 +581,9 @@ const whatsappMessages = async (req, res) => {
         // oldSessionIds[message?.interactive?.list_reply?.id] = sessionId;
       }
 
+
+      console.log(message.type, "message.type");
+      
       if (message.type === "image" || message.type === "document") {
         const mediaID = message.image?.id || message.document?.id;
 
@@ -1134,6 +1137,20 @@ const whatsappMessages = async (req, res) => {
           const userInput =
             message?.interactive?.list_reply?.title ||
             message?.interactive?.button_reply?.title;
+            const mess6 = {
+              chatId: existingChat._id,
+              sender: null,
+              receiver: existingChat?.customerId?.toString(),
+              sendType: "user",
+              receiverType: "admin",
+              content: userInput,
+            };
+            userInput &&
+              sendMessageToAdmins(
+                socketObj,
+                mess6,
+                existingChat?.department?._id
+              );
           // const userInput = ;
           const aiResponse = await continueChat(
             existingChat.currentSessionId,
