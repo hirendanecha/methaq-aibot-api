@@ -3,12 +3,24 @@ const ChatModel = require("../models/chat.model");
 const CustomerModel = require("../models/customer.model");
 const MessageModel = require("../models/message.model");
 const UserModel = require("../models/user.model");
-const { sendWhatsAppMessage, sendImageByUrl, sendDocumentByUrl } = require("../services/whatsaap.service");
+const {
+  sendWhatsAppMessage,
+  sendImageByUrl,
+  sendDocumentByUrl,
+} = require("../services/whatsaap.service");
 const environment = require("../utils/environment");
 const jwt = require("jsonwebtoken");
-const { getAssigneeAgent, sendMessageToAdmins, isImageType } = require("../utils/fn");
+const {
+  getAssigneeAgent,
+  sendMessageToAdmins,
+  isImageType,
+  sendMessageToUser,
+} = require("../utils/fn");
 const { default: mongoose } = require("mongoose");
-const { startChat, continueChat } = require("../controllers/typebot/typeBot.controller");
+const {
+  startChat,
+  continueChat,
+} = require("../controllers/typebot/typeBot.controller");
 
 let logger = console;
 const socketObj = {};
@@ -76,21 +88,36 @@ socketObj.config = (server) => {
       if (typeof cb === "function")
         cb({
           room: params.cust_id,
-          message: "Room joined successfully"
+          message: "Room joined successfully",
         });
       logger.info("joinroom", {
         ...params,
-      })
-    })
+      });
+    });
 
     socket.on("joinChat", async (params, cb) => {
       const customer = new CustomerModel({
-        isGuestUser: true
+        isGuestUser: true,
       });
       const updatedCus = await customer.save();
+      console.log("joinchat", updatedCus);
+      // const chat = new ChatModel({
+      //   customerId: updatedCus._id,
+      // })
+
+      const startChatResponse = await startChat("");
+
+      const sessionId = startChatResponse?.response?.data?.sessionId;
+
+      console.log(sessionId, "pp88");
+      const secMess = await continueChat(sessionId, sessionId);
       const chat = new ChatModel({
         customerId: updatedCus._id,
-      })
+        currentSessionId: sessionId,
+        // sessionId: sessionId,
+        // threadId: threadId,
+        source: "bot",
+      });
       const updatedChat = await chat.save();
 
       socket.join(updatedChat._id);
@@ -105,17 +132,20 @@ socketObj.config = (server) => {
       if (typeof cb === "function")
         cb({
           room: updatedChat._id,
-          cust_id: updatedCus._id
+          cust_id: updatedCus._id,
         });
     });
-    socket.on('getchatdetails', async (params, cb) => {
+    socket.on("getchatdetails", async (params, cb) => {
       try {
-        const { chatId } = typeof params === "string" ? JSON.parse(params) : params;
-        const chat = await ChatModel.findById(chatId).populate('adminId customerId').lean();
+        const { chatId } =
+          typeof params === "string" ? JSON.parse(params) : params;
+        const chat = await ChatModel.findById(chatId)
+          .populate("adminId customerId")
+          .lean();
         if (typeof cb === "function")
           cb({
             success: true,
-            chat
+            chat,
           });
       } catch (error) {
         console.log(error);
@@ -125,24 +155,201 @@ socketObj.config = (server) => {
             message: error?.message,
           });
       }
-    })
+    });
     socket.on("save-message", async (params) => {
       try {
-        console.log(socket.user);
-
         params = typeof params === "string" ? JSON.parse(params) : params;
         const chatDetails = await ChatModel.findById(params?.chatId);
+        let sessionId = chatDetails.currentSessionId;
+        if (!sessionId) {
+          const startChatResponse = await startChat("");
+          sessionId = startChatResponse?.response?.data?.sessionId;
+          const secMess = await continueChat(sessionId, sessionId);
+          const updatedChat = await ChatModel.findOneAndUpdate(
+            { _id: params?.chatId },
+            { currentSessionId: sessionId },
+            { new: true }
+          );
+        }
+        const userInput = params.content;
+        const attachments =
+          params?.attachments?.reduce((acc, curr) => acc.concat(curr), []) ||
+          [];
+
+        //console.log(attachments, "params?.attachments");
         const mess = {
           chatId: params.chatId,
           sender: params.sender,
           sendType: params.sendType,
           content: params.content,
-          attachments: params?.attachments || [],
+          attachments: attachments || [],
           receiver: params?.receiver || null,
-          receiverType: params.receiverType
-        }
-        console.log(mess, "sadsdfsdffd");
+          receiverType: params.receiverType,
+        };
+
         await sendMessageToAdmins(socketObj, mess, chatDetails?.department);
+
+        console.log(attachments, "attachments646364634");
+        if (!chatDetails?.isHuman) {
+          if (attachments && attachments.length > 0) {
+            const response = await continueChat(sessionId, " ", attachments);
+            if (response.interactiveMsg && response.interactivePayload) {
+              if (response?.finaloutput) {
+                const mess2 = {
+                  chatId: chatDetails._id,
+                  sender: null,
+                  sendType: "assistant",
+                  content: response.finaloutput,
+                  attachments: [],
+                  receiver: chatDetails?.customerId || null,
+                  receiverType: "user",
+                };
+                await sendMessageToUser(socketObj, mess2);
+              }
+
+              const intmessage = {
+                chatId: chatDetails._id,
+                sender: null,
+                receiver: chatDetails.customerId,
+                sendType: "assistant",
+                receiverType: "user",
+                content: "Please select one of the following options:",
+                messageType: "interective",
+                messageOptions: response.interactivePayload?.options?.map(
+                  (department) => ({
+                    label: department.name,
+                    value: department.depId,
+                  })
+                ),
+              };
+              await sendMessageToUser(socketObj, intmessage);
+            } else if (
+              response?.interactiveListButton &&
+              response?.interactiveListPayload
+            ) {
+              if (response?.finaloutput) {
+                const mess2 = {
+                  chatId: chatDetails._id,
+                  sender: null,
+                  sendType: "assistant",
+                  content: response.finaloutput,
+                  attachments: [],
+                  receiver: chatDetails?.customerId || null,
+                  receiverType: "user",
+                };
+                await sendMessageToUser(socketObj, mess2);
+              }
+              const intmessage = {
+                chatId: chatDetails._id,
+                sender: null,
+                receiver: chatDetails.customerId?.toString(),
+                sendType: "assistant",
+                receiverType: "user",
+                content: "Please select one of the following options:",
+                messageType: "interective",
+                messageOptions:
+                  response?.interactiveListPayload?.action?.buttons?.map(
+                    (btn) => ({
+                      label: btn.reply.title,
+                      value: btn.reply.id,
+                    })
+                  ),
+              };
+              await sendMessageToUser(socketObj, intmessage);
+            } else {
+              const mess2 = {
+                chatId: chatDetails._id,
+                sender: null,
+                sendType: "assistant",
+                content: response?.finaloutput,
+                attachments: [],
+                receiver: chatDetails?.customerId || null,
+                receiverType: "user",
+              };
+              await sendMessageToUser(socketObj, mess2);
+            }
+          } else {
+            const response = await continueChat(sessionId, userInput);
+
+            if (response.interactiveMsg && response.interactivePayload) {
+              if (response?.finaloutput) {
+                const mess2 = {
+                  chatId: chatDetails._id,
+                  sender: null,
+                  sendType: "assistant",
+                  content: response.finaloutput,
+                  attachments: [],
+                  receiver: chatDetails?.customerId || null,
+                  receiverType: "user",
+                };
+                await sendMessageToUser(socketObj, mess2);
+              }
+
+              const intmessage = {
+                chatId: chatDetails._id,
+                sender: null,
+                receiver: chatDetails.customerId,
+                sendType: "assistant",
+                receiverType: "user",
+                content: "Please select one of the following options:",
+                messageType: "interective",
+                messageOptions: response.interactivePayload?.options?.map(
+                  (department) => ({
+                    label: department.name,
+                    value: department.depId,
+                  })
+                ),
+              };
+              await sendMessageToUser(socketObj, intmessage);
+            } else if (
+              response?.interactiveListButton &&
+              response?.interactiveListPayload
+            ) {
+              if (response?.finaloutput) {
+                const mess2 = {
+                  chatId: chatDetails._id,
+                  sender: null,
+                  sendType: "assistant",
+                  content: response.finaloutput,
+                  attachments: [],
+                  receiver: chatDetails?.customerId || null,
+                  receiverType: "user",
+                };
+                await sendMessageToUser(socketObj, mess2);
+              }
+              const intmessage = {
+                chatId: chatDetails._id,
+                sender: null,
+                receiver: chatDetails.customerId?.toString(),
+                sendType: "assistant",
+                receiverType: "user",
+                content: "Please select one of the following options:",
+                messageType: "interective",
+                messageOptions:
+                  response?.interactiveListPayload?.action?.buttons?.map(
+                    (btn) => ({
+                      label: btn.reply.title,
+                      value: btn.reply.id,
+                    })
+                  ),
+              };
+              await sendMessageToUser(socketObj, intmessage);
+            } else {
+              const mess2 = {
+                chatId: chatDetails._id,
+                sender: null,
+                sendType: "assistant",
+                content: response?.finaloutput,
+                attachments: [],
+                receiver: chatDetails?.customerId || null,
+                receiverType: "user",
+              };
+              await sendMessageToUser(socketObj, mess2);
+            }
+          }
+        }
+
+        // console.log(response.finaloutput, "finaloutput");
         if (typeof cb === "function")
           cb({
             success: true,
@@ -161,49 +368,73 @@ socketObj.config = (server) => {
 
     socket.on("transfer-bot", async (params, cb) => {
       params = typeof params === "string" ? JSON.parse(params) : params;
-      const chatDetails = await ChatModel.findById(params.chatId).populate('customerId').lean();
+      const chatDetails = await ChatModel.findById(params.chatId)
+        .populate("customerId")
+        .lean();
       console.log(chatDetails?.customerId, "chatDetails?.customerId");
       const mess = {
         chatId: chatDetails?._id,
         sender: null,
         sendType: "admin",
-        content: 'Chat is transferred to BOT',
+        content: "Chat is transferred to BOT",
         attachments: [],
         timestamp: new Date(),
         receiver: chatDetails?.customerId?._id?.toString(),
         receiverType: "user",
-        messageType: "tooltip"
-      }
-      const newMessage = new MessageModel(mess)
+        messageType: "tooltip",
+      };
+      const newMessage = new MessageModel(mess);
       const final = await newMessage.save();
       const startChatResponse = await startChat("");
       const sessionId = startChatResponse?.response?.data?.sessionId;
       const firstMess = await continueChat(sessionId, sessionId);
       // const secMess = await continueChat(sessionId, message.text?.body);
-      const updatedChat = await ChatModel.findOneAndUpdate({ _id: chatDetails?._id }, { latestMessage: final?._id, isHuman: false, adminId: null, currentSessionId: sessionId, department: null }, { new: true }).lean();
-      const receivers = await UserModel.find({ $or: [{ role: { $in: ["Admin", "Supervisor"] } }, { _id: { $in: [chatDetails?.customerId?._id?.toString()] } }] });
-      receivers.forEach(receiver => {
-        socketObj.io.to(receiver._id?.toString()).emit("update-chat", updatedChat);
-        socketObj.io.to(receiver._id?.toString()).emit("message", { ...updatedChat, latestMessage: final });
-      })
+      const updatedChat = await ChatModel.findOneAndUpdate(
+        { _id: chatDetails?._id },
+        {
+          latestMessage: final?._id,
+          isHuman: false,
+          adminId: null,
+          currentSessionId: sessionId,
+          department: null,
+        },
+        { new: true }
+      ).lean();
+      const receivers = await UserModel.find({
+        $or: [
+          { role: { $in: ["Admin", "Supervisor"] } },
+          { _id: { $in: [chatDetails?.customerId?._id?.toString()] } },
+        ],
+      });
+      receivers.forEach((receiver) => {
+        socketObj.io
+          .to(receiver._id?.toString())
+          .emit("update-chat", updatedChat);
+        socketObj.io
+          .to(receiver._id?.toString())
+          .emit("message", { ...updatedChat, latestMessage: final });
+      });
       if (typeof cb === "function")
         cb({
           success: true,
-          message: "Chat transfered to bot"
+          message: "Chat transfered to bot",
         });
-
-    })
+    });
 
     socket.on("get-messages", async (params, cb) => {
       params = typeof params === "string" ? JSON.parse(params) : params;
-      const messages = await MessageModel.find({ chatId: params.chatId }).sort({ timestamp: -1 }).skip(params.offset).limit(params.limit).lean();
+      const messages = await MessageModel.find({ chatId: params.chatId })
+        .sort({ timestamp: -1 })
+        .skip(params.offset)
+        .limit(params.limit)
+        .lean();
       console.log(messages, "messages");
 
       if (typeof cb === "function")
         cb({
           messages: messages,
         });
-    })
+    });
 
     socket.on("send-message", async (params, cb) => {
       console.log(params, typeof params, socket.user, "params");
@@ -217,18 +448,28 @@ socketObj.config = (server) => {
         attachments: params.attachments,
         timestamp: params?.timestamp || new Date(),
         receiver: params.receiver || null,
-        receiverType: "user"
-      }
-      const chatDetails = await ChatModel.findById(params.chatId).populate('customerId').lean();
-      const receivers = await UserModel.find({ $or: [{ role: { $in: ["Admin", "Supervisor"] } }, { _id: { $in: [params.receiver, params.sender] } }] }).lean();
-      const customers = await CustomerModel.find({ _id: { $in: [params.receiver, params.sender] } }).lean();
-      console.log(receivers, "receivers")
-      const newMessage = new MessageModel(mess)
+        receiverType: "user",
+      };
+
+      const chatDetails = await ChatModel.findById(params.chatId)
+        .populate("customerId")
+        .lean();
+      const receivers = await UserModel.find({
+        $or: [
+          { role: { $in: ["Admin", "Supervisor"] } },
+          { _id: { $in: [params.receiver, params.sender] } },
+        ],
+      }).lean();
+      const customers = await CustomerModel.find({
+        _id: { $in: [params.receiver, params.sender] },
+      }).lean();
+      console.log(receivers, "receivers");
+      const newMessage = new MessageModel(mess);
       const final = await newMessage.save();
       console.log(chatDetails?.adminId, "chatDetails?.adminId");
       if (!chatDetails?.adminId) {
-        const authHeader = socket.handshake.headers.authorization || '';
-        const token = (authHeader && authHeader.split(' ')[1]);
+        const authHeader = socket.handshake.headers.authorization || "";
+        const token = authHeader && authHeader.split(" ")[1];
         let decoded = jwt.decode(token);
         console.log(authHeader, "authHeaderauthHeader");
 
@@ -243,55 +484,110 @@ socketObj.config = (server) => {
           timestamp: new Date(),
           receiver: chatDetails?.customerId?._id?.toString(),
           receiverType: "user",
-          messageType: "tooltip"
-        }
-        const newMessage = new MessageModel(mess)
+          messageType: "tooltip",
+        };
+        const newMessage = new MessageModel(mess);
         const tooltipMess = await newMessage.save();
-        const updatedChat = await ChatModel.findOneAndUpdate({ _id: params.chatId }, { latestMessage: tooltipMess?._id, adminId: decoded?._id, isHuman: true }, { new: true }).populate('customerId').lean();
+        const updatedChat = await ChatModel.findOneAndUpdate(
+          { _id: params.chatId },
+          {
+            latestMessage: tooltipMess?._id,
+            adminId: decoded?._id,
+            isHuman: true,
+          },
+          { new: true }
+        )
+          .populate("customerId")
+          .lean();
         console.log(updatedChat, "updatedChatupdatedChat");
 
-        [...receivers, ...customers].forEach(receiver => {
-          socketObj.io.to(receiver._id?.toString()).emit("message", { ...updatedChat, latestMessage: final });
-          socketObj.io.to(receiver._id?.toString()).emit("message", { ...updatedChat, latestMessage: tooltipMess });
-        })
+        [...receivers, ...customers].forEach((receiver) => {
+          socketObj.io
+            .to(receiver._id?.toString())
+            .emit("message", { ...updatedChat, latestMessage: final });
+          socketObj.io
+            .to(receiver._id?.toString())
+            .emit("message", { ...updatedChat, latestMessage: tooltipMess });
+        });
 
-        if (chatDetails?.source === 'whatsapp') {
+        if (chatDetails?.source === "whatsapp") {
           if (final?.attachments?.length > 0) {
             final?.attachments?.map(async (attachment) => {
               if (isImageType(attachment)) {
-                await sendImageByUrl(updatedChat?.customerId?.phone, undefined, undefined, attachment)
+                await sendImageByUrl(
+                  updatedChat?.customerId?.phone,
+                  undefined,
+                  undefined,
+                  attachment
+                );
+              } else {
+                await sendDocumentByUrl(
+                  updatedChat?.customerId?.phone,
+                  undefined,
+                  undefined,
+                  attachment
+                );
               }
-              else {
-                await sendDocumentByUrl(updatedChat?.customerId?.phone, undefined, undefined, attachment)
-              }
-            })
-          }
-          else {
-            sendWhatsAppMessage(updatedChat?.customerId?.phone, undefined, undefined, undefined, final?.content, updatedChat?.isHuman)
+            });
+          } else {
+            sendWhatsAppMessage(
+              updatedChat?.customerId?.phone,
+              undefined,
+              undefined,
+              undefined,
+              final?.content,
+              updatedChat?.isHuman
+            );
           }
         }
       } else {
+        const updatedChat = await ChatModel.findOneAndUpdate(
+          { _id: params.chatId },
+          { latestMessage: final?._id },
+          { new: true }
+        )
+          .populate("customerId")
+          .lean();
 
-        const updatedChat = await ChatModel.findOneAndUpdate({ _id: params.chatId }, { latestMessage: final?._id }, { new: true }).populate('customerId').lean();
+        [...receivers, ...customers].forEach((receiver) => {
+          socketObj.io
+            .to(receiver._id?.toString())
+            .emit("message", { ...updatedChat, latestMessage: final });
+        });
 
-        [...receivers, ...customers].forEach(receiver => {
-          socketObj.io.to(receiver._id?.toString()).emit("message", { ...updatedChat, latestMessage: final });
-        })
-
-        if (updatedChat?.source === 'whatsapp') {
-          console.log("zvdgsdfsdf", final?.content, chatDetails?.customerId?.phone);
+        if (updatedChat?.source === "whatsapp") {
+          console.log(
+            "zvdgsdfsdf",
+            final?.content,
+            chatDetails?.customerId?.phone
+          );
           if (final?.attachments?.length > 0) {
             final?.attachments?.map(async (attachment) => {
               if (isImageType(attachment)) {
-                await sendImageByUrl(updatedChat?.customerId?.phone, undefined, undefined, attachment)
+                await sendImageByUrl(
+                  updatedChat?.customerId?.phone,
+                  undefined,
+                  undefined,
+                  attachment
+                );
+              } else {
+                await sendDocumentByUrl(
+                  updatedChat?.customerId?.phone,
+                  undefined,
+                  undefined,
+                  attachment
+                );
               }
-              else {
-                await sendDocumentByUrl(updatedChat?.customerId?.phone, undefined, undefined, attachment)
-              }
-            })
-          }
-          else {
-            sendWhatsAppMessage(updatedChat?.customerId?.phone, undefined, undefined, undefined, final?.content, updatedChat?.isHuman)
+            });
+          } else {
+            sendWhatsAppMessage(
+              updatedChat?.customerId?.phone,
+              undefined,
+              undefined,
+              undefined,
+              final?.content,
+              updatedChat?.isHuman
+            );
           }
         }
       }
@@ -300,16 +596,17 @@ socketObj.config = (server) => {
         cb({
           chat: { ...updatedChat, latestMessage: final },
         });
-    })
+    });
 
     socket.on("transfer-chat", async (params, cb) => {
-      const { chatId, department, adminId } = typeof params === "string" ? JSON.parse(params) : params;
+      const { chatId, department, adminId } =
+        typeof params === "string" ? JSON.parse(params) : params;
       const chat = await ChatModel.findById(chatId);
       console.log(chat);
       if (!chat) {
         cb({
           success: false,
-          message: "Entr Valid chat"
+          message: "Entr Valid chat",
         });
         return;
       }
@@ -326,18 +623,35 @@ socketObj.config = (server) => {
           timestamp: new Date(),
           receiver: chatDetails?.customerId?.toString(),
           receiverType: "user",
-          messageType: "tooltip"
-        }
-        const newMessage = new MessageModel(mess)
+          messageType: "tooltip",
+        };
+        const newMessage = new MessageModel(mess);
         const final = await newMessage.save();
-        const updatedChat = await ChatModel.findOneAndUpdate({ _id: chatId }, { adminId: adminId, department: department, isHuman: true, latestMessage: final?._id }, { new: true }).lean();
-        const receivers = await UserModel.find({ $or: [{ role: { $in: ["Admin", "Supervisor"] } }, { _id: { $in: [adminId, oldAssignee] } }] });
-        receivers.forEach(receiver => {
-          socketObj.io.to(receiver._id?.toString()).emit("update-chat", updatedChat);
-          socketObj.io.to(receiver._id?.toString()).emit("message", { ...updatedChat, latestMessage: final });
-        })
-      }
-      else {
+        const updatedChat = await ChatModel.findOneAndUpdate(
+          { _id: chatId },
+          {
+            adminId: adminId,
+            department: department,
+            isHuman: true,
+            latestMessage: final?._id,
+          },
+          { new: true }
+        ).lean();
+        const receivers = await UserModel.find({
+          $or: [
+            { role: { $in: ["Admin", "Supervisor"] } },
+            { _id: { $in: [adminId, oldAssignee] } },
+          ],
+        });
+        receivers.forEach((receiver) => {
+          socketObj.io
+            .to(receiver._id?.toString())
+            .emit("update-chat", updatedChat);
+          socketObj.io
+            .to(receiver._id?.toString())
+            .emit("message", { ...updatedChat, latestMessage: final });
+        });
+      } else {
         chat.adminId = null;
         const agents = await UserModel.find({ role: "Agent", department });
         const chatDetails = await ChatModel.findOne({ _id: chatId }).lean();
@@ -352,28 +666,47 @@ socketObj.config = (server) => {
             attachments: [],
             timestamp: new Date(),
             receiver: chatDetails?.customerId?.toString(),
-            receiverType: "user"
-          }
-          const newMessage = new MessageModel(mess)
+            receiverType: "user",
+          };
+          const newMessage = new MessageModel(mess);
           const final = await newMessage.save();
-          const updatedChat = await ChatModel.findOneAndUpdate({ _id: chatId }, { latestMessage: final?._id }, { new: true }).lean();
-          const receivers = await UserModel.find({ $or: [{ role: { $in: ["Admin", "Supervisor"] } }] }).lean();
+          const updatedChat = await ChatModel.findOneAndUpdate(
+            { _id: chatId },
+            { latestMessage: final?._id },
+            { new: true }
+          ).lean();
+          const receivers = await UserModel.find({
+            $or: [{ role: { $in: ["Admin", "Supervisor"] } }],
+          }).lean();
           console.log(chatDetails?.customerId, "finalfinalfinalfinal");
-          [...receivers, chatDetails?.customerId].forEach(receiver => {
-            socketObj.io.to(receiver._id?.toString()).emit("message", { ...updatedChat, latestMessage: final });
-          })
+          [...receivers, chatDetails?.customerId].forEach((receiver) => {
+            socketObj.io
+              .to(receiver._id?.toString())
+              .emit("message", { ...updatedChat, latestMessage: final });
+          });
           if (typeof cb === "function") {
             return cb({
               success: false,
-              message: "No Agent is now available"
+              message: "No Agent is now available",
             });
           }
-        }
-        else {
-          const assigneeAgent = await getAssigneeAgent(new mongoose.Types.ObjectId(department));
+        } else {
+          const assigneeAgent = await getAssigneeAgent(
+            new mongoose.Types.ObjectId(department)
+          );
           console.log(assigneeAgent, department, "assigneeAgentsdfsdfsdfg");
 
-          const updatedChat = await ChatModel.findByIdAndUpdate(chatId, { adminId: assigneeAgent?._id, department: department, isHuman: true }, { new: true })?.populate('adminId customerId').lean();
+          const updatedChat = await ChatModel.findByIdAndUpdate(
+            chatId,
+            {
+              adminId: assigneeAgent?._id,
+              department: department,
+              isHuman: true,
+            },
+            { new: true }
+          )
+            ?.populate("adminId customerId")
+            .lean();
           console.log(updatedChat, "updatedChatupdatedChat");
 
           const mess = {
@@ -383,30 +716,30 @@ socketObj.config = (server) => {
             content: `Chat is now assigned to ${updatedChat?.adminId?.fullName}`,
             receiver: chatDetails?.customerId?._id?.toString(),
             receiverType: "user",
-            messageType: "tooltip"
-          }
-          await sendMessageToAdmins(socketObj, mess, updatedChat?.department)
+            messageType: "tooltip",
+          };
+          await sendMessageToAdmins(socketObj, mess, updatedChat?.department);
           if (typeof cb === "function")
             cb({
               success: true,
               message: "Agent is now assigned",
-              agentId: assigneeAgent?._id
+              agentId: assigneeAgent?._id,
             });
         }
       }
-    })
+    });
 
-    socket.on('activity', (params, cb) => {
+    socket.on("activity", (params, cb) => {
       async function updateOnlineStatus(isOnline) {
         const updateIsOnline = await UserModel.findOneAndUpdate(
           {
-            _id: params.room
+            _id: params.room,
           },
           {
-            isOnline: isOnline
+            isOnline: isOnline,
           },
           {
-            new: true
+            new: true,
           }
         );
       }
@@ -414,23 +747,22 @@ socketObj.config = (server) => {
 
       if (agents[socket.id]) {
         clearTimeout(agents[socket.id].idleTimer);
-        updateOnlineStatus(true)
+        updateOnlineStatus(true);
       }
 
       // Reset idle timer
       agents[socket.id] = {
         idleTimer: setTimeout(() => {
           agents[socket.id].isIdle = true;
-          updateOnlineStatus(false)
-          socket.emit('idle', 'You are idle. Click here to be active again.');
+          updateOnlineStatus(false);
+          socket.emit("idle", "You are idle. Click here to be active again.");
         }, 10 * 60 * 1000), // 10 minutes
-        isIdle: false
+        isIdle: false,
       };
       console.log(agents, "ahenenehj");
-
     });
 
-    socket.on('active', () => {
+    socket.on("active", () => {
       if (agents[socket.id]) {
         clearTimeout(agents[socket.id].idleTimer);
         agents[socket.id].isIdle = false;
@@ -438,77 +770,120 @@ socketObj.config = (server) => {
         // Reset idle timer
         agents[socket.id].idleTimer = setTimeout(() => {
           agents[socket.id].isIdle = true;
-          socket.emit('idle', 'You are idle. Click here to be active again.');
+          socket.emit("idle", "You are idle. Click here to be active again.");
         }, 10 * 60 * 1000); // 10 minutes
       }
     });
 
     socket.on("seen-messages", async (params) => {
-      const { chatId } = typeof params === "string" ? JSON.parse(params) : params;
-      const updateMessages = await MessageModel.updateMany({ chatId: chatId }, { isSeen: true })
+      const { chatId } =
+        typeof params === "string" ? JSON.parse(params) : params;
+      const updateMessages = await MessageModel.updateMany(
+        { chatId: chatId },
+        { isSeen: true }
+      );
       if (typeof cb === "function")
         cb({
-          message: "Chat messages seen"
+          message: "Chat messages seen",
         });
     });
 
-    socket.on('archive-chat', async (params, cb) => {
+    socket.on("archive-chat", async (params, cb) => {
       try {
-        const authHeader = socket.handshake.headers.authorization || '';
-        const token = (authHeader && authHeader.split(' ')[1]);
+        const authHeader = socket.handshake.headers.authorization || "";
+        const token = authHeader && authHeader.split(" ")[1];
         let decoded = jwt.decode(token);
         const adminDetails = await UserModel.findById(decoded?._id).lean();
-        const { chatId } = typeof params === "string" ? JSON.parse(params) : params;
-        const chat = await ChatModel.findById(chatId).populate("adminId department").lean();
+        const { chatId } =
+          typeof params === "string" ? JSON.parse(params) : params;
+        const chat = await ChatModel.findById(chatId)
+          .populate("adminId department")
+          .lean();
         console.log(chatId, chat, "desdgsfdg");
 
         if (!chat) {
           if (typeof cb === "function")
             return cb({
               success: false,
-              message: "Chat not found"
+              message: "Chat not found",
             });
-        };
+        }
 
         const mess = {
           chatId: chatId,
           sender: null,
           sendType: "admin",
-          content: chat?.department?.messages?.chatClosingMessage || `This conversation has ended, thank you for contacting Methaq Takaful Insuance ${chat?.department?.name ? chat?.department?.name : ""}. We hope we were able to serve you`,
+          content:
+            chat?.department?.messages?.chatClosingMessage ||
+            `This conversation has ended, thank you for contacting Methaq Takaful Insuance ${chat?.department?.name ? chat?.department?.name : ""
+            }. We hope we were able to serve you`,
           attachments: [],
           timestamp: new Date(),
           receiver: chat?.customerId?.toString(),
           receiverType: "user",
-          messageType: "tooltip"
-        }
-        const newMessage = new MessageModel(mess)
+          messageType: "tooltip",
+        };
+        const newMessage = new MessageModel(mess);
         const final = await newMessage.save();
-        const updatedChat = await ChatModel.findOneAndUpdate({ _id: chatId }, { latestMessage: final?._id, adminId: null, isHuman: false, status: "archived", department: null, currentSessionId: null, depId: "", sessionIds: {} }, { new: true })?.populate("adminId customerId").lean();
-        const receivers = await UserModel.find({ $or: [{ role: { $in: ["Admin", "Supervisor"] } }, { _id: { $in: [chat?.customerId?.toString()] } }] });
-        receivers.forEach(receiver => {
-          socketObj.io.to(receiver._id?.toString()).emit("update-chat", updatedChat);
-          socketObj.io.to(receiver._id?.toString()).emit("message", { ...updatedChat, latestMessage: final });
-        })
-        if (updatedChat?.source === 'whatsapp') {
+        const updatedChat = await ChatModel.findOneAndUpdate(
+          { _id: chatId },
+          {
+            latestMessage: final?._id,
+            adminId: null,
+            isHuman: false,
+            status: "archived",
+            department: null,
+            currentSessionId: null,
+            depId: "",
+            sessionIds: {},
+          },
+          { new: true }
+        )
+          ?.populate("adminId customerId")
+          .lean();
+        const receivers = await UserModel.find({
+          $or: [
+            { role: { $in: ["Admin", "Supervisor"] } },
+            { _id: { $in: [chat?.customerId?.toString()] } },
+          ],
+        });
+        receivers.forEach((receiver) => {
+          socketObj.io
+            .to(receiver._id?.toString())
+            .emit("update-chat", updatedChat);
+          socketObj.io
+            .to(receiver._id?.toString())
+            .emit("message", { ...updatedChat, latestMessage: final });
+        });
+        if (updatedChat?.source === "whatsapp") {
           console.log("zvdgsdfsdf", final?.content, chat?.customerId?.phone);
-          sendWhatsAppMessage(updatedChat?.customerId?.phone, undefined, undefined, undefined, chat?.department?.messages?.chatClosingMessage || `Chat archived by ${adminDetails?.fullName}`, updatedChat?.isHuman)
+          sendWhatsAppMessage(
+            updatedChat?.customerId?.phone,
+            undefined,
+            undefined,
+            undefined,
+            chat?.department?.messages?.chatClosingMessage ||
+            `Chat archived by ${adminDetails?.fullName}`,
+            updatedChat?.isHuman
+          );
         }
         if (typeof cb === "function")
           cb({
-            message: "Chat archived successfully."
+            message: "Chat archived successfully.",
           });
       } catch (error) {
         console.error("Error archiving chat:", error);
         if (typeof cb === "function")
           cb({
-            message: error.message
+            message: error.message,
           });
       }
-    })
+    });
 
-    socket.on('unarchive-chat', async (params, cb) => {
+    socket.on("unarchive-chat", async (params, cb) => {
       try {
-        const { chatId } = typeof params === "string" ? JSON.parse(params) : params;
+        const { chatId } =
+          typeof params === "string" ? JSON.parse(params) : params;
         const chat = await ChatModel.findById(chatId);
         console.log(chat, "chatchatchatchat");
 
@@ -516,11 +891,11 @@ socketObj.config = (server) => {
           if (typeof cb === "function")
             return cb({
               success: false,
-              message: "Chat not found"
+              message: "Chat not found",
             });
-        };
-        const authHeader = socket.handshake.headers.authorization || '';
-        const token = (authHeader && authHeader.split(' ')[1]);
+        }
+        const authHeader = socket.handshake.headers.authorization || "";
+        const token = authHeader && authHeader.split(" ")[1];
         let decoded = jwt.decode(token);
         const adminDetails = await UserModel.findById(decoded?._id).lean();
         chat.status = "active";
@@ -532,24 +907,22 @@ socketObj.config = (server) => {
           content: `Chat unarchived by ${adminDetails?.fullName || ""}`,
           receiver: chat?.customerId?.toString(),
           receiverType: "user",
-          messageType: "tooltip"
-        }
-        await sendMessageToAdmins(socketObj, mess, chat?.department)
+          messageType: "tooltip",
+        };
+        await sendMessageToAdmins(socketObj, mess, chat?.department);
 
         if (typeof cb === "function")
           cb({
-            message: "Chat is successfully unarchived"
+            message: "Chat is successfully unarchived",
           });
-
       } catch (error) {
         console.error("Error archiving chat:", error);
         if (typeof cb === "function")
           cb({
-            message: error.message
+            message: error.message,
           });
       }
-    })
-
+    });
 
     socket.on("disconnect", () => {
       console.log("A user disconnected:", socket.id);
@@ -558,7 +931,6 @@ socketObj.config = (server) => {
         method: "disconnect",
       });
     });
-
   });
 };
 
