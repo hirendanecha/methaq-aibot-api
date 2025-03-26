@@ -1102,7 +1102,7 @@ const whatsappMessages = async (req, res) => {
             depId: answer,
           });
 
-          departmentSession = existingChat?.currentSessionId;
+          // departmentSession = existingChat?.currentSessionId;
           existingChat = await ChatModel.findOneAndUpdate(
             { _id: existingChat._id },
             {

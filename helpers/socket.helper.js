@@ -21,6 +21,7 @@ const {
   startChat,
   continueChat,
 } = require("../controllers/typebot/typeBot.controller");
+const DepartmentModel = require("../models/department.model");
 
 let logger = console;
 const socketObj = {};
@@ -159,7 +160,7 @@ socketObj.config = (server) => {
     socket.on("save-message", async (params) => {
       try {
         params = typeof params === "string" ? JSON.parse(params) : params;
-        const chatDetails = await ChatModel.findById(params?.chatId);
+        let chatDetails = await ChatModel.findById(params?.chatId);
         let sessionId = chatDetails.currentSessionId;
         if (!sessionId) {
           const startChatResponse = await startChat("");
@@ -172,6 +173,45 @@ socketObj.config = (server) => {
           );
         }
         const userInput = params.content;
+        if (params?.isInteractiveAnswer) {
+          const answer = userInput?.split("-")[0];
+          if (["1", "2", "3", "4", "5"].includes(answer)) {
+            const departmentDetails = await DepartmentModel.findOne({
+              depId: answer,
+            });
+
+            // departmentSession = existingChat?.currentSessionId;
+            chatDetails = await ChatModel.findOneAndUpdate(
+              { _id: chatDetails._id },
+              {
+                department: departmentDetails?._id,
+                depId: departmentDetails?.depId,
+              },
+              { new: true }
+            ).populate("department");
+            const mess1 = {
+              chatId: chatDetails?._id,
+              // wpId: message?.id,
+              sender: chatDetails?.customerId?.toString(),
+              receiver: null,
+              sendType: "user",
+              receiverType: "assistant",
+              messageType: "text",
+              content: `${userInput}`,
+            };
+            sendMessageToAdmins(socketObj, mess1, chatDetails?.department);
+            const mess2 = {
+              chatId: chatDetails?._id,
+              sender: null,
+              receiver: null,
+              sendType: "assistant",
+              receiverType: "admin",
+              messageType: "tooltip",
+              content: `Chat is transferred to ${userInput?.split("-")[1]} department`,
+            };
+            sendMessageToAdmins(socketObj, mess2, chatDetails?.department);
+          }
+        }
         const attachments =
           params?.attachments?.reduce((acc, curr) => acc.concat(curr), []) ||
           [];
