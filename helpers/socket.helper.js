@@ -207,9 +207,7 @@ socketObj.config = (server) => {
               sendType: "assistant",
               receiverType: "admin",
               messageType: "tooltip",
-              content: `Chat is transferred to ${
-                userInput?.split("-")[1]
-              } department`,
+              content: `Chat is transferred to ${userInput?.split("-")[1]} department`,
             };
             sendMessageToAdmins(socketObj, mess2, chatDetails?.department);
           }
@@ -246,13 +244,7 @@ socketObj.config = (server) => {
                   receiver: chatDetails?.customerId || null,
                   receiverType: "user",
                 };
-
                 await sendMessageToUser(socketObj, mess2);
-                await sendMessageToAdmins(
-                  socketObj,
-                  mess2,
-                  chatDetails?.department
-                );
               }
 
               const intmessage = {
@@ -271,11 +263,6 @@ socketObj.config = (server) => {
                 ),
               };
               await sendMessageToUser(socketObj, intmessage);
-              await sendMessageToAdmins(
-                socketObj,
-                intmessage,
-                chatDetails?.department
-              );
             } else if (
               response?.interactiveListButton &&
               response?.interactiveListPayload
@@ -291,11 +278,6 @@ socketObj.config = (server) => {
                   receiverType: "user",
                 };
                 await sendMessageToUser(socketObj, mess2);
-                await sendMessageToAdmins(
-                  socketObj,
-                  mess2,
-                  chatDetails?.department
-                );
               }
               const intmessage = {
                 chatId: chatDetails._id,
@@ -314,11 +296,6 @@ socketObj.config = (server) => {
                   ),
               };
               await sendMessageToUser(socketObj, intmessage);
-              await sendMessageToAdmins(
-                socketObj,
-                intmessage,
-                chatDetails?.department
-              );
             } else {
               const mess2 = {
                 chatId: chatDetails._id,
@@ -330,11 +307,6 @@ socketObj.config = (server) => {
                 receiverType: "user",
               };
               await sendMessageToUser(socketObj, mess2);
-              await sendMessageToAdmins(
-                socketObj,
-                mess2,
-                chatDetails?.department
-              );
             }
           } else {
             const response = await continueChat(sessionId, userInput);
@@ -350,11 +322,6 @@ socketObj.config = (server) => {
                   receiver: chatDetails?.customerId || null,
                   receiverType: "user",
                 };
-                await sendMessageToAdmins(
-                  socketObj,
-                  mess2,
-                  chatDetails?.department
-                );
                 await sendMessageToUser(socketObj, mess2);
               }
 
@@ -373,11 +340,6 @@ socketObj.config = (server) => {
                   })
                 ),
               };
-              await sendMessageToAdmins(
-                socketObj,
-                intmessage,
-                chatDetails?.department
-              );
               await sendMessageToUser(socketObj, intmessage);
             } else if (
               response?.interactiveListButton &&
@@ -393,11 +355,6 @@ socketObj.config = (server) => {
                   receiver: chatDetails?.customerId || null,
                   receiverType: "user",
                 };
-                await sendMessageToAdmins(
-                  socketObj,
-                  mess2,
-                  chatDetails?.department
-                );
                 await sendMessageToUser(socketObj, mess2);
               }
               const intmessage = {
@@ -416,11 +373,6 @@ socketObj.config = (server) => {
                     })
                   ),
               };
-              await sendMessageToAdmins(
-                socketObj,
-                intmessage,
-                chatDetails?.department
-              );
               await sendMessageToUser(socketObj, intmessage);
             } else {
               const mess2 = {
@@ -433,11 +385,6 @@ socketObj.config = (server) => {
                 receiverType: "user",
               };
               await sendMessageToUser(socketObj, mess2);
-              await sendMessageToAdmins(
-                socketObj,
-                mess2,
-                chatDetails?.department
-              );
             }
           }
         }
@@ -908,8 +855,7 @@ socketObj.config = (server) => {
           sendType: "admin",
           content:
             chat?.department?.messages?.chatClosingMessage ||
-            `This conversation has ended, thank you for contacting Methaq Takaful Insuance ${
-              chat?.department?.name ? chat?.department?.name : ""
+            `This conversation has ended, thank you for contacting Methaq Takaful Insuance ${chat?.department?.name ? chat?.department?.name : ""
             }. We hope we were able to serve you`,
           attachments: [],
           timestamp: new Date(),
@@ -957,7 +903,7 @@ socketObj.config = (server) => {
             undefined,
             undefined,
             chat?.department?.messages?.chatClosingMessage ||
-              `Chat archived by ${adminDetails?.fullName}`,
+            `Chat archived by ${adminDetails?.fullName}`,
             updatedChat?.isHuman
           );
         }
