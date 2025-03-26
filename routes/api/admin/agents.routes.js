@@ -16,7 +16,7 @@ router.post("/updatepermissions", agentCtrl.updatePermissions);
 router.post('/getchats', agentCtrl.getChatList);
 router.get('/:chatId/getchatdetails', agentCtrl.getChatDetails);
 router.post('/:chatId/updatechatnotes', agentCtrl.updateNotesToChat);
-router.post("/getallagents", permissionAuthorization("commonPermission.agent", ["read"]), agentCtrl.getAllAgents);
+router.post("/getallagents", agentCtrl.getAllAgents);
 router.get("/:userId/getagent", permissionAuthorization("commonPermission.agent", ["read"]), agentCtrl.getAgent);
 router.put("/:userId/updateagent", permissionAuthorization("commonPermission.agent", ["update"]), agentCtrl.updateAgents);
 router.post("/:userId/changepassword", permissionAuthorization("commonPermission.agent", ["update"]), agentCtrl.changePassword);
