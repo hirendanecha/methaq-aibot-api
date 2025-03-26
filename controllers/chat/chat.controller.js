@@ -317,6 +317,8 @@ const assignAgentController = async (req, res) => {
 
     // const department = await DepartmentModel.findOne({ _id: chatDetails?.department });
     const assigneeAgent = await getAssigneeAgent(chatDetails?.department);
+    console.log(assigneeAgent, "assigneeAgentassigneeAgent");
+
     if (!chatDetails) {
       return res.status(404).json({ error: "Please provide valid sessionId" });
     }
@@ -595,7 +597,7 @@ const whatsappMessages = async (req, res) => {
 
 
       console.log(message.type, "message.type");
-      
+
       if (message.type === "image" || message.type === "document") {
         const mediaID = message.image?.id || message.document?.id;
 
@@ -1117,9 +1119,8 @@ const whatsappMessages = async (req, res) => {
             sendType: "user",
             receiverType: "assistant",
             messageType: "text",
-            content: `${message?.interactive?.list_reply?.title}\n${
-              message?.interactive?.list_reply?.description || ""
-            }`,
+            content: `${message?.interactive?.list_reply?.title}\n${message?.interactive?.list_reply?.description || ""
+              }`,
           };
           sendMessageToAdmins(socketObj, mess1, existingChat?.department?._id);
           const mess2 = {
@@ -1149,20 +1150,20 @@ const whatsappMessages = async (req, res) => {
           const userInput =
             message?.interactive?.list_reply?.title ||
             message?.interactive?.button_reply?.title;
-            const mess6 = {
-              chatId: existingChat._id,
-              sender: null,
-              receiver: existingChat?.customerId?.toString(),
-              sendType: "user",
-              receiverType: "admin",
-              content: userInput,
-            };
-            userInput &&
-              sendMessageToAdmins(
-                socketObj,
-                mess6,
-                existingChat?.department?._id
-              );
+          const mess6 = {
+            chatId: existingChat._id,
+            sender: null,
+            receiver: existingChat?.customerId?.toString(),
+            sendType: "user",
+            receiverType: "admin",
+            content: userInput,
+          };
+          userInput &&
+            sendMessageToAdmins(
+              socketObj,
+              mess6,
+              existingChat?.department?._id
+            );
           // const userInput = ;
           const aiResponse = await continueChat(
             existingChat.currentSessionId,

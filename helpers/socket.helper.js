@@ -160,11 +160,22 @@ socketObj.config = (server) => {
       try {
         params = typeof params === "string" ? JSON.parse(params) : params;
         const chatDetails = await ChatModel.findById(params?.chatId);
-        const sessionId = chatDetails.currentSessionId;
+        let sessionId = chatDetails.currentSessionId;
+        if (!sessionId) {
+          const startChatResponse = await startChat("");
+          sessionId = startChatResponse?.response?.data?.sessionId;
+          const secMess = await continueChat(sessionId, sessionId);
+          const updatedChat = await ChatModel.findOneAndUpdate(
+            { _id: params?.chatId },
+            { currentSessionId: sessionId },
+            { new: true }
+          );
+        }
         const userInput = params.content;
         const attachments =
           params?.attachments?.reduce((acc, curr) => acc.concat(curr), []) ||
           [];
+
         //console.log(attachments, "params?.attachments");
         const mess = {
           chatId: params.chatId,
@@ -804,8 +815,7 @@ socketObj.config = (server) => {
           sendType: "admin",
           content:
             chat?.department?.messages?.chatClosingMessage ||
-            `This conversation has ended, thank you for contacting Methaq Takaful Insuance ${
-              chat?.department?.name ? chat?.department?.name : ""
+            `This conversation has ended, thank you for contacting Methaq Takaful Insuance ${chat?.department?.name ? chat?.department?.name : ""
             }. We hope we were able to serve you`,
           attachments: [],
           timestamp: new Date(),
@@ -853,7 +863,7 @@ socketObj.config = (server) => {
             undefined,
             undefined,
             chat?.department?.messages?.chatClosingMessage ||
-              `Chat archived by ${adminDetails?.fullName}`,
+            `Chat archived by ${adminDetails?.fullName}`,
             updatedChat?.isHuman
           );
         }
