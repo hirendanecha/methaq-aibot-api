@@ -106,7 +106,10 @@ socketObj.config = (server) => {
       // })
 
       const startChatResponse = await startChat("");
+
       const sessionId = startChatResponse?.response?.data?.sessionId;
+
+      console.log(sessionId, "pp88");
       const secMess = await continueChat(sessionId, sessionId);
       const chat = new ChatModel({
         customerId: updatedCus._id,
@@ -155,12 +158,12 @@ socketObj.config = (server) => {
     });
     socket.on("save-message", async (params) => {
       try {
-        console.log(params, "save-msg nak");
-
         params = typeof params === "string" ? JSON.parse(params) : params;
         const chatDetails = await ChatModel.findById(params?.chatId);
         const sessionId = chatDetails.currentSessionId;
         const userInput = params.content;
+
+        console.log(params?.attachments, "params?.attachments");
         const mess = {
           chatId: params.chatId,
           sender: params.sender,
@@ -170,15 +173,24 @@ socketObj.config = (server) => {
           receiver: params?.receiver || null,
           receiverType: params.receiverType,
         };
-        console.log(mess, "sadsdfsdffd");
+
         await sendMessageToAdmins(socketObj, mess, chatDetails?.department);
 
         const response = await continueChat(sessionId, userInput);
+
         if (response.interactiveMsg && response.interactivePayload) {
-          console.log(
-            "response.interactivePayload",
-            response.interactivePayload
-          );
+          if (response?.finaloutput) {
+            const mess2 = {
+              chatId: chatDetails._id,
+              sender: null,
+              sendType: "assistant",
+              content: response.finaloutput,
+              attachments: [],
+              receiver: chatDetails?.customerId || null,
+              receiverType: "user",
+            };
+            await sendMessageToUser(socketObj, mess2);
+          }
 
           const intmessage = {
             chatId: chatDetails._id,
@@ -200,6 +212,18 @@ socketObj.config = (server) => {
           response?.interactiveListButton &&
           response?.interactiveListPayload
         ) {
+          if (response?.finaloutput) {
+            const mess2 = {
+              chatId: chatDetails._id,
+              sender: null,
+              sendType: "assistant",
+              content: response.finaloutput,
+              attachments: [],
+              receiver: chatDetails?.customerId || null,
+              receiverType: "user",
+            };
+            await sendMessageToUser(socketObj, mess2);
+          }
           const intmessage = {
             chatId: chatDetails._id,
             sender: null,
@@ -225,12 +249,10 @@ socketObj.config = (server) => {
             receiver: chatDetails?.customerId || null,
             receiverType: "user",
           };
-
-          console.log(mess2, "mess2gdfg");
           await sendMessageToUser(socketObj, mess2);
         }
 
-        console.log(response.finaloutput, "finaloutput");
+        // console.log(response.finaloutput, "finaloutput");
         if (typeof cb === "function")
           cb({
             success: true,
@@ -696,7 +718,8 @@ socketObj.config = (server) => {
           sendType: "admin",
           content:
             chat?.department?.messages?.chatClosingMessage ||
-            `This conversation has ended, thank you for contacting Methaq Takaful Insuance ${chat?.department?.name ? chat?.department?.name : ""
+            `This conversation has ended, thank you for contacting Methaq Takaful Insuance ${
+              chat?.department?.name ? chat?.department?.name : ""
             }. We hope we were able to serve you`,
           attachments: [],
           timestamp: new Date(),
@@ -744,7 +767,7 @@ socketObj.config = (server) => {
             undefined,
             undefined,
             chat?.department?.messages?.chatClosingMessage ||
-            `Chat archived by ${adminDetails?.fullName}`,
+              `Chat archived by ${adminDetails?.fullName}`,
             updatedChat?.isHuman
           );
         }

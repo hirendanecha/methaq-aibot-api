@@ -326,7 +326,6 @@ exports.sendMessageToUser = async (socketObj, message) => {
     )
       .populate("adminId customerId")
       .lean();
-      console.log(updatedChat,"pppppppppppp send");
       socketObj.io
       .to(updatedChat?.customerId?._id?.toString())
       .emit("message", { ...updatedChat, latestMessage: latestMess });
