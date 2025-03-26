@@ -107,6 +107,7 @@ socketObj.config = (server) => {
 
       const startChatResponse = await startChat("");
       const sessionId = startChatResponse?.response?.data?.sessionId;
+      const secMess = await continueChat(sessionId, sessionId);
       const chat = new ChatModel({
         customerId: updatedCus._id,
         currentSessionId: sessionId,
@@ -695,8 +696,7 @@ socketObj.config = (server) => {
           sendType: "admin",
           content:
             chat?.department?.messages?.chatClosingMessage ||
-            `This conversation has ended, thank you for contacting Methaq Takaful Insuance ${
-              chat?.department?.name ? chat?.department?.name : ""
+            `This conversation has ended, thank you for contacting Methaq Takaful Insuance ${chat?.department?.name ? chat?.department?.name : ""
             }. We hope we were able to serve you`,
           attachments: [],
           timestamp: new Date(),
@@ -744,7 +744,7 @@ socketObj.config = (server) => {
             undefined,
             undefined,
             chat?.department?.messages?.chatClosingMessage ||
-              `Chat archived by ${adminDetails?.fullName}`,
+            `Chat archived by ${adminDetails?.fullName}`,
             updatedChat?.isHuman
           );
         }
