@@ -162,94 +162,180 @@ socketObj.config = (server) => {
         const chatDetails = await ChatModel.findById(params?.chatId);
         const sessionId = chatDetails.currentSessionId;
         const userInput = params.content;
-
-        console.log(params?.attachments, "params?.attachments");
+        const attachments =
+          params?.attachments?.reduce((acc, curr) => acc.concat(curr), []) ||
+          [];
+        //console.log(attachments, "params?.attachments");
         const mess = {
           chatId: params.chatId,
           sender: params.sender,
           sendType: params.sendType,
           content: params.content,
-          attachments: params?.attachments || [],
+          attachments: attachments || [],
           receiver: params?.receiver || null,
           receiverType: params.receiverType,
         };
 
         await sendMessageToAdmins(socketObj, mess, chatDetails?.department);
 
-        const response = await continueChat(sessionId, userInput);
+        console.log(attachments, "attachments646364634");
+        if (!chatDetails?.isHuman) {
+          if (attachments && attachments.length > 0) {
+            const response = await continueChat(sessionId, " ", attachments);
+            if (response.interactiveMsg && response.interactivePayload) {
+              if (response?.finaloutput) {
+                const mess2 = {
+                  chatId: chatDetails._id,
+                  sender: null,
+                  sendType: "assistant",
+                  content: response.finaloutput,
+                  attachments: [],
+                  receiver: chatDetails?.customerId || null,
+                  receiverType: "user",
+                };
+                await sendMessageToUser(socketObj, mess2);
+              }
 
-        if (response.interactiveMsg && response.interactivePayload) {
-          if (response?.finaloutput) {
-            const mess2 = {
-              chatId: chatDetails._id,
-              sender: null,
-              sendType: "assistant",
-              content: response.finaloutput,
-              attachments: [],
-              receiver: chatDetails?.customerId || null,
-              receiverType: "user",
-            };
-            await sendMessageToUser(socketObj, mess2);
-          }
+              const intmessage = {
+                chatId: chatDetails._id,
+                sender: null,
+                receiver: chatDetails.customerId,
+                sendType: "assistant",
+                receiverType: "user",
+                content: "Please select one of the following options:",
+                messageType: "interective",
+                messageOptions: response.interactivePayload?.options?.map(
+                  (department) => ({
+                    label: department.name,
+                    value: department.depId,
+                  })
+                ),
+              };
+              await sendMessageToUser(socketObj, intmessage);
+            } else if (
+              response?.interactiveListButton &&
+              response?.interactiveListPayload
+            ) {
+              if (response?.finaloutput) {
+                const mess2 = {
+                  chatId: chatDetails._id,
+                  sender: null,
+                  sendType: "assistant",
+                  content: response.finaloutput,
+                  attachments: [],
+                  receiver: chatDetails?.customerId || null,
+                  receiverType: "user",
+                };
+                await sendMessageToUser(socketObj, mess2);
+              }
+              const intmessage = {
+                chatId: chatDetails._id,
+                sender: null,
+                receiver: chatDetails.customerId?.toString(),
+                sendType: "assistant",
+                receiverType: "user",
+                content: "Please select one of the following options:",
+                messageType: "interective",
+                messageOptions:
+                  response?.interactiveListPayload?.action?.buttons?.map(
+                    (btn) => ({
+                      label: btn.reply.title,
+                      value: btn.reply.id,
+                    })
+                  ),
+              };
+              await sendMessageToUser(socketObj, intmessage);
+            } else {
+              const mess2 = {
+                chatId: chatDetails._id,
+                sender: null,
+                sendType: "assistant",
+                content: response?.finaloutput,
+                attachments: [],
+                receiver: chatDetails?.customerId || null,
+                receiverType: "user",
+              };
+              await sendMessageToUser(socketObj, mess2);
+            }
+          } else {
+            const response = await continueChat(sessionId, userInput);
 
-          const intmessage = {
-            chatId: chatDetails._id,
-            sender: null,
-            receiver: chatDetails.customerId,
-            sendType: "assistant",
-            receiverType: "user",
-            content: "Please select one of the following options:",
-            messageType: "interective",
-            messageOptions: response.interactivePayload?.options?.map(
-              (department) => ({
-                label: department.name,
-                value: department.depId,
-              })
-            ),
-          };
-          await sendMessageToUser(socketObj, intmessage);
-        } else if (
-          response?.interactiveListButton &&
-          response?.interactiveListPayload
-        ) {
-          if (response?.finaloutput) {
-            const mess2 = {
-              chatId: chatDetails._id,
-              sender: null,
-              sendType: "assistant",
-              content: response.finaloutput,
-              attachments: [],
-              receiver: chatDetails?.customerId || null,
-              receiverType: "user",
-            };
-            await sendMessageToUser(socketObj, mess2);
+            if (response.interactiveMsg && response.interactivePayload) {
+              if (response?.finaloutput) {
+                const mess2 = {
+                  chatId: chatDetails._id,
+                  sender: null,
+                  sendType: "assistant",
+                  content: response.finaloutput,
+                  attachments: [],
+                  receiver: chatDetails?.customerId || null,
+                  receiverType: "user",
+                };
+                await sendMessageToUser(socketObj, mess2);
+              }
+
+              const intmessage = {
+                chatId: chatDetails._id,
+                sender: null,
+                receiver: chatDetails.customerId,
+                sendType: "assistant",
+                receiverType: "user",
+                content: "Please select one of the following options:",
+                messageType: "interective",
+                messageOptions: response.interactivePayload?.options?.map(
+                  (department) => ({
+                    label: department.name,
+                    value: department.depId,
+                  })
+                ),
+              };
+              await sendMessageToUser(socketObj, intmessage);
+            } else if (
+              response?.interactiveListButton &&
+              response?.interactiveListPayload
+            ) {
+              if (response?.finaloutput) {
+                const mess2 = {
+                  chatId: chatDetails._id,
+                  sender: null,
+                  sendType: "assistant",
+                  content: response.finaloutput,
+                  attachments: [],
+                  receiver: chatDetails?.customerId || null,
+                  receiverType: "user",
+                };
+                await sendMessageToUser(socketObj, mess2);
+              }
+              const intmessage = {
+                chatId: chatDetails._id,
+                sender: null,
+                receiver: chatDetails.customerId?.toString(),
+                sendType: "assistant",
+                receiverType: "user",
+                content: "Please select one of the following options:",
+                messageType: "interective",
+                messageOptions:
+                  response?.interactiveListPayload?.action?.buttons?.map(
+                    (btn) => ({
+                      label: btn.reply.title,
+                      value: btn.reply.id,
+                    })
+                  ),
+              };
+              await sendMessageToUser(socketObj, intmessage);
+            } else {
+              const mess2 = {
+                chatId: chatDetails._id,
+                sender: null,
+                sendType: "assistant",
+                content: response?.finaloutput,
+                attachments: [],
+                receiver: chatDetails?.customerId || null,
+                receiverType: "user",
+              };
+              await sendMessageToUser(socketObj, mess2);
+            }
           }
-          const intmessage = {
-            chatId: chatDetails._id,
-            sender: null,
-            receiver: chatDetails.customerId?.toString(),
-            sendType: "assistant",
-            receiverType: "user",
-            content: "Please select one of the following options:",
-            messageType: "interective",
-            messageOptions:
-              response?.interactiveListPayload?.action?.buttons?.map((btn) => ({
-                label: btn.reply.title,
-                value: btn.reply.id,
-              })),
-          };
-          await sendMessageToUser(socketObj, intmessage);
-        } else {
-          const mess2 = {
-            chatId: chatDetails._id,
-            sender: null,
-            sendType: "assistant",
-            content: response?.finaloutput,
-            attachments: [],
-            receiver: chatDetails?.customerId || null,
-            receiverType: "user",
-          };
-          await sendMessageToUser(socketObj, mess2);
         }
 
         // console.log(response.finaloutput, "finaloutput");
