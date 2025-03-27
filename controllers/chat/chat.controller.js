@@ -1093,47 +1093,6 @@ const whatsappMessages = async (req, res) => {
         //   }
         //   return res.status(200).send("Message processed");
         // } else {
-        const answer =
-          message?.interactive?.list_reply?.id ||
-          message?.interactive?.button_reply?.id;
-        console.log(answer, "dffgdfgdgfg");
-        if (["1", "2", "3", "4", "5"].includes(answer)) {
-          const departmentDetails = await DepartmentModel.findOne({
-            depId: answer,
-          });
-
-          // departmentSession = existingChat?.currentSessionId;
-          existingChat = await ChatModel.findOneAndUpdate(
-            { _id: existingChat._id },
-            {
-              department: departmentDetails?._id,
-              depId: departmentDetails?.depId,
-            },
-            { new: true }
-          ).populate("department");
-          const mess1 = {
-            chatId: existingChat?._id,
-            wpId: message?.id,
-            sender: existingChat?.customerId?.toString(),
-            receiver: null,
-            sendType: "user",
-            receiverType: "assistant",
-            messageType: "text",
-            content: `${message?.interactive?.list_reply?.title}\n${message?.interactive?.list_reply?.description || ""
-              }`,
-          };
-          sendMessageToAdmins(socketObj, mess1, existingChat?.department?._id);
-          const mess2 = {
-            chatId: existingChat?._id,
-            sender: null,
-            receiver: null,
-            sendType: "assistant",
-            receiverType: "admin",
-            messageType: "tooltip",
-            content: `Chat is transferred to ${message?.interactive?.list_reply?.title} department`,
-          };
-          sendMessageToAdmins(socketObj, mess2, existingChat?.department?._id);
-        }
         // const isAvailable = await checkDepartmentAvailability(
         //   socketObj,
         //   existingChat,
@@ -1164,6 +1123,35 @@ const whatsappMessages = async (req, res) => {
               mess6,
               existingChat?.department?._id
             );
+          const answer =
+            message?.interactive?.list_reply?.id ||
+            message?.interactive?.button_reply?.id;
+          console.log(answer, "dffgdfgdgfg");
+          if (["1", "2", "3", "4", "5"].includes(answer)) {
+            const departmentDetails = await DepartmentModel.findOne({
+              depId: answer,
+            });
+
+            // departmentSession = existingChat?.currentSessionId;
+            existingChat = await ChatModel.findOneAndUpdate(
+              { _id: existingChat._id },
+              {
+                department: departmentDetails?._id,
+                depId: departmentDetails?.depId,
+              },
+              { new: true }
+            ).populate("department");
+            const mess2 = {
+              chatId: existingChat?._id,
+              sender: null,
+              receiver: null,
+              sendType: "assistant",
+              receiverType: "admin",
+              messageType: "tooltip",
+              content: `Chat is transferred to ${message?.interactive?.list_reply?.title} department`,
+            };
+            sendMessageToAdmins(socketObj, mess2, existingChat?.department?._id);
+          }
           // const userInput = ;
           const aiResponse = await continueChat(
             existingChat.currentSessionId,
