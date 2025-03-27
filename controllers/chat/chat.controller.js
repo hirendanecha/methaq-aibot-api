@@ -1189,6 +1189,26 @@ const whatsappMessages = async (req, res) => {
               messageID,
               aiResponse?.interactivePayload
             );
+            const intmessage = {
+              chatId: existingChat._id,
+              sender: null,
+              receiver: existingChat.customerId?.toString(),
+              sendType: "assistant",
+              receiverType: "user",
+              content: "Please select one of the following options:",
+              messageType: "interective",
+              messageOptions: aiResponse?.interactivePayload?.options?.map(
+                (department) => ({
+                  label: department.name,
+                  value: department.depId,
+                })
+              ),
+            };
+            await sendMessageToAdmins(
+              socketObj,
+              intmessage,
+              existingChat?.department?._id
+            );
           } else if (
             aiResponse?.interactiveListButton &&
             aiResponse?.interactiveListPayload
