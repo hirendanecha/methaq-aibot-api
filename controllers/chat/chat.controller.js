@@ -473,6 +473,9 @@ const whatsappMessages = async (req, res) => {
     const displayPhoneNumber = metadata?.phone_number_id;
     const phoneNumberId = metadata?.display_phone_number;
 
+    console.log( req.body.entry,"req");
+    
+
     if (!messages) return res.status(400).send("No messages found"); // Added response for no messages
 
     const message = messages[0];
