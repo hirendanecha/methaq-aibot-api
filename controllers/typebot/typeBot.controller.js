@@ -122,7 +122,7 @@ const getAllTypeBots = async () => {
 const startChat = async (botId, message) => {
   // const url = `https://typebot-uqjtp-u35950.vm.elestio.app/api/v1/typebots/${botId}/startChat`; // Use the specific URL
   const url =
-    "https://typebot-uqjtp-u35950.vm.elestio.app/api/v1/typebots/welcome-bot-tony-x5fq4n9/startChat";
+    "https://botauto.vionextech.com/api/v1/typebots/welcome-bot-tony-x5fq4n9/startChat";
   try {
     const response = await axios.post(
       url
@@ -249,7 +249,7 @@ const continueChat = async (sessionId, message, urls = null) => {
   let interactiveListPayload = false;
   let interactivePayload = null;
   console.log("sessionId aaa", sessionId, message, urls);
-  const url = `https://typebot-uqjtp-u35950.vm.elestio.app/api/v1/sessions/${sessionId}/continueChat`; // Use the specific URL
+  const url = `https://botauto.vionextech.com/api/v1/sessions/${sessionId}/continueChat`; // Use the specific URL
 
   try {
     const requestBody = {
