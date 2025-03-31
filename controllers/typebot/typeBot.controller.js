@@ -378,10 +378,10 @@ const continueChat = async (sessionId, message, urls = null) => {
     const updatedChat = await ChatModel.findOneAndUpdate(
       { currentSessionId: sessionId },
       {
-        status: "archived",
+        //status: "archived",
         currentSessionId: null,
-        adminId: null,
-        isHuman: false,
+        //adminId: null,
+        //isHuman: false,
         department: null,
       },
       { new: true }
