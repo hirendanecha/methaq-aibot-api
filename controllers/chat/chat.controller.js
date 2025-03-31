@@ -473,8 +473,7 @@ const whatsappMessages = async (req, res) => {
     const displayPhoneNumber = metadata?.phone_number_id;
     const phoneNumberId = metadata?.display_phone_number;
 
-    console.log( req.body.entry,"req");
-    
+    //console.log( req.body.entry,"req");
 
     if (!messages) return res.status(400).send("No messages found"); // Added response for no messages
 
@@ -597,7 +596,6 @@ const whatsappMessages = async (req, res) => {
         // const secMess = await continueChat(sessionId, message.text?.body || "Hi");
         // oldSessionIds[message?.interactive?.list_reply?.id] = sessionId;
       }
-
 
       console.log(message.type, "message.type");
 
@@ -1053,7 +1051,11 @@ const whatsappMessages = async (req, res) => {
                   })
                 ),
             };
-            await sendMessageToAdmins(socketObj, intmessage, existingChat?.department?._id);
+            await sendMessageToAdmins(
+              socketObj,
+              intmessage,
+              existingChat?.department?._id
+            );
           } else {
             const mess = {
               chatId: existingChat?._id,
@@ -1129,8 +1131,13 @@ const whatsappMessages = async (req, res) => {
           const answer =
             message?.interactive?.list_reply?.id ||
             message?.interactive?.button_reply?.id;
-          console.log(answer, "dffgdfgdgfg");
-          if (["1", "2", "3", "4", "5"].includes(answer)) {
+          // console.log(answer, "dffgdfgdgfg");
+          const dataDept = await fetchDepartmentsAndPrompts();
+          //console.log(dataDept, "dataDept");
+
+          if (dataDept.map((d) => d.depId).includes(answer)) {
+           // console.log(answer, "answer");
+            
             const departmentDetails = await DepartmentModel.findOne({
               depId: answer,
             });
@@ -1153,7 +1160,11 @@ const whatsappMessages = async (req, res) => {
               messageType: "tooltip",
               content: `Chat is transferred to ${message?.interactive?.list_reply?.title} department`,
             };
-            sendMessageToAdmins(socketObj, mess2, existingChat?.department?._id);
+            sendMessageToAdmins(
+              socketObj,
+              mess2,
+              existingChat?.department?._id
+            );
           }
           // const userInput = ;
           const aiResponse = await continueChat(
