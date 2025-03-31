@@ -1,5 +1,6 @@
 const axios = require("axios");
 const { ChatOpenAI } = require("@langchain/openai");
+const ChatModel = require("../../models/chat.model");
 
 const openai = new ChatOpenAI({
   openAIApiKey: process.env.OPENAI_API_KEY,
@@ -9,45 +10,91 @@ const openai = new ChatOpenAI({
   maxRetries: 3,
   // cache: true, // Consider carefully if you want caching; it can lead to stale results.
 });
+const convertNodeToMarkdown = (node) => {
+  if (!node) return "";
 
-const formatRichText = (richText) => {
-  return richText
-    .map((item) => {
-      if (item.type === "p" || item.type === "li") {
-        return item.children.map((child) => child.text || "").join("");
-      } else if (item.type === "ul" || item.type === "ol") {
-        return item.children
-          .map(
-            (li) =>
-              "- " +
-              li.children
-                .map((lic) =>
-                  lic.children.map((text) => text.text || "").join("")
-                )
-                .join("")
-          )
-          .join("\n");
-      } else if (item.type === "variable") {
-        // Handle the "variable" type by processing its children
-        return item.children.map((child) => formatRichText([child])).join("\n");
+  let md = "";
+
+  // Switch based on the node type
+  switch (node.type) {
+    case "p": {
+      // Process children and add two line breaks at the end for a new paragraph.
+      const content = node.children
+        ? node.children.map(convertNodeToMarkdown).join("")
+        : node.text || "";
+      md += content + "\n\n";
+      break;
+    }
+    case "li": {
+      // For list items, prefix with a dash and a space.
+      const content = node.children
+        ? node.children.map(convertNodeToMarkdown).join("")
+        : node.text || "";
+      md += `- ${content}\n`;
+      break;
+    }
+    case "ul":
+    case "ol": {
+      // Process each child (expected to be list items) and join them.
+      md += node.children
+        ? node.children.map(convertNodeToMarkdown).join("")
+        : "";
+      md += "\n";
+      break;
+    }
+    case "variable":
+    case "inline-variable": {
+      // Treat these as containers – simply process their children.
+      md += node.children
+        ? node.children.map(convertNodeToMarkdown).join("")
+        : "";
+      break;
+    }
+    case "text":
+    default: {
+      // For plain text nodes (or unknown types), check for formatting flags.
+      // If you want to support bold text, assume a property 'bold' is used.
+      if (node.bold) {
+        md += `**${node.text || ""}**`;
+      } else {
+        md += node.text || "";
       }
-      return "";
-    })
-    .join("\n");
+      // Also process any children recursively.
+      if (node.children && Array.isArray(node.children)) {
+        md += node.children.map(convertNodeToMarkdown).join("");
+      }
+      break;
+    }
+  }
+  return md;
+};
+
+// Convert an array of rich text nodes into Markdown text.
+const formatRichTextToMarkdown = (richText) => {
+  return richText.map(convertNodeToMarkdown).join("");
 };
 
 const getFormattedMessage = (messages) => {
-  //console.log("messages", messages);
-  //const messages = response.messages;
   return messages
     .map((msg) => {
       if (msg.content && msg.content.richText) {
-        return formatRichText(msg.content.richText);
+        return formatRichTextToMarkdown(msg.content.richText);
       }
       return "";
     })
     .join("\n");
 };
+
+// const getFormattedMessage = (messages) => {
+//   return messages
+//     .map((msg) => {
+//       if (msg.content && msg.content.richText) {
+//         return formatRichText(msg.content.richText);
+//       }
+//       return "";
+//     })
+//     .join("\n");
+// };
 const getAllTypeBots = async () => {
   const url = `${process.env.TYPEBOT_BASE_URL}/api/v1/typebots?workspaceId=${process.env.TYPEBOT_WORKSPACEID}`; // Set the base URL and endpoint
 
@@ -189,7 +236,7 @@ async function translateTextDynamic(inputText, finalOutput) {
   "Please select one of the following options:"
   `;
   const response = await openai.invoke([{ role: "user", content: prompt }]);
- // console.log(response, "0303040");
+  // console.log(response, "0303040");
 
   // // Translate inputText to detected language
 
@@ -226,6 +273,10 @@ const continueChat = async (sessionId, message, urls = null) => {
     // console.log(response?.data,"response?.data?.messages?.[0]?.content?.richText?.[0]?.children?.[0]");
     // new thing
 
+    console.log(
+      "response?.data?.messages",
+      response?.data?.messages?.[0]?.content?.richText
+    );
     const finaloutput = getFormattedMessage(response?.data?.messages);
     console.log("finaloutput333", finaloutput);
     let finaloutputDisplay =
@@ -236,7 +287,7 @@ const continueChat = async (sessionId, message, urls = null) => {
     //   response?.data?.messages?.[0]?.content?.richText?.[0]?.children?.[0]
     //     ?.children?.[0]?.text;
     // console.log("Extracted text:", messageText);
-    console.log(response?.data?.input?.items, "response?.data?.input?.items");
+    // console.log(response?.data?.input?.items, "response?.data?.input?.items");
     if (
       response &&
       response.data &&
@@ -245,7 +296,7 @@ const continueChat = async (sessionId, message, urls = null) => {
       response?.data?.input?.items?.length > 0
     ) {
       if (response?.data?.input?.items?.length === 2) {
-        console.log(response?.data?.input.items, "iirirt");
+        // console.log(response?.data?.input.items, "iirirt");
         let payload1 = response?.data?.input.items;
         const result1 = await translateTextDynamic(
           "Choose an option",
@@ -324,6 +375,17 @@ const continueChat = async (sessionId, message, urls = null) => {
     };
   } catch (error) {
     console.error("Error continuing chat:", error.response.data.message);
+    const updatedChat = await ChatModel.findOneAndUpdate(
+      { currentSessionId: sessionId },
+      {
+        status: "archived",
+        currentSessionId: null,
+        adminId: null,
+        isHuman: false,
+        department: null,
+      },
+      { new: true }
+    ).lean();
     return "Axle broke!! Abort mission!!";
   }
 };
