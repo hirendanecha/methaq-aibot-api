@@ -1022,14 +1022,37 @@ const whatsappMessages = async (req, res) => {
             response?.interactiveListButton &&
             response?.interactiveListPayload
           ) {
-            response?.finaloutput &&
-              (await sendWhatsAppMessage(
+            if (response?.finaloutput) {
+              await sendWhatsAppMessage(
                 messageSender,
                 "",
                 messageID,
                 "",
                 response?.finaloutput
-              ));
+              );
+
+              const mess6 = {
+                chatId: existingChat._id,
+                sender: null,
+                receiver: existingChat?.customerId?.toString(),
+                sendType: "admin",
+                receiverType: "user",
+                content: response?.finaloutput,
+              };
+              sendMessageToAdmins(
+                socketObj,
+                mess6,
+                existingChat?.department?._id
+              );
+            }
+            // response?.finaloutput &&
+            //   (await sendWhatsAppMessage(
+            //     messageSender,
+            //     "",
+            //     messageID,
+            //     "",
+            //     response?.finaloutput
+            //   ));
             await sendListMessage(
               messageSender,
               messageID,
@@ -1046,11 +1069,12 @@ const whatsappMessages = async (req, res) => {
               messageOptions:
                 response?.interactiveListPayload?.action?.buttons?.map(
                   (btn) => ({
-                    label: btn.title,
-                    value: department.depId,
+                    label: btn.reply.title,
+                    value: btn.reply.id,
                   })
                 ),
             };
+
             await sendMessageToAdmins(
               socketObj,
               intmessage,
@@ -1136,8 +1160,8 @@ const whatsappMessages = async (req, res) => {
           //console.log(dataDept, "dataDept");
 
           if (dataDept.map((d) => d.depId).includes(answer)) {
-           // console.log(answer, "answer");
-            
+            // console.log(answer, "answer");
+
             const departmentDetails = await DepartmentModel.findOne({
               depId: answer,
             });
