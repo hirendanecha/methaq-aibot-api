@@ -1,7 +1,7 @@
 const ChatModel = require("../../models/chat.model");
 const ComplaintModel = require("../../models/complain.model");
 const CustomerModel = require("../../models/customer.model");
-const { getPagination, getPaginationData } = require("../../utils/fn");
+const { getPagination, getPaginationData, getAssigneeAgent } = require("../../utils/fn");
 const {
   sendSuccessResponse,
   sendErrorResponse,
@@ -39,7 +39,8 @@ const addComplaint = async (req, res) => {
     }
 
     console.log(chat, "srsdg");
-
+    const agent = await getAssigneeAgent(chat.department);
+    //console.log(agent, "agent1233");
     // Retrieve customer details using the customer ID from the chat
     const customer = await CustomerModel.findById(chat.customerId);
     if (!customer) {
@@ -53,6 +54,7 @@ const addComplaint = async (req, res) => {
       customername: customer.name || req.body.customername,
       customeremail: customer.email || req.body.customeremail,
       customerphone: customer.phone || req.body.customerphone,
+      adminId: agent?._id || null,
       ...req.body, // Include any additional details from the request body
     });
 
