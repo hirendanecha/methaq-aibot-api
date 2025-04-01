@@ -11,6 +11,7 @@ const {
   deleteThread,
 } = require("../../services/openai/controller/threadsController");
 const ComplaintModel = require("../../models/complain.model");
+const socketObj = require('../../helpers/socket.helper');
 
 exports.getAllCustomers = async (req, res) => {
   try {
@@ -19,11 +20,11 @@ exports.getAllCustomers = async (req, res) => {
     const { limit, offset } = getPagination(page, size);
     const condition = search
       ? [
-          { name: { $regex: new RegExp(search), $options: "i" } },
-          { email: { $regex: new RegExp(search), $options: "i" } },
-          { phone: { $regex: new RegExp(search), $options: "i" } },
-          { note: { $regex: new RegExp(search), $options: "i" } },
-        ]
+        { name: { $regex: new RegExp(search), $options: "i" } },
+        { email: { $regex: new RegExp(search), $options: "i" } },
+        { phone: { $regex: new RegExp(search), $options: "i" } },
+        { note: { $regex: new RegExp(search), $options: "i" } },
+      ]
       : [];
     const count = await CustomerModel.countDocuments({
       $or: condition,
@@ -156,6 +157,7 @@ exports.deleteCustomer = async (req, res) => {
       await ComplaintModel.deleteMany({ chatId: chatDetails._id });
       await MessageModel.deleteMany({ chatId: chatDetails._id });
       await ChatModel.deleteMany({ customerId: customerId });
+      socketObj.io.emit("delete-chat", { chatId: chatDetails._id });
       // await deleteThread(chatDetails.threadId);
     }
     return sendSuccessResponse(res, "Customer deleted successfully");
