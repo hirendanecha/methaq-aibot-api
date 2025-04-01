@@ -40,7 +40,7 @@ const addComplaint = async (req, res) => {
 
     console.log(chat, "srsdg");
     const agent = await getAssigneeAgent(chat.department);
-
+    //console.log(agent, "agent1233");
     // Retrieve customer details using the customer ID from the chat
     const customer = await CustomerModel.findById(chat.customerId);
     if (!customer) {
