@@ -82,7 +82,8 @@ const getFormattedMessage = (messages) => {
       }
       return "";
     })
-    .join("\n");
+    .join("\n")
+    .replace(/^\{\}\n*/, ''); // Remove standalone {} at the start of the string
 };
 
 // const getFormattedMessage = (messages) => {

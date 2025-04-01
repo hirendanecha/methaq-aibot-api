@@ -1351,6 +1351,161 @@ const whatsappMessages = async (req, res) => {
           // );
         }
         // }
+      } else if (message?.type === "audio") {
+        const audioID = message.audio.id;
+        const audioUrl = await downloadMedia(audioID);
+        const { url } = audioUrl?.data || {};
+
+        const mess1 = {
+          chatId: existingChat._id,
+          wpId: message?.id,
+          sender: existingChat?.customerId?.toString(),
+          receiver: existingChat?.adminId?.toString() || null,
+          sendType: "user",
+          receiverType: "admin",
+          content: "",
+          attachments: [url],
+        };
+        sendMessageToAdmins(socketObj, mess1, existingChat?.department?._id);
+
+        // console.log(audioUrl.data.url, "audioUrl");
+        if (!existingChat?.isHuman) {
+          //const userInput = message.text.body;
+          const sessionId = existingChat.currentSessionId;
+          // const response = await continueChat(sessionId, userInput);
+          const response = await continueChat(
+            existingChat.currentSessionId,
+            "",
+            [url]
+          );
+
+          if (response?.interactiveMsg && response?.interactivePayload) {
+            response?.finaloutput &&
+              (await sendWhatsAppMessage(
+                messageSender,
+                "",
+                messageID,
+                "",
+                response?.finaloutput
+              ));
+            await sendInteractiveMessage(
+              messageSender,
+              messageID,
+              response?.interactivePayload
+            );
+            const intmessage = {
+              chatId: existingChat._id,
+              sender: null,
+              receiver: existingChat.customerId?.toString(),
+              sendType: "assistant",
+              receiverType: "user",
+              content: "Please select one of the following options:",
+              messageType: "interective",
+              messageOptions: response?.interactivePayload?.options?.map(
+                (department) => ({
+                  label: department.name,
+                  value: department.depId,
+                })
+              ),
+            };
+            await sendMessageToAdmins(
+              socketObj,
+              intmessage,
+              existingChat?.department?._id
+            );
+          } else if (
+            response?.interactiveListButton &&
+            response?.interactiveListPayload
+          ) {
+            if (response?.finaloutput) {
+              await sendWhatsAppMessage(
+                messageSender,
+                "",
+                messageID,
+                "",
+                response?.finaloutput
+              );
+
+              const mess6 = {
+                chatId: existingChat._id,
+                sender: null,
+                receiver: existingChat?.customerId?.toString(),
+                sendType: "admin",
+                receiverType: "user",
+                content: response?.finaloutput,
+              };
+              sendMessageToAdmins(
+                socketObj,
+                mess6,
+                existingChat?.department?._id
+              );
+            }
+            // response?.finaloutput &&
+            //   (await sendWhatsAppMessage(
+            //     messageSender,
+            //     "",
+            //     messageID,
+            //     "",
+            //     response?.finaloutput
+            //   ));
+            await sendListMessage(
+              messageSender,
+              messageID,
+              response?.interactiveListPayload
+            );
+            const intmessage = {
+              chatId: existingChat._id,
+              sender: null,
+              receiver: existingChat.customerId?.toString(),
+              sendType: "assistant",
+              receiverType: "user",
+              content: "Please select one of the following options:",
+              messageType: "interective",
+              messageOptions:
+                response?.interactiveListPayload?.action?.buttons?.map(
+                  (btn) => ({
+                    label: btn.reply.title,
+                    value: btn.reply.id,
+                  })
+                ),
+            };
+
+            await sendMessageToAdmins(
+              socketObj,
+              intmessage,
+              existingChat?.department?._id
+            );
+          } else {
+            console.log("sttttt",response, "response?.finaloutput audio");
+            const mess = {
+              chatId: existingChat?._id,
+              sender: null,
+              sendType: "assistant",
+              content: response?.finaloutput,
+              receiver: existingChat?.customerId?.toString(),
+              receiverType: "user",
+            };
+            await sendMessageToAdmins(
+              socketObj,
+              mess,
+              existingChat?.department?._id
+            );
+            await sendWhatsAppMessage(
+              messageSender,
+              undefined,
+              messageID,
+              displayPhoneNumber,
+              response?.finaloutput
+            );
+          }
+          // const formalMessage =
+          //   "We are audio sorry, but we cannot process this type of content.";
+          // await sendWhatsAppMessageFromalMessage(
+          //   messageSender,
+          //   messageID,
+          //   formalMessage
+          // );
+        }
       } else if (
         message?.type === "video" ||
         message?.type === "location" ||
