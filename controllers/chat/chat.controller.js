@@ -1367,10 +1367,11 @@ const whatsappMessages = async (req, res) => {
       }
     }
 
-    return res.status(200).send("Message processed"); // Added response for successful processing
+    return res.status(200).send("EVENT_RECEIVED"); // Added response for successful processing
   } catch (error) {
     console.log(error.message);
-    return res.status(500).send("Error processing message");
+    return res.status(200).send("EVENT_RECEIVED");
+    //return res.status(500).send("Error processing message");
   }
 };
 
