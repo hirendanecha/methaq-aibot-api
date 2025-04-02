@@ -48,14 +48,16 @@ const addComplaint = async (req, res) => {
     }
 
     if (chat) {
-      console.log(chat, "srsdg");
-
+      //console.log(chat, "srsdg");
       // Retrieve customer details using the customer ID from the chat
+      agent = await getAssigneeAgent(
+        chat && chat.department
+          ? chat.department
+          : new mongoose.Types.ObjectId("67e6d17332f102190438fa1d")
+      );
       customer = await CustomerModel.findById(chat.customerId);
     }
-    agent = await getAssigneeAgent(
-      chat && chat.department ? chat.department : new mongoose.Types.ObjectId("67e6d17332f102190438fa1d")
-    );
+
     // Object"67e6d17332f102190438fa1d"
     // Create a new complaint using the chat ID and customer details
     const newComplaint = new ComplaintModel({
