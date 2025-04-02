@@ -1,7 +1,12 @@
+const { default: mongoose } = require("mongoose");
 const ChatModel = require("../../models/chat.model");
 const ComplaintModel = require("../../models/complain.model");
 const CustomerModel = require("../../models/customer.model");
-const { getPagination, getPaginationData, getAssigneeAgent } = require("../../utils/fn");
+const {
+  getPagination,
+  getPaginationData,
+  getAssigneeAgent,
+} = require("../../utils/fn");
 const {
   sendSuccessResponse,
   sendErrorResponse,
@@ -28,33 +33,38 @@ const getAllComplaints = async (req, res) => {
 const addComplaint = async (req, res) => {
   try {
     const { sessionId } = req.params; // Get session ID from query string
+
+    let chat = null;
+    let customer = null;
+    let agent = null;
+
     console.log("sessionid", sessionId);
 
     // Find the chat document using the session ID
-    const chat = await ChatModel.findOne({
-      currentSessionId: sessionId,
-    }).lean();
-    if (!chat) {
-      return sendErrorResponse(res, "Chat not found", 400, true, true);
+    if (sessionId) {
+      chat = await ChatModel.findOne({
+        currentSessionId: sessionId,
+      }).lean();
     }
 
-    console.log(chat, "srsdg");
-    const agent = await getAssigneeAgent(chat.department);
-    //console.log(agent, "agent1233");
-    // Retrieve customer details using the customer ID from the chat
-    const customer = await CustomerModel.findById(chat.customerId);
-    if (!customer) {
-      return sendErrorResponse(res, "Customer not found", 400, true, true);
-    }
+    if (chat) {
+      console.log(chat, "srsdg");
 
+      // Retrieve customer details using the customer ID from the chat
+      customer = await CustomerModel.findById(chat.customerId);
+    }
+    agent = await getAssigneeAgent(
+      chat && chat.department ? chat.department : new mongoose.Types.ObjectId("67e6d17332f102190438fa1d")
+    );
+    // Object"67e6d17332f102190438fa1d"
     // Create a new complaint using the chat ID and customer details
     const newComplaint = new ComplaintModel({
-      chatId: chat._id,
-      custid: customer._id,
-      customername: customer.name || req.body.customername,
-      customeremail: customer.email || req.body.customeremail,
-      customerphone: customer.phone || req.body.customerphone,
-      adminId: agent?._id || null,
+      chatId: chat ? chat._id : null,
+      custid: customer ? customer._id : null,
+      customername: customer ? customer.name : req.body.customername,
+      customeremail: customer ? customer.email : req.body.customeremail,
+      customerphone: customer ? customer.phone : req.body.customerphone,
+      adminId: agent ? agent._id : null,
       ...req.body, // Include any additional details from the request body
     });
 
