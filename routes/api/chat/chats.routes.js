@@ -129,7 +129,7 @@ router.post("/addtool", addToolToAssistant);
 router.get("/get-complaints", getAllComplaints);
 
 // Route to add a new complaint
-router.post("/add-complaints/:sessionId", addComplaint);
+router.post("/add-complaints/:sessionId?", addComplaint);
 
 // Route to update a complaint using session ID
 router.put("/update-complaint/:id", updateComplaint);
