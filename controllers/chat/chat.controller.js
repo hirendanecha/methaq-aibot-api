@@ -962,6 +962,7 @@ const whatsappMessages = async (req, res) => {
           }, 5000);
         }
       } else if (message.type == "text") {
+        let message =[];
         const mess = {
           chatId: existingChat?._id,
           wpId: message?.id,
@@ -972,7 +973,7 @@ const whatsappMessages = async (req, res) => {
           content: message.text?.body,
         };
         console.log(mess, "message from userside");
-
+        message.push(message.text?.body);
         sendMessageToAdmins(socketObj, mess, existingChat?.department?._id);
         // const isDepartmentSelected = existingChat?.department;
         // if (!isDepartmentSelected) {
@@ -1087,6 +1088,7 @@ const whatsappMessages = async (req, res) => {
         //   }
         // }
         if (!existingChat?.isHuman) {
+          
           setTimeout(async () => {
             const userInput = message.text.body;
             const sessionId = existingChat.currentSessionId; // Ensure sessionId is available
