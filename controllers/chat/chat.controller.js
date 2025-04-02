@@ -244,6 +244,34 @@ const deleteDocument = async (req, res) => {
   }
 };
 
+
+// const updateTimeToArchive = async (chatId) => {
+//   try {
+//     // Find the specific chat by ID
+//     const chat = await ChatModel.findById(chatId);
+//     if (!chat) {
+//       throw new Error("Chat not found.");
+//     }
+
+//     // Check if the chat has been archived
+//     if (!chat.archivedAt || !chat.createdAt) {
+//       throw new Error("Archived time or created time is missing.");
+//     }
+
+//     // Calculate the time taken to archive
+//     const archiveTime = chat.archivedAt - chat.createdAt; // Time in milliseconds
+//     const averageArchiveTime = archiveTime / 1000; // Convert to seconds
+
+//     // Update the averageArchiveTime field in the chat document
+//     chat.averageArchiveTime = averageArchiveTime;
+//     await chat.save(); // Save the updated chat document
+
+//     console.log(`Average archive time for chat ${chatId} updated successfully: ${averageArchiveTime} seconds`);
+//   } catch (error) {
+//     console.error("Error updating average archive time:", error.message);
+//     throw error; // Rethrow the error for further handling if needed
+//   }
+// };
 const closeChatController = async (req, res) => {
   try {
     // console.log(threadId, "rbbbjkb");
@@ -258,6 +286,15 @@ const closeChatController = async (req, res) => {
     }
     console.log(chat, "chatdf");
 
+    const timestamp = dayjs(); // Current time using dayjs
+    const createdAt = dayjs(chat.createdAt); // Convert createdAt to dayjs object
+    const chatTime = timestamp.diff(createdAt); // Time in milliseconds
+
+
+    // const timestamp = new Date(); // Current time
+    // const createdAt = new Date(chat.createdAt); // Convert createdAt to Date object
+    // const averageArchiveTime = timestamp - createdAt; // Time in milliseconds
+
     const updatedChat = await ChatModel.findOneAndUpdate(
       { _id: chat?._id },
       {
@@ -266,6 +303,7 @@ const closeChatController = async (req, res) => {
         adminId: null,
         isHuman: false,
         department: null,
+        chatTime
       },
       { new: true }
     ).lean();
@@ -368,7 +406,11 @@ const completedDocumentController = async (req, res) => {
       { currentSessionId: sessionId },
       {
         tags: !chatDetails?.tags?.includes("document_received")
-          ? [...(chatDetails?.tags || []), "document_received"]
+          ? [
+              ...(chatDetails?.tags?.filter((tag) => tag !== "pending") || []),
+              "document_received",
+              "qulified_lead",
+            ]
           : chatDetails?.tags,
       },
       {
@@ -412,6 +454,46 @@ const getDepartmentAvailability = async (req, res) => {
     return res.status(200).json(availableMess);
   } catch (error) {
     return res.status(500).json({ error: "Failed to update status" });
+  }
+};
+
+
+
+const getChatReports = async (req, res) => {
+  try {
+    // Total number of chats
+    const totalChats = await ChatModel.countDocuments();
+
+    // Number of open chats
+    const openChats = await ChatModel.countDocuments({ status: "active" });
+
+    // Number of closed chats
+    const closedChats = await ChatModel.countDocuments({ status: "archived" });
+
+    // Number of chats answered by AI
+    const aiAnsweredChats = await ChatModel.countDocuments({ isHuman: false });
+
+    const isHumanHandleChats = await ChatModel.countDocuments({
+      isHuman: true,
+    });
+
+    const average_to_human_responses = 2;
+    const average_to_archive_chats = 3;
+    // Prepare the report
+    const report = {
+      totalChats,
+      openChats,
+      closedChats,
+      aiAnsweredChats,
+      isHumanHandleChats,
+      average_to_human_responses,
+      average_to_archive_chats,
+    };
+
+    res.status(200).json(report);
+  } catch (error) {
+    console.error("Error fetching chat reports:", error.message);
+    res.status(500).json({ error: error.message });
   }
 };
 
@@ -516,11 +598,12 @@ const whatsappMessages = async (req, res) => {
       const chat = new ChatModel({
         customerId: updatedCus._id,
         currentSessionId: sessionId,
+        tags: ["pending"],
         // sessionId: sessionId,
         // threadId: threadId,
         source: "whatsapp",
       });
-      const newChat = await chat.save();
+      let newChat = await chat.save();
       const mess2 = {
         chatId: newChat?._id?.toString(),
         wpId: message?.id,
@@ -540,6 +623,13 @@ const whatsappMessages = async (req, res) => {
           displayPhoneNumber,
           secMess.finaloutput
         );
+        if (!newChat?.tags?.includes("ai_answered")) {
+          newChat = await ChatModel.findOneAndUpdate(
+            { _id: newChat._id },
+            { $push: { tags: "ai_answered" } },
+            { new: true }
+          );
+        }
         const mess6 = {
           chatId: newChat?._id?.toString(),
           sender: null,
@@ -1476,7 +1566,7 @@ const whatsappMessages = async (req, res) => {
               existingChat?.department?._id
             );
           } else {
-            console.log("sttttt",response, "response?.finaloutput audio");
+            console.log("sttttt", response, "response?.finaloutput audio");
             const mess = {
               chatId: existingChat?._id,
               sender: null,
@@ -1544,4 +1634,5 @@ module.exports = {
   assignAgentController,
   isDocumentReceived,
   getDepartmentAvailability,
+  getChatReports,
 };

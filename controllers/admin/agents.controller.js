@@ -89,12 +89,12 @@ exports.getAllAgents = async (req, res) => {
       role: { $nin: ["User", "Admin"] },
       ...(search
         ? {
-            $or: [
-              { fullName: new RegExp(search, "i") },
-              { email: new RegExp(search, "i") },
-              { mobileNumber: new RegExp(search, "i") },
-            ],
-          }
+          $or: [
+            { fullName: new RegExp(search, "i") },
+            { email: new RegExp(search, "i") },
+            { mobileNumber: new RegExp(search, "i") },
+          ],
+        }
         : {}),
     });
     const users = await UserModel.find({
@@ -102,12 +102,12 @@ exports.getAllAgents = async (req, res) => {
       ...(department ? { department: { $in: department } } : {}),
       ...(search
         ? {
-            $or: [
-              { fullName: new RegExp(search, "i") },
-              { email: new RegExp(search, "i") },
-              { mobileNumber: new RegExp(search, "i") },
-            ],
-          }
+          $or: [
+            { fullName: new RegExp(search, "i") },
+            { email: new RegExp(search, "i") },
+            { mobileNumber: new RegExp(search, "i") },
+          ],
+        }
         : {}),
     })
       .populate("department")
@@ -317,12 +317,12 @@ exports.getChatList = async (req, res) => {
 
       ...(search
         ? [
-            {
-              $match: {
-                "customerId.name": { $regex: new RegExp(search, "i") },
-              },
+          {
+            $match: {
+              "customerId.name": { $regex: new RegExp(search, "i") },
             },
-          ]
+          },
+        ]
         : []),
 
       {
@@ -393,9 +393,14 @@ exports.getChatDetails = async (req, res) => {
 exports.updateNotesToChat = async (req, res) => {
   try {
     const { chatId } = req.params;
-    const { notes } = req.body;
+    const { notes, tags } = req.body;
     const chat = await ChatModel.findById(chatId);
-    chat.notes = notes;
+    if (notes) {
+      chat.notes = notes;
+    }
+    if (tags) {
+      chat.tags = tags;
+    }
     await chat.save();
     return sendSuccessResponse(res, { data: chat });
   } catch (error) {

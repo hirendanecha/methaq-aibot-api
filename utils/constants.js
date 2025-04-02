@@ -30,5 +30,5 @@ module.exports = {
     },
   },
   chatStatus: ["active", "archived"],
-  chatTags: ["document_received", ""],
+  chatTags: ["document_received", "pending", "qulified_lead", "ai_answered"],
 };
