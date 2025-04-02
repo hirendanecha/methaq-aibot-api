@@ -587,10 +587,15 @@ const whatsappMessages = async (req, res) => {
 
     const currentTimestamp = Math.floor(Date.now() / 1000);
 
-    const currentTime = Date.now();
-    req.body.entry[0].changes[0].value.messages = messages.filter(
-      (message) => message.timestamp > currentTime - 1000 * 60 * 12
-    );
+    // const currentTime = Date.now();
+    // req.body.entry[0].changes[0].value.messages = messages.filter(
+    //   (message) => message.timestamp > currentTime - 1000 * 60 * 12
+    // );
+    if (req.body.entry[0]?.changes[0]?.value?.messages) {
+      req.body.entry[0].changes[0].value.messages = req.body.entry[0].changes[0].value.messages.filter(
+        (message) => message.timestamp > (Date.now() - 1000 * 60 * 60 * 0.2) / 1000
+      );
+    }
 
     const message = messages[0];
     const messInDB = await MessageModel.findOne({ wpId: message.id });
