@@ -368,7 +368,7 @@ const completedDocumentController = async (req, res) => {
       { currentSessionId: sessionId },
       {
         tags: !chatDetails?.tags?.includes("document_received")
-          ? [...(chatDetails?.tags || []), "document_received", "qulified_lead"]
+          ? [...(chatDetails?.tags?.filter((tag) => tag !== "pending") || []), "document_received", "qulified_lead"]
           : chatDetails?.tags,
       },
       {
@@ -454,7 +454,7 @@ const isDocumentReceived = async (req, res) => {
     if (!chatDetails) {
       return res.status(404).json({ error: "Please provide valid sessionId" });
     }
-    if (chatDetails?.tags?.includes("document_received", "qulified_lead")) {
+    if (chatDetails?.tags?.includes("document_received")) {
       return res.status(200).json({ status: "True" });
     } else {
       return res.status(200).json({ status: "False" });
