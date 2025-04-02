@@ -57,6 +57,18 @@ const ChatSchema = Schema(
       type: Number,
       default: null,
     },
+    agentTransferedAt: {
+      type: Date,
+      default: null
+    },
+    agentHandledAt: {
+      type: Date,
+      default: null,
+    },
+    initialHandlingTime: {
+      type: Number,
+      default: null
+    },
     tags: [
       {
         type: String,

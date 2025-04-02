@@ -364,6 +364,7 @@ const assignAgentController = async (req, res) => {
       { currentSessionId: sessionId },
       {
         adminId: assigneeAgent?._id,
+        agentTransferedAt: assigneeAgent ? new Date() : null,
         currentSessionId: null,
         isHuman: true,
       },
@@ -407,10 +408,10 @@ const completedDocumentController = async (req, res) => {
       {
         tags: !chatDetails?.tags?.includes("document_received")
           ? [
-              ...(chatDetails?.tags?.filter((tag) => tag !== "pending") || []),
-              "document_received",
-              "qulified_lead",
-            ]
+            ...(chatDetails?.tags?.filter((tag) => tag !== "pending") || []),
+            "document_received",
+            "qulified_lead",
+          ]
           : chatDetails?.tags,
       },
       {
@@ -473,6 +474,20 @@ const getChatReports = async (req, res) => {
     // Number of chats answered by AI
     const aiAnsweredChats = await ChatModel.countDocuments({ isHuman: false });
 
+    const totalHandlingTime = await ChatModel.aggregate([
+      {
+        $match: {
+          isHuman: true,
+        },
+        $group: {
+          _id: null,
+          totalHandlingTime: {
+            $sum: "$initialHandlingTime",
+          },
+        },
+      }
+    ])
+    console.log(totalHandlingTime, "totalHandlingTime123")
     const isHumanHandleChats = await ChatModel.countDocuments({
       isHuman: true,
     });
@@ -509,6 +524,7 @@ const assignDepartmentController = async (req, res) => {
       { currentSessionId: sessionId },
       {
         adminId: assigneeAgent?._id,
+        agentTransferedAt: assigneeAgent ? new Date() : null,
         department: department,
         currentSessionId: null,
         isHuman: true,
