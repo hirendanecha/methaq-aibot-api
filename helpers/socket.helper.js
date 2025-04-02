@@ -22,6 +22,7 @@ const {
   continueChat,
 } = require("../controllers/typebot/typeBot.controller");
 const DepartmentModel = require("../models/department.model");
+const dayjs = require("dayjs");
 
 let logger = console;
 const socketObj = {};
@@ -544,6 +545,9 @@ socketObj.config = (server) => {
             latestMessage: tooltipMess?._id,
             adminId: decoded?._id,
             isHuman: true,
+            agentTransferedAt: chatDetails?.agentTransferedAt || dayjs(),
+            agentHandledAt: chatDetails?.agentHandledAt || dayjs(),
+            initialHandlingTime: chatDetails?.initialHandlingTime || dayjs().diff(chatDetails?.agentTransferedAt, "minute"),
           },
           { new: true }
         )
@@ -751,6 +755,7 @@ socketObj.config = (server) => {
             {
               adminId: assigneeAgent?._id,
               department: department,
+              agentTransferedAt: assigneeAgent ? new Date() : null,
               isHuman: true,
             },
             { new: true }
