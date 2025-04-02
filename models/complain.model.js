@@ -6,7 +6,7 @@ const ComplaintSchema = new Schema(
     custid: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "customers",
-      required: true,
+      // required: true,
     },
     adminId: {
       type: Schema.Types.ObjectId,
@@ -16,8 +16,9 @@ const ComplaintSchema = new Schema(
     chatId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "chat",
-      required: true,
+      // required: true,
     },
+    complainType: { type: String, default: "" },
     customername: { type: String },
     complainComment: { type: String, default: "" },
     customeremail: { type: String },
