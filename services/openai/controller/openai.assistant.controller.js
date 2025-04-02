@@ -31,7 +31,7 @@ exports.createAssistant = async (name, instructions, toolNames = []) => {
     const assistant = await openai.beta.assistants.create({
       name,
       instructions,
-      model: process.env.OPENAI_MODEL || "gpt-4-turbo",
+      model: process.env.OPENAI_MODEL || "gpt-4o-mini",
       tools,
     });
 
@@ -177,5 +177,58 @@ exports.getToolFunctions = async (req, res) => {
     return sendSuccessResponse(res, { data: toolFunctions });
   } catch (error) {
     return sendErrorResponse(res, error.message);
+  }
+};
+
+exports.enableFIleSearch = async (assistantId) => {
+  try {
+    if (!assistantId) {
+      throw new Error(
+        "Assistant ID and updates are required to update an assistant."
+      );
+    }
+
+    // Retrieve the existing assistant details
+    const existingAssistant = await openai.beta.assistants.retrieve(
+      assistantId
+    );
+
+    // Check if file_search is already enabled
+    const hasFileSearch = existingAssistant.tools.some(
+      (tool) => tool.type === "file_search"
+    );
+
+    if (!hasFileSearch) {
+      // Add file_search tool
+      existingAssistant.tools.push({
+        type: "file_search",
+        file_search: {
+          ranking_options: {
+            ranker: "default_2024_08_21",
+            score_threshold: 0.0,
+          },
+        },
+      });
+
+      // Update the assistant with the new tools
+      const updatedAssistant = await openai.beta.assistants.update(
+        assistantId,
+        {
+          tools: existingAssistant.tools,
+        }
+      );
+
+      return {
+        success: true,
+        assistantId: updatedAssistant.id,
+        message: "Assistant updated successfully!",
+      };
+    } // Added missing closing brace here
+  } catch (error) {
+    console.error("Error updating assistant:", error);
+    return {
+      success: false,
+      message: `Failed to update assistant: ${error.message}`,
+    };
   }
 };

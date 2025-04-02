@@ -6,12 +6,25 @@ const processImage = require("../openai-functions/processImage");
 const documentStatus = require("../openai-functions/document_submission_confirmation");
 const closeChat = require("../openai-functions/closeChat");
 const DepartmentModel = require("../../../models/department.model");
+const { enableFIleSearch } = require("./openai.assistant.controller");
+const UploadModel = require("../../../models/uploade.model");
+const constants = require("../../../utils/constants");
 // Create a new thread
 exports.createThread = async () => {
   try {
     const thread = await openai.beta.threads.create();
     console.log("Thread Created:", thread.id);
     return thread.id;
+  } catch (error) {
+    console.error("Error creating thread:", error.message);
+    throw new Error("Failed to create thread.");
+  }
+};
+exports.deleteThread = async (threadId) => {
+  try {
+    const deletedThread = await openai.beta.threads.del(threadId);
+    console.log("Thread Created:", deletedThread);
+    return threadId;
   } catch (error) {
     console.error("Error creating thread:", error.message);
     throw new Error("Failed to create thread.");
@@ -56,6 +69,114 @@ const getActiveRun = async (threadId) => {
   const activeRuns = await openai.beta.threads.runs.list(threadId);
   return activeRuns.data.find((run) => run.status === "active");
 };
+// exports.handleUserMessage = async (
+//   threadId,
+//   userMessage = null,
+//   assistantId,
+//   fileUrl = null,
+//   formData,
+//   prompt
+// ) => {
+//   try {
+//     // Validate inputs
+//     if (!threadId || !assistantId) {
+//       throw new Error("Thread ID and user message are required.");
+//     }
+
+//     // console.log(assistantId, "assistantIdassistantId");
+
+//     let messageContent = userMessage || "";
+//     if (fileUrl) {
+//       messageContent += ` Analyze the file at this URL: ${fileUrl
+//         ?.map((file) => file.url)
+//         ?.join(", ")}`;
+//     }
+//     // Construct the message payload
+//     const messagePayload = {
+//       role: "user",
+//       content: messageContent,
+//     };
+//     console.log(messagePayload, "messagePayload");
+
+//     const userMessageResponse = await openai.beta.threads.messages.create(
+//       threadId,
+//       messagePayload
+//     );
+//     console.log("User message added:", userMessageResponse);
+//     const activeRun = await getActiveRun(threadId);
+//     if (activeRun) {
+//       console.log(`Cancelling active run: ${activeRun.id}`);
+//       await openai.beta.threads.runs.cancel(activeRun.id, {
+//         thread_id: threadId,
+//       });
+//     }
+//     // Run the assistant
+//     console.log(assistantId, "assistantIdassistantId12march");
+//     let run = await openai.beta.threads.runs.createAndPoll(threadId, {
+//       assistant_id: assistantId,
+//     });
+
+//     console.log(run.status, "run.status ankit");
+
+//     if (run.status === "requires_action") {
+//       const toolCalls = run.required_action.submit_tool_outputs.tool_calls;
+//       console.log(toolCalls, "toolCallstoolCallstoolCalls");
+
+//       const toolOutputs = await Promise.all(
+//         toolCalls.map(async (toolCall) => {
+//           const functionName = toolCall.function.name;
+//           const functionArgs = JSON.parse(toolCall.function.arguments);
+
+//           console.log(`Function to Call: ${functionName}`, functionArgs);
+
+//           let output;
+
+//           if (functionName === "processImage") {
+//             // console.log('Fetching Temperature for:', functionArgs.location);
+//             output = await processImage(formData, threadId, assistantId);
+//             //console.log("output :>> ", output);
+//           } else if (functionName === "checkUserUploadedAllDocs") {
+//             output = await documentStatus(threadId);
+//           } else if (functionName === "closeChat") {
+//             output = await closeChat(threadId);
+//           } else {
+//             console.warn(`Unknown function called: ${functionName}`);
+//             output = { error: "Unknown function" };
+//           }
+//           return {
+//             tool_call_id: toolCall.id,
+//             output: JSON.stringify(output?.message),
+//           };
+//         })
+//       );
+
+//       // Submit function response to OpenAI
+//       await openai.beta.threads.runs.submitToolOutputs(threadId, run.id, {
+//         tool_outputs: toolOutputs,
+//       });
+
+//       console.log("Tool outputs submitted. Waiting for final response...");
+
+//       // Poll again until Assistant completes processing**
+//       while (run.status !== "completed") {
+//         console.log("Waiting for assistant to finish processing...");
+//         await new Promise((resolve) => setTimeout(resolve, 2000));
+//         run = await openai.beta.threads.runs.retrieve(threadId, run.id);
+//       }
+//     }
+//     if (run.status === "completed") {
+//       const messages = await openai.beta.threads.messages.list(threadId);
+//       const aiReply = messages.data.find((m) => m.role === "assistant");
+//       return aiReply.content[0].text.value;
+//     } else {
+//       return "Processing your request...";
+//     }
+//   } catch (error) {
+//     console.error("Error handling user message:", error.message);
+//     throw new Error("Failed to handle user message.");
+//   }
+// };
+
 exports.handleUserMessage = async (
   threadId,
   userMessage = null,
@@ -65,9 +186,8 @@ exports.handleUserMessage = async (
   prompt
 ) => {
   try {
-    // Validate inputs
     if (!threadId || !assistantId) {
-      throw new Error("Thread ID and user message are required.");
+      throw new Error("Thread ID and assistant ID are required.");
     }
 
     let messageContent = userMessage || "";
@@ -76,11 +196,8 @@ exports.handleUserMessage = async (
         ?.map((file) => file.url)
         ?.join(", ")}`;
     }
-    // Construct the message payload
-    const messagePayload = {
-      role: "user",
-      content: messageContent,
-    };
+
+    const messagePayload = { role: "user", content: messageContent };
     console.log(messagePayload, "messagePayload");
 
     const userMessageResponse = await openai.beta.threads.messages.create(
@@ -88,36 +205,49 @@ exports.handleUserMessage = async (
       messagePayload
     );
     console.log("User message added:", userMessageResponse);
+
     const activeRun = await getActiveRun(threadId);
     if (activeRun) {
       console.log(`Cancelling active run: ${activeRun.id}`);
       await openai.beta.threads.runs.cancel(activeRun.id, {
         thread_id: threadId,
       });
+
+      let runStatus;
+      do {
+        await new Promise((resolve) => setTimeout(resolve, 2000));
+        const run = await openai.beta.threads.runs.retrieve(
+          threadId,
+          activeRun.id
+        );
+        runStatus = run.status;
+        console.log(
+          `Waiting for run ${activeRun.id} to be cancelled. Current status: ${runStatus}`
+        );
+      } while (runStatus !== "cancelled");
     }
-    // Run the assistant
+
+    console.log(assistantId);
+    const newActiveRun = await getActiveRun(threadId);
+    if (newActiveRun) {
+      throw new Error(`Thread ${threadId} still has an active run ${newActiveRun?.id}.`);
+    }
     let run = await openai.beta.threads.runs.createAndPoll(threadId, {
       assistant_id: assistantId,
     });
-    console.log(run.status, "run.status ankit");
+    console.log(run.status);
 
     if (run.status === "requires_action") {
       const toolCalls = run.required_action.submit_tool_outputs.tool_calls;
-      console.log(toolCalls, "toolCallstoolCallstoolCalls");
-
       const toolOutputs = await Promise.all(
         toolCalls.map(async (toolCall) => {
           const functionName = toolCall.function.name;
           const functionArgs = JSON.parse(toolCall.function.arguments);
-
           console.log(`Function to Call: ${functionName}`, functionArgs);
 
           let output;
-
           if (functionName === "processImage") {
-            // console.log('Fetching Temperature for:', functionArgs.location);
             output = await processImage(formData, threadId, assistantId);
-            //console.log("output :>> ", output);
           } else if (functionName === "checkUserUploadedAllDocs") {
             output = await documentStatus(threadId);
           } else if (functionName === "closeChat") {
@@ -133,20 +263,18 @@ exports.handleUserMessage = async (
         })
       );
 
-      // Submit function response to OpenAI
       await openai.beta.threads.runs.submitToolOutputs(threadId, run.id, {
         tool_outputs: toolOutputs,
       });
-
       console.log("Tool outputs submitted. Waiting for final response...");
 
-      // Poll again until Assistant completes processing**
       while (run.status !== "completed") {
         console.log("Waiting for assistant to finish processing...");
         await new Promise((resolve) => setTimeout(resolve, 2000));
         run = await openai.beta.threads.runs.retrieve(threadId, run.id);
       }
     }
+
     if (run.status === "completed") {
       const messages = await openai.beta.threads.messages.list(threadId);
       const aiReply = messages.data.find((m) => m.role === "assistant");
@@ -170,26 +298,35 @@ exports.createVectorStore = async (departmentDetails, files) => {
   }
 
   try {
-    let vectorStoreId = ""
+    await enableFIleSearch(departmentDetails?.assistantDetails?.id);
+    let vectorStoreId = "";
     if (!departmentDetails?.assistantDetails?.vectorId) {
       const vectorStore = await openai.beta.vectorStores.create({
         name: departmentDetails?.name,
       });
       console.log("Vector Store Created:", vectorStore);
-      await openai.beta.assistants.update(departmentDetails?.assistantDetails?.id, {
-        tool_resources: {
-          file_search: { vector_store_ids: [vectorStore?.id] },
-        },
-      });
-      vectorStoreId = vectorStore?.id
-      const updatedDepartment = await DepartmentModel.findByIdAndUpdate(departmentDetails?._id, {
-        assistantDetails: {
-          ...departmentDetails?.assistantDetails,
-          vectorId: vectorStoreId
+      await openai.beta.assistants.update(
+        departmentDetails?.assistantDetails?.id,
+        {
+          tool_resources: {
+            file_search: { vector_store_ids: [vectorStore?.id] },
+          },
         }
-      })
-    }
-    else {
+      );
+      vectorStoreId = vectorStore?.id;
+      departmentDetails = await DepartmentModel.findByIdAndUpdate(
+        departmentDetails?._id,
+        {
+          assistantDetails: {
+            ...departmentDetails?.assistantDetails,
+            vectorId: vectorStoreId,
+          },
+        },
+        {
+          new: true,
+        }
+      );
+    } else {
       vectorStoreId = departmentDetails?.assistantDetails?.vectorId;
     }
     if (vectorStoreId) {
@@ -203,18 +340,41 @@ exports.createVectorStore = async (departmentDetails, files) => {
         fs.renameSync(filePathT, newFilePathT);
 
         const fileStream = fs.createReadStream(newFilePath);
-        const response = await openai.files.create({
+        let response = {};
+        response = await openai.files.create({
           file: fileStream,
           purpose: "assistants",
         });
+        const newFile = new UploadModel({
+          ...(file && { file: file }),
+          department: departmentDetails?._id,
+          assistantDocId: response.id,
+          status: constants.status.statusObj.success,
+        });
+        const updated = await newFile.save();
+        console.log(updated, `Uploaded File ID: ${response?.id}`);
+        fs.unlinkSync(newFilePathT);
 
-        console.log(`Uploaded File ID: ${response.id}`);
-
+        departmentDetails = await DepartmentModel.findByIdAndUpdate(
+          departmentDetails?._id,
+          {
+            assistantDetails: {
+              ...departmentDetails?.assistantDetails,
+              documentIds: [
+                ...(departmentDetails?.assistantDetails?.documentIds || []),
+                response?.id,
+              ],
+            },
+          },
+          {
+            new: true,
+          }
+        );
         await openai.beta.vectorStores.files.createAndPoll(vectorStoreId, {
-          file_id: response.id,
+          file_id: response?.id,
         });
 
-        console.log(`File ${response.id} attached to Vector Store!`);
+        console.log(`File ${response?.id} attached to Vector Store!`);
       }
 
       return {
@@ -228,52 +388,52 @@ exports.createVectorStore = async (departmentDetails, files) => {
   }
 };
 
-exports.updateAssistantVectorStore = async (assistantId, vectorStoreId) => {
-  if (!vectorStoreId) {
-    throw new Error("Vector Store ID is required!");
-  }
+// exports.updateAssistantVectorStore = async (assistantId, vectorStoreId) => {
+//   if (!vectorStoreId) {
+//     throw new Error("Vector Store ID is required!");
+//   }
 
-  try {
-    // Step 1: Fetch the existing assistant details
-    const assistant = await openai.beta.assistants.retrieve(assistantId);
+//   try {
+//     // Step 1: Fetch the existing assistant details
+//     const assistant = await openai.beta.assistants.retrieve(assistantId);
 
-    // Step 2: Get existing vector_store_ids or initialize an empty array
-    const existingVectorStoreIds =
-      assistant.tool_resources?.file_search?.vector_store_ids[0] || [];
+//     // Step 2: Get existing vector_store_ids or initialize an empty array
+//     const existingVectorStoreIds =
+//       assistant.tool_resources?.file_search?.vector_store_ids[0] || [];
 
-    // Step 3: Prevent duplicates by checking if vectorStoreId already exists
-    if (existingVectorStoreIds.includes(vectorStoreId)) {
-      return {
-        success: true,
-        message: "Vector Store is already assigned to Assistant!",
-        assistantId,
-        vectorStoreId,
-      };
-    }
-    console.log(existingVectorStoreIds, vectorStoreId, "existingVectorStoreIds");
+//     // Step 3: Prevent duplicates by checking if vectorStoreId already exists
+//     if (existingVectorStoreIds.includes(vectorStoreId)) {
+//       return {
+//         success: true,
+//         message: "Vector Store is already assigned to Assistant!",
+//         assistantId,
+//         vectorStoreId,
+//       };
+//     }
+//     console.log(existingVectorStoreIds, vectorStoreId, "existingVectorStoreIds");
 
-    // Step 4: Append the new vectorStoreId
-    const updatedVectorStoreIds = [...existingVectorStoreIds, vectorStoreId];
-    console.log(updatedVectorStoreIds, "updatedVectorStoreIds");
+//     // Step 4: Append the new vectorStoreId
+//     const updatedVectorStoreIds = [...existingVectorStoreIds, vectorStoreId];
+//     console.log(updatedVectorStoreIds, "updatedVectorStoreIds");
 
-    // Step 5: Update the assistant with the new list
-    await openai.beta.assistants.update(assistantId, {
-      tool_resources: {
-        file_search: { vector_store_ids: updatedVectorStoreIds },
-      },
-    });
+//     // Step 5: Update the assistant with the new list
+//     await openai.beta.assistants.update(assistantId, {
+//       tool_resources: {
+//         file_search: { vector_store_ids: updatedVectorStoreIds },
+//       },
+//     });
 
-    return {
-      success: true,
-      message: "Vector Store successfully added to Assistant!",
-      assistantId,
-      vectorStoreId,
-    };
-  } catch (error) {
-    console.error("Error updating assistant:", error.message);
-    throw new Error(`Failed to update assistant: ${error.message}`);
-  }
-};
+//     return {
+//       success: true,
+//       message: "Vector Store successfully added to Assistant!",
+//       assistantId,
+//       vectorStoreId,
+//     };
+//   } catch (error) {
+//     console.error("Error updating assistant:", error.message);
+//     throw new Error(`Failed to update assistant: ${error.message}`);
+//   }
+// };
 // exports.updateAssistantVectorStore = async (assistantId, vectorStoreId) => {
 //   const { vectorStoreId, filePath } = req.body;
 

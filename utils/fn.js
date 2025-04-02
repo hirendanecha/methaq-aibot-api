@@ -275,11 +275,14 @@ exports.sendMessageToAdmins = async (socketObj, message, department) => {
   try {
     const newMessage = new MessageModel(message);
     const latestMess = await newMessage.save();
+    const conditions = [
+      { role: { $in: ["Admin", "Supervisor"] } },
+    ]
+    if(department){
+      conditions.push({ department: department })
+    }
     const receivers = await UserModel.find({
-      $or: [
-        { role: { $in: ["Admin", "Supervisor"] } },
-        { department: department },
-      ],
+      $or: conditions,
     }).lean();
     const updatedChat = await ChatModel.findOneAndUpdate(
       { _id: message?.chatId },
@@ -298,11 +301,46 @@ exports.sendMessageToAdmins = async (socketObj, message, department) => {
     throw error;
   }
 };
+exports.sendMessageToUser = async (socketObj, message) => {
+  try {
+
+    console.log(message,"sendMessageToUser message");
+    
+    const newMessage = new MessageModel(message);
+    const latestMess = await newMessage.save();
+    // const conditions = [
+    //   { role: { $in: ["Admin", "Supervisor"] } },
+    // ]
+    // if(department){
+    //   conditions.push({ department: department })
+    // }
+    // const receivers = await UserModel.find({
+    //   $or: conditions,
+    // }).lean();
+
+    
+    const updatedChat = await ChatModel.findOneAndUpdate(
+      { _id: message?.chatId },
+      { latestMessage: latestMess?._id, status: "active" },
+      { new: true }
+    )
+      .populate("adminId customerId")
+      .lean();
+      socketObj.io
+      .to(updatedChat?.customerId?._id?.toString())
+      .emit("message", { ...updatedChat, latestMessage: latestMess });
+    // [...receivers].forEach((receiver) => {
+      
+
+    // });
+  } catch (error) {
+    console.error("Error sending message to admins:", error);
+    throw error;
+  }
+};
 
 exports.checkDepartmentAvailability = async (
-  socketObj,
-  existingChat,
-  messageSender
+  existingChat
 ) => {
   try {
     if (existingChat?.department?.workingHours?.startTime) {
@@ -330,30 +368,30 @@ exports.checkDepartmentAvailability = async (
       console.log(endHour, "endHour");
 
       if (currentHour < startHour || currentHour > endHour) {
-        const message = {
-          chatId: existingChat?._id,
-          sender: null,
-          receiver: existingChat.customerId?.toString(),
-          sendType: "assistant",
-          receiverType: "user",
-          content: existingChat?.department?.messages?.afterHoursResponse,
-        };
-        exports.sendMessageToAdmins(
-          socketObj,
-          message,
-          existingChat?.department?._id
-        );
-        await sendWhatsAppMessage(
-          messageSender,
-          undefined,
-          undefined,
-          undefined,
-          existingChat?.department?.messages?.afterHoursResponse
-        );
-        return false;
+        // const message = {
+        //   chatId: existingChat?._id,
+        //   sender: null,
+        //   receiver: existingChat.customerId?.toString(),
+        //   sendType: "assistant",
+        //   receiverType: "user",
+        //   content: existingChat?.department?.messages?.afterHoursResponse,
+        // };
+        // exports.sendMessageToAdmins(
+        //   socketObj,
+        //   message,
+        //   existingChat?.department?._id
+        // );
+        // await sendWhatsAppMessage(
+        //   messageSender,
+        //   undefined,
+        //   undefined,
+        //   undefined,
+        //   existingChat?.department?.messages?.afterHoursResponse
+        // );
+        return existingChat?.department?.messages?.afterHoursResponse;
       }
     }
-    return true;
+    return "True";
   } catch (error) {
     console.error("Error checking department availability:", error);
     throw error;

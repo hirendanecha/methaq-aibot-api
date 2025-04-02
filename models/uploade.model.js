@@ -6,6 +6,7 @@ const Schema = mongoose.Schema;
 const uploadSchema = new Schema(
   {
     department: { type: mongoose.Types.ObjectId, ref: "departments" },
+    assistantDocId: { type: String },
     file: {
       type: Object,
     },

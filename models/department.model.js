@@ -8,12 +8,13 @@ const DepartmentSchema = new Schema(
     description: { type: String },
     logo: { type: String },
     jobId: { type: Object },
+    depId: { type: String },
     messages: {
       afterHoursResponse: { type: String },
       allAgentsOfflineResponse: { type: String },
       chatClosingMessage: { type: String },
     },
-    prompt: { type: String, default: "" },
+    // prompt: { type: String, default: "" },
     workingHours: {
       startTime: { type: String },
       endTime: { type: String },
@@ -21,10 +22,11 @@ const DepartmentSchema = new Schema(
     assistantDetails: {
       id: { type: String },
       vectorId: { type: String },
+      documentIds: [{ type: String }],
       name: { type: String },
       createdAt: { type: String },
     },
-    functionId: [{ type: String }],
+    // functionId: [{ type: String }],
   },
   {
     timestamps: true,

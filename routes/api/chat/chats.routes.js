@@ -8,6 +8,13 @@ const {
   uploadDocument,
   deleteDocument,
   whatsappMessages,
+  closeChatController,
+  completedDocumentController,
+  assignDepartmentController,
+  assignAgentController,
+  getDepartmentAvailability,
+  isDocumentReceived,
+  getChatReports,
 } = require("../../../controllers/chat/chat.controller");
 const {
   getAgentChats,
@@ -21,6 +28,21 @@ const {
   getToolFunctions,
   addToolToAssistant,
 } = require("../../../services/openai/controller/openai.assistant.controller");
+const {
+  getAllComplaints,
+  addComplaint,
+  updateComplaint,
+  updateComplaintStatus,
+  deleteComplaintById,
+  assignAgentToComplaint,
+  getComplaintById,
+} = require("../../../controllers/complain/complain.controller");
+const {
+  createSettings,
+  getSettings,
+  updateSettings,
+  rewriteMessage,
+} = require("../../../controllers/setting/settings.controller");
 const pinecone = new Pinecone({ apiKey: environment.pinecone.apiKey });
 // Route to store chat
 router.post("/store-chat", storeChat);
@@ -44,7 +66,7 @@ router.post(
   "/uploadDocument",
   fileUpload(
     "file",
-    ["pdf", "image"],
+    ["pdf", "word", "text", "json", "csv", "image", ""],
     [
       {
         name: "file",
@@ -85,8 +107,54 @@ router.get("/getwhatsappmessages", (req, res) => {
 
 router.post("/getwhatsappmessages", whatsappMessages);
 
+router.get("/close-chat/:sessionId", closeChatController);
+
+router.get("/received-document/:sessionId", completedDocumentController);
+
+router.post("/assign-department/:sessionId", assignDepartmentController);
+
+router.get("/check-document-received/:sessionId", isDocumentReceived);
+
+router.get("/assign-agent/:sessionId", assignAgentController);
+
+router.get(
+  "/check-department-availability/:sessionId",
+  getDepartmentAvailability
+);
+
 router.get("/get-tools", getToolFunctions);
 
 router.post("/addtool", addToolToAssistant);
+
+router.get("/get-complaints", getAllComplaints);
+
+// Route to add a new complaint
+router.post("/add-complaints/:sessionId", addComplaint);
+
+// Route to update a complaint using session ID
+router.put("/update-complaint/:id", updateComplaint);
+
+router.get("/getByIdComplain/:id", getComplaintById);
+
+// Route to delete a complaint using session ID
+router.delete("/delete-complaints/:complainid", deleteComplaintById);
+router.patch("/update-status-complaint/:id", updateComplaintStatus);
+router.patch("/assign-agent-complaint/:id", assignAgentToComplaint);
+
+//openai
+router.post("/create-settings", createSettings);
+
+// Route to get settings
+router.get("/get-settings", getSettings);
+
+// Route to update settings by ID
+router.put("/update-setting/:id", updateSettings); // Updated to include ID
+
+// Route to rewrite a message
+router.post("/settings/rewrite", rewriteMessage);
+
+//chat-reports
+router.get("/reports", getChatReports);
+//
 
 module.exports = router;
