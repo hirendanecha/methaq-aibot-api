@@ -57,7 +57,7 @@ const ChatSchema = Schema(
       {
         type: String,
         enum: constants.chatTags,
-        default: "",
+        default: "pending",
       },
     ],
   },

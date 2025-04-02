@@ -368,7 +368,7 @@ const completedDocumentController = async (req, res) => {
       { currentSessionId: sessionId },
       {
         tags: !chatDetails?.tags?.includes("document_received")
-          ? [...(chatDetails?.tags || []), "document_received"]
+          ? [...(chatDetails?.tags || []), "document_received", "qulified_lead"]
           : chatDetails?.tags,
       },
       {
@@ -454,7 +454,7 @@ const isDocumentReceived = async (req, res) => {
     if (!chatDetails) {
       return res.status(404).json({ error: "Please provide valid sessionId" });
     }
-    if (chatDetails?.tags?.includes("document_received")) {
+    if (chatDetails?.tags?.includes("document_received", "qulified_lead")) {
       return res.status(200).json({ status: "True" });
     } else {
       return res.status(200).json({ status: "False" });
@@ -520,7 +520,7 @@ const whatsappMessages = async (req, res) => {
         // threadId: threadId,
         source: "whatsapp",
       });
-      const newChat = await chat.save();
+      let newChat = await chat.save();
       const mess2 = {
         chatId: newChat?._id?.toString(),
         wpId: message?.id,
@@ -540,6 +540,13 @@ const whatsappMessages = async (req, res) => {
           displayPhoneNumber,
           secMess.finaloutput
         );
+        if (!newChat?.tags?.includes("ai_answered")) {
+          newChat = await ChatModel.findOneAndUpdate(
+            { _id: newChat._id },
+            { $push: { tags: "ai_answered" } },
+            { new: true }
+          )
+        }
         const mess6 = {
           chatId: newChat?._id?.toString(),
           sender: null,
@@ -1476,7 +1483,7 @@ const whatsappMessages = async (req, res) => {
               existingChat?.department?._id
             );
           } else {
-            console.log("sttttt",response, "response?.finaloutput audio");
+            console.log("sttttt", response, "response?.finaloutput audio");
             const mess = {
               chatId: existingChat?._id,
               sender: null,
