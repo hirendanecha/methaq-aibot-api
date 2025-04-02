@@ -244,7 +244,6 @@ const deleteDocument = async (req, res) => {
   }
 };
 
-
 // const updateTimeToArchive = async (chatId) => {
 //   try {
 //     // Find the specific chat by ID
@@ -290,7 +289,6 @@ const closeChatController = async (req, res) => {
     const createdAt = dayjs(chat.createdAt); // Convert createdAt to dayjs object
     const chatTime = timestamp.diff(createdAt); // Time in milliseconds
 
-
     // const timestamp = new Date(); // Current time
     // const createdAt = new Date(chat.createdAt); // Convert createdAt to Date object
     // const averageArchiveTime = timestamp - createdAt; // Time in milliseconds
@@ -303,7 +301,7 @@ const closeChatController = async (req, res) => {
         adminId: null,
         isHuman: false,
         department: null,
-        chatTime
+        chatTime,
       },
       { new: true }
     ).lean();
@@ -408,10 +406,10 @@ const completedDocumentController = async (req, res) => {
       {
         tags: !chatDetails?.tags?.includes("document_received")
           ? [
-            ...(chatDetails?.tags?.filter((tag) => tag !== "pending") || []),
-            "document_received",
-            "qulified_lead",
-          ]
+              ...(chatDetails?.tags?.filter((tag) => tag !== "pending") || []),
+              "document_received",
+              "qulified_lead",
+            ]
           : chatDetails?.tags,
       },
       {
@@ -458,8 +456,6 @@ const getDepartmentAvailability = async (req, res) => {
   }
 };
 
-
-
 const getChatReports = async (req, res) => {
   try {
     // Total number of chats
@@ -479,21 +475,37 @@ const getChatReports = async (req, res) => {
         $match: {
           isHuman: true,
         },
+      },
+      {
         $group: {
           _id: null,
           totalHandlingTime: {
             $sum: "$initialHandlingTime",
           },
         },
-      }
-    ])
-    console.log(totalHandlingTime, "totalHandlingTime123")
+      },
+    ]);
+
+    const totalHandlingTimeClose = await ChatModel.aggregate([
+      {
+        $group: {
+          _id: null,
+          totalChatTime: {
+            $sum: "$chatTime",
+          },
+        },
+      },
+    ]);
+    console.log(totalHandlingTimeClose, "totalHandlingTime123");
+
     const isHumanHandleChats = await ChatModel.countDocuments({
       isHuman: true,
     });
 
-    const average_to_human_responses = 2;
-    const average_to_archive_chats = 3;
+    const average_to_human_responses =
+      totalHandlingTime[0]?.totalHandlingTime || 0;
+    const average_to_archive_chats =
+      totalHandlingTimeClose[0]?.totalChatTime || 0;
     // Prepare the report
     const report = {
       totalChats,
@@ -565,15 +577,20 @@ const images = {};
 const whatsappMessages = async (req, res) => {
   try {
     // Added async
-
+    //res.status(200).send("EVENT_RECEIVED");
     const { messages, metadata, contacts } =
       req.body.entry?.[0]?.changes?.[0].value ?? {};
     const displayPhoneNumber = metadata?.phone_number_id;
     const phoneNumberId = metadata?.display_phone_number;
 
-    //console.log( req.body.entry,"req");
+    if (!messages) return res.status(400).send("No messages found");
 
-    if (!messages) return res.status(400).send("No messages found"); // Added response for no messages
+    const currentTimestamp = Math.floor(Date.now() / 1000);
+
+    const currentTime = Date.now();
+    req.body.entry[0].changes[0].value.messages = messages.filter(
+      (message) => message.timestamp > currentTime - 1000 * 60 * 12
+    );
 
     const message = messages[0];
     const messInDB = await MessageModel.findOne({ wpId: message.id });
