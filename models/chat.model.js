@@ -53,6 +53,10 @@ const ChatSchema = Schema(
       enum: constants.chatStatus,
       default: "active",
     },
+    chatTime: {
+      type: Number,
+      default: null,
+    },
     tags: [
       {
         type: String,

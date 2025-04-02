@@ -14,6 +14,7 @@ const {
   assignAgentController,
   getDepartmentAvailability,
   isDocumentReceived,
+  getChatReports,
 } = require("../../../controllers/chat/chat.controller");
 const {
   getAgentChats,
@@ -36,6 +37,12 @@ const {
   assignAgentToComplaint,
   getComplaintById,
 } = require("../../../controllers/complain/complain.controller");
+const {
+  createSettings,
+  getSettings,
+  updateSettings,
+  rewriteMessage,
+} = require("../../../controllers/setting/settings.controller");
 const pinecone = new Pinecone({ apiKey: environment.pinecone.apiKey });
 // Route to store chat
 router.post("/store-chat", storeChat);
@@ -133,5 +140,21 @@ router.get("/getByIdComplain/:id", getComplaintById);
 router.delete("/delete-complaints/:complainid", deleteComplaintById);
 router.patch("/update-status-complaint/:id", updateComplaintStatus);
 router.patch("/assign-agent-complaint/:id", assignAgentToComplaint);
+
+//openai
+router.post("/create-settings", createSettings);
+
+// Route to get settings
+router.get("/get-settings", getSettings);
+
+// Route to update settings by ID
+router.put("/update-setting/:id", updateSettings); // Updated to include ID
+
+// Route to rewrite a message
+router.post("/settings/rewrite", rewriteMessage);
+
+//chat-reports
+router.get("/reports", getChatReports);
+//
 
 module.exports = router;
