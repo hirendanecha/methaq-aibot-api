@@ -394,8 +394,8 @@ socketObj.config = (server) => {
                 receiver: chatDetails?.customerId || null,
                 receiverType: "user",
               };
-              await sendMessageToAdmins(socketObj, mess2, chatDetails?.department);
-              await sendMessageToUser(socketObj, mess2);
+              const message = await sendMessageToAdmins(socketObj, mess2, chatDetails?.department);
+              await sendMessageToUser(socketObj, message);
             }
           }
         }
@@ -539,7 +539,7 @@ socketObj.config = (server) => {
         };
         const newMessage = new MessageModel(mess);
         const tooltipMess = await newMessage.save();
-        console.log(+chatDetails?.initialHandlingTime || dayjs().diff(chatDetails?.agentTransferedAt, "minute"),chatDetails?.agentTransferedAt,"chatDetails?.initialHandlingTime")
+        console.log(+chatDetails?.initialHandlingTime || dayjs().diff(chatDetails?.agentTransferedAt, "minute"), chatDetails?.agentTransferedAt, "chatDetails?.initialHandlingTime")
         const updatedChat = await ChatModel.findOneAndUpdate(
           { _id: params.chatId },
           {
@@ -548,7 +548,7 @@ socketObj.config = (server) => {
             isHuman: true,
             agentTransferedAt: chatDetails?.agentTransferedAt || dayjs(),
             agentHandledAt: chatDetails?.agentHandledAt || dayjs(),
-            initialHandlingTime: +chatDetails?.initialHandlingTime || dayjs().diff(chatDetails?.agentTransferedAt||dayjs(), "minute"),
+            initialHandlingTime: +chatDetails?.initialHandlingTime || dayjs().diff(chatDetails?.agentTransferedAt || dayjs(), "minute"),
           },
           { new: true }
         )
