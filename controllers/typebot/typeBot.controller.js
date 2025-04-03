@@ -122,8 +122,8 @@ const getAllTypeBots = async () => {
 
 const startChat = async (botId, message) => {
   // const url = `https://typebot-uqjtp-u35950.vm.elestio.app/api/v1/typebots/${botId}/startChat`; // Use the specific URL
-  const url =
-    "https://botauto.vionextech.com/api/v1/typebots/welcome-bot-tony-x5fq4n9/startChat";
+  const url = `https://botauto.vionextech.com/api/v1/typebots/${process.env.TYPEBOT_BOT_ID_WELCOME}/startChat`;
+    console.log(process.env.TYPEBOT_BOT_ID_WELCOME);
   try {
     const response = await axios.post(
       url
