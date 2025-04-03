@@ -574,6 +574,9 @@ const isDocumentReceived = async (req, res) => {
   }
 };
 const images = {};
+let accumulatedMessages = [];
+let messageTimeout;
+
 const whatsappMessages = async (req, res) => {
   try {
     // Added async
@@ -592,9 +595,11 @@ const whatsappMessages = async (req, res) => {
     //   (message) => message.timestamp > currentTime - 1000 * 60 * 12
     // );
     if (req.body.entry[0]?.changes[0]?.value?.messages) {
-      req.body.entry[0].changes[0].value.messages = req.body.entry[0].changes[0].value.messages.filter(
-        (message) => message.timestamp > (Date.now() - 1000 * 60 * 60 * 0.2) / 1000
-      );
+      req.body.entry[0].changes[0].value.messages =
+        req.body.entry[0].changes[0].value.messages.filter(
+          (message) =>
+            message.timestamp > (Date.now() - 1000 * 60 * 60 * 0.2) / 1000
+        );
     }
 
     const message = messages[0];
@@ -962,7 +967,8 @@ const whatsappMessages = async (req, res) => {
           }, 5000);
         }
       } else if (message.type == "text") {
-        let message =[];
+        // Initialize an array to accumulate messages
+      
         const mess = {
           chatId: existingChat?._id,
           wpId: message?.id,
@@ -972,8 +978,10 @@ const whatsappMessages = async (req, res) => {
           receiverType: "admin",
           content: message.text?.body,
         };
-        console.log(mess, "message from userside");
-        message.push(message.text?.body);
+        //console.log(mess, "message from userside");
+
+        // Push the current message to the accumulated messages array
+        accumulatedMessages.push(message.text?.body);
         sendMessageToAdmins(socketObj, mess, existingChat?.department?._id);
         // const isDepartmentSelected = existingChat?.department;
         // if (!isDepartmentSelected) {
@@ -1088,9 +1096,15 @@ const whatsappMessages = async (req, res) => {
         //   }
         // }
         if (!existingChat?.isHuman) {
-          
-          setTimeout(async () => {
-            const userInput = message.text.body;
+          // Clear any existing timeout to reset the 8-second window
+          if (messageTimeout) {
+            clearTimeout(messageTimeout);
+          }
+
+          // Set a timeout to process messages after 8 seconds
+          messageTimeout = setTimeout(async () => {
+            // Join accumulated messages into a single string with spaces
+            const userInput = accumulatedMessages.join(" ");
             const sessionId = existingChat.currentSessionId; // Ensure sessionId is available
             const messageObj = {
               text: userInput,
@@ -1234,7 +1248,9 @@ const whatsappMessages = async (req, res) => {
                 response?.finaloutput
               );
             }
-          }, 0);
+            // Clear the accumulated messages after processing
+            accumulatedMessages = [];
+          }, 8000); // 8-second delay
         }
       } else if (message?.type === "interactive") {
         console.log(message, "message in interactive");
