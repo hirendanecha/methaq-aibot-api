@@ -98,7 +98,7 @@ const updateComplaintStatus = async (req, res) => {
     const { complainstatus } = req.body; // Get the new status from the request body
 
     // Validate the new status
-    if (!["pending", "resolved", "closed"].includes(complainstatus)) {
+    if (!["in_progress", "new", "closed"].includes(complainstatus)) {
       return sendErrorResponse(res, "Invalid status value", 400, true, true);
     }
 
