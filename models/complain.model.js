@@ -27,8 +27,8 @@ const ComplaintSchema = new Schema(
     complaindocuments: [{ type: String }], // Assuming documents are stored as URLs or file paths
     complainstatus: {
       type: String,
-      enum: ["pending", "resolved", "closed"],
-      default: "pending",
+      enum: ["new", "in_progress", "closed"],
+      default: "new",
     },
   },
   {
