@@ -968,7 +968,7 @@ const whatsappMessages = async (req, res) => {
         }
       } else if (message.type == "text") {
         // Initialize an array to accumulate messages
-      
+
         const mess = {
           chatId: existingChat?._id,
           wpId: message?.id,
@@ -1240,17 +1240,19 @@ const whatsappMessages = async (req, res) => {
                 mess,
                 existingChat?.department?._id
               );
-              await sendWhatsAppMessage(
-                messageSender,
-                undefined,
-                messageID,
-                displayPhoneNumber,
-                response?.finaloutput
-              );
+              if (response?.finaloutput) {
+                await sendWhatsAppMessage(
+                  messageSender,
+                  undefined,
+                  messageID,
+                  displayPhoneNumber,
+                  response.finaloutput
+                );
+              }
             }
             // Clear the accumulated messages after processing
             accumulatedMessages = [];
-          }, 8000); // 8-second delay
+          }, 5000); // 8-second delay
         }
       } else if (message?.type === "interactive") {
         console.log(message, "message in interactive");
@@ -1435,13 +1437,15 @@ const whatsappMessages = async (req, res) => {
               existingChat?.department?._id
             );
           } else {
-            await sendWhatsAppMessage(
-              messageSender,
-              undefined,
-              messageID,
-              displayPhoneNumber,
-              userInputmessage
-            );
+            if (userInputmessage) {
+              await sendWhatsAppMessage(
+                messageSender,
+                undefined,
+                messageID,
+                displayPhoneNumber,
+                userInputmessage
+              );
+            }
           }
 
           // const embeddings = new OpenAIEmbeddings({
@@ -1639,13 +1643,16 @@ const whatsappMessages = async (req, res) => {
               mess,
               existingChat?.department?._id
             );
-            await sendWhatsAppMessage(
-              messageSender,
-              undefined,
-              messageID,
-              displayPhoneNumber,
-              response?.finaloutput
-            );
+
+            if (response?.finaloutput) {
+              await sendWhatsAppMessage(
+                messageSender,
+                undefined,
+                messageID,
+                displayPhoneNumber,
+                response.finaloutput
+              );
+            }
           }
           // const formalMessage =
           //   "We are audio sorry, but we cannot process this type of content.";
