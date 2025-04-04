@@ -609,6 +609,9 @@ const whatsappMessages = async (req, res) => {
     }
     const messageSender = message.from;
     const messageID = message.id;
+
+    const read = await markMessageAsRead(messageID);
+
     const messaging_product = "whatsaap";
     const profileName = contacts?.[0]?.profile?.name;
 
@@ -976,7 +979,7 @@ const whatsappMessages = async (req, res) => {
           receiverType: "admin",
           content: message.text?.body,
         };
-       // console.log(mess, "message from userside");
+        // console.log(mess, "message from userside");
 
         sendMessageToAdmins(socketObj, mess, existingChat?.department?._id);
         // const isDepartmentSelected = existingChat?.department;
