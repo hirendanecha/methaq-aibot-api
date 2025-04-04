@@ -68,7 +68,7 @@ const sendWhatsAppMessage = async (
       Authorization: `Bearer ${environment.whatsaap.whatAuthT}`,
     },
   });
-  messageID && (await markMessageAsRead(messageID));
+ // messageID && (await markMessageAsRead(messageID));
 };
 
 const sendWhatsAppMessageFromalMessage = async (
@@ -95,7 +95,7 @@ const sendWhatsAppMessageFromalMessage = async (
       Authorization: `Bearer ${environment.whatsaap.whatAuthT}`,
     },
   });
-  await markMessageAsRead(messageID);
+  //await markMessageAsRead(messageID);
 };
 
 //convert pdf to image//
@@ -305,7 +305,7 @@ const sendListMessage = async (messageSender, messageID, buttonPayload) => {
   try {
     const response = await axios.post(url, data, config);
     console.log("Button interactive message sent:", response.data);
-    messageID && (await markMessageAsRead(messageID));
+    // messageID && (await markMessageAsRead(messageID));
     return response.data; // Return the response data
   } catch (error) {
     console.error(
@@ -371,7 +371,7 @@ const sendInteractiveMessage = async (messageSender, messageID, payload) => {
   try {
     const response = await axios.post(url, data, config);
     console.log("Interactive list message sent:", response.data);
-    await markMessageAsRead(messageID);
+   // await markMessageAsRead(messageID);
     return response.data; // Return the response data
   } catch (error) {
     console.error("Error sending interactive list message:", error.message);
