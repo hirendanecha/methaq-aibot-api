@@ -287,7 +287,7 @@ const closeChatController = async (req, res) => {
     if (!chat?.adminId && !chat?.tags?.includes("ai_answered")) {
       extraPayload = {
         $push: { tags: "ai_answered" },
-      }
+      };
     }
     const timestamp = dayjs(); // Current time using dayjs
     const createdAt = dayjs(chat.createdAt); // Convert createdAt to dayjs object
@@ -306,7 +306,7 @@ const closeChatController = async (req, res) => {
         isHuman: false,
         department: null,
         chatTime,
-        ...extraPayload
+        ...extraPayload,
       },
       { new: true }
     ).lean();
@@ -411,10 +411,10 @@ const completedDocumentController = async (req, res) => {
       {
         tags: !chatDetails?.tags?.includes("document_received")
           ? [
-            ...(chatDetails?.tags?.filter((tag) => tag !== "pending") || []),
-            "document_received",
-            "qulified_lead",
-          ]
+              ...(chatDetails?.tags?.filter((tag) => tag !== "pending") || []),
+              "document_received",
+              "qulified_lead",
+            ]
           : chatDetails?.tags,
       },
       {
@@ -621,7 +621,7 @@ const whatsappMessages = async (req, res) => {
     const profileName = contacts?.[0]?.profile?.name;
 
     const user = await CustomerModel.findOne({ phone: messageSender });
-   // res.sendStatus(200);
+    // res.sendStatus(200);
     if (!user) {
       const customer = new CustomerModel({
         name: profileName,
@@ -987,6 +987,7 @@ const whatsappMessages = async (req, res) => {
         // console.log(mess, "message from userside");
 
         sendMessageToAdmins(socketObj, mess, existingChat?.department?._id);
+
         // const isDepartmentSelected = existingChat?.department;
         // if (!isDepartmentSelected) {
         //   await sendInterectiveMessageConfirmation(
@@ -1108,7 +1109,7 @@ const whatsappMessages = async (req, res) => {
           };
           console.log(sessionId, "response typebot");
           const response = await continueChat(sessionId, userInput);
-          // console.log(response, "response typebot");
+          console.log(response.interactivePayload, "hey ankit");
           // const assistantMessage = response.data.messages[0]?.content?.richText[0]?.children[0]?.children[0]?.text;
 
           // const results = await vectorStore.similaritySearch(userInput, 5);
@@ -1134,10 +1135,19 @@ const whatsappMessages = async (req, res) => {
                 "",
                 response?.finaloutput
               ));
+            const mess = {
+              chatId: existingChat?._id,
+              wpId: message?.id,
+              sender: null,
+              receiver: existingChat?.customerId?.toString(),
+              sendType: "admin",
+              receiverType: "user",
+              content: response?.finaloutput,
+            };
             response?.finaloutput &&
               (await sendMessageToAdmins(
                 socketObj,
-                response?.finaloutput,
+                mess,
                 existingChat?.department?._id
               ));
             await sendInteractiveMessage(
