@@ -612,7 +612,9 @@ const whatsappMessages = async (req, res) => {
     const messageID = message.id;
     const messaging_product = "whatsaap";
     const profileName = contacts?.[0]?.profile?.name;
-    const read = await markMessageAsRead(messageID);
+    if (messageID) {
+      const read = await markMessageAsRead(messageID);
+    }
     const user = await CustomerModel.findOne({ phone: messageSender });
     //  res.status(200);
     if (!user) {

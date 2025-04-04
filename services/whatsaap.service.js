@@ -53,9 +53,7 @@ const sendWhatsAppMessage = async (
     messaging_product: "whatsapp",
     recipient_type: "individual",
     to: messageSender,
-    context: {
-      message_id: messageID,
-    },
+    ...(messageID ? { context: { message_id: messageID } } : {}),
     type: "text",
     text: {
       preview_url: false,
@@ -68,7 +66,7 @@ const sendWhatsAppMessage = async (
       Authorization: `Bearer ${environment.whatsaap.whatAuthT}`,
     },
   });
- // messageID && (await markMessageAsRead(messageID));
+  // messageID && (await markMessageAsRead(messageID));
 };
 
 const sendWhatsAppMessageFromalMessage = async (
@@ -371,7 +369,7 @@ const sendInteractiveMessage = async (messageSender, messageID, payload) => {
   try {
     const response = await axios.post(url, data, config);
     console.log("Interactive list message sent:", response.data);
-   // await markMessageAsRead(messageID);
+    // await markMessageAsRead(messageID);
     return response.data; // Return the response data
   } catch (error) {
     console.error("Error sending interactive list message:", error.message);
