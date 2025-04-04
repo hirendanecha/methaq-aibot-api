@@ -60,6 +60,7 @@ const ModuleAcessSchema = new Schema(
             agent: permissionSchema,
             chatTransfer: updatePermissionSchema,
             customer: permissionSchema,
+            complain: { ...readPermissionSchema, ...updatePermissionSchema },
         },
     },
     {
