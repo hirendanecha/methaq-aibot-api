@@ -586,7 +586,7 @@ const whatsappMessages = async (req, res) => {
     const displayPhoneNumber = metadata?.phone_number_id;
     const phoneNumberId = metadata?.display_phone_number;
 
-    if (!messages) return res.status(400).send("No messages found");
+    if (!messages) return res.status(200).send("EVENT_RECEIVED");
 
     const currentTimestamp = Math.floor(Date.now() / 1000);
 
@@ -605,7 +605,7 @@ const whatsappMessages = async (req, res) => {
     const message = messages[0];
     const messInDB = await MessageModel.findOne({ wpId: message.id });
     if (messInDB) {
-      return res.status(200).send("Message already processed");
+      return res.status(200).send("EVENT_RECEIVED");
     }
     const messageSender = message.from;
     const messageID = message.id;
