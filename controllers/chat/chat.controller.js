@@ -591,7 +591,7 @@ const whatsappMessages = async (req, res) => {
     const displayPhoneNumber = metadata?.phone_number_id;
     const phoneNumberId = metadata?.display_phone_number;
 
-    if (!messages) return res.status(200).send("EVENT_RECEIVED");
+    if (!messages) return res.status(200);
 
     const currentTimestamp = Math.floor(Date.now() / 1000);
 
@@ -610,7 +610,7 @@ const whatsappMessages = async (req, res) => {
     const message = messages[0];
     const messInDB = await MessageModel.findOne({ wpId: message.id });
     if (messInDB) {
-      return res.status(200).send("EVENT_RECEIVED");
+      return res.status(200);
     }
     const messageSender = message.from;
     const messageID = message.id;
@@ -621,7 +621,7 @@ const whatsappMessages = async (req, res) => {
     const profileName = contacts?.[0]?.profile?.name;
 
     const user = await CustomerModel.findOne({ phone: messageSender });
-
+    res.sendStatus(200);
     if (!user) {
       const customer = new CustomerModel({
         name: profileName,
@@ -725,7 +725,7 @@ const whatsappMessages = async (req, res) => {
       // console.log("jjjjjjjj")
 
       if (!existingChat) {
-        return res.status(200).send("Message processed");
+        return res.status(200);
       }
       //console.log(existingChat, "existingChatexistingChat");
       if (!existingChat?.currentSessionId) {
@@ -1605,10 +1605,10 @@ const whatsappMessages = async (req, res) => {
       }
     }
 
-    return res.status(200).send("EVENT_RECEIVED"); // Added response for successful processing
+    return res.status(200); // Added response for successful processing
   } catch (error) {
     console.log(error.message);
-    return res.status(200).send("EVENT_RECEIVED");
+    return res.status(200);
     //return res.status(500).send("Error processing message");
   }
 };
