@@ -1134,6 +1134,12 @@ const whatsappMessages = async (req, res) => {
                 "",
                 response?.finaloutput
               ));
+            response?.finaloutput &&
+              (await sendMessageToAdmins(
+                socketObj,
+                response?.finaloutput,
+                existingChat?.department?._id
+              ));
             await sendInteractiveMessage(
               messageSender,
               messageID,
