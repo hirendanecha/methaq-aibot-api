@@ -621,7 +621,7 @@ const whatsappMessages = async (req, res) => {
     const profileName = contacts?.[0]?.profile?.name;
 
     const user = await CustomerModel.findOne({ phone: messageSender });
-    res.sendStatus(200);
+   // res.sendStatus(200);
     if (!user) {
       const customer = new CustomerModel({
         name: profileName,
