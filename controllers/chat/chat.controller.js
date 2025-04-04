@@ -1136,7 +1136,7 @@ const whatsappMessages = async (req, res) => {
               receiver: existingChat?.customerId?.toString(),
               sendType: "admin",
               receiverType: "user",
-              content: message.text?.body,
+              content: response?.finaloutput,
             };
             response?.finaloutput &&
               (await sendMessageToAdmins(socketObj, mess, existingChat?.department?._id));
