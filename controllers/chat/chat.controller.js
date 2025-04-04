@@ -276,7 +276,7 @@ const closeChatController = async (req, res) => {
     // console.log(threadId, "rbbbjkb");
     const { sessionId } = req.params || {};
     console.log(sessionId, "sessionId");
-    const extraPayload = {};
+
     const chat = await ChatModel.findOne({ currentSessionId: sessionId })
       .populate("customerId department")
       .lean();
@@ -284,11 +284,7 @@ const closeChatController = async (req, res) => {
       return res.status(404).json({ error: "Chat not found" });
     }
     console.log(chat, "chatdf");
-    if (!chat?.adminId && !chat?.tags?.includes("ai_answered")) {
-      extraPayload = {
-        $push: { tags: "ai_answered" },
-      };
-    }
+
     const timestamp = dayjs(); // Current time using dayjs
     const createdAt = dayjs(chat.createdAt); // Convert createdAt to dayjs object
     const chatTime = timestamp.diff(createdAt); // Time in milliseconds
@@ -306,7 +302,6 @@ const closeChatController = async (req, res) => {
         isHuman: false,
         department: null,
         chatTime,
-        ...extraPayload,
       },
       { new: true }
     ).lean();
@@ -579,9 +574,6 @@ const isDocumentReceived = async (req, res) => {
   }
 };
 const images = {};
-let accumulatedMessages = [];
-let messageTimeout;
-
 const whatsappMessages = async (req, res) => {
   try {
     // Added async
@@ -591,7 +583,7 @@ const whatsappMessages = async (req, res) => {
     const displayPhoneNumber = metadata?.phone_number_id;
     const phoneNumberId = metadata?.display_phone_number;
 
-    if (!messages) return res.status(200);
+    if (!messages) return res.status(400).send("No messages found");
 
     const currentTimestamp = Math.floor(Date.now() / 1000);
 
@@ -599,12 +591,11 @@ const whatsappMessages = async (req, res) => {
     // req.body.entry[0].changes[0].value.messages = messages.filter(
     //   (message) => message.timestamp > currentTime - 1000 * 60 * 12
     // );
+
     if (req.body.entry[0]?.changes[0]?.value?.messages) {
-      req.body.entry[0].changes[0].value.messages =
-        req.body.entry[0].changes[0].value.messages.filter(
-          (message) =>
-            message.timestamp > (Date.now() - 1000 * 60 * 60 * 0.2) / 1000
-        );
+      req.body.entry[0].changes[0].value.messages = req.body.entry[0].changes[0].value.messages.filter(
+        (message) => message.timestamp > (Date.now() - 1000 * 60 * 60 * 0.2) / 1000
+      );
     }
 
     const message = messages[0];
@@ -614,14 +605,11 @@ const whatsappMessages = async (req, res) => {
     }
     const messageSender = message.from;
     const messageID = message.id;
-
-    const read = await markMessageAsRead(messageID);
-
     const messaging_product = "whatsaap";
     const profileName = contacts?.[0]?.profile?.name;
-
+    const read = await markMessageAsRead(messageID);
     const user = await CustomerModel.findOne({ phone: messageSender });
-    // res.sendStatus(200);
+  //  res.status(200);
     if (!user) {
       const customer = new CustomerModel({
         name: profileName,
@@ -674,13 +662,13 @@ const whatsappMessages = async (req, res) => {
           displayPhoneNumber,
           secMess.finaloutput
         );
-        // if (!newChat?.tags?.includes("ai_answered")) {
-        //   newChat = await ChatModel.findOneAndUpdate(
-        //     { _id: newChat._id },
-        //     { $push: { tags: "ai_answered" } },
-        //     { new: true }
-        //   );
-        // }
+        if (!newChat?.tags?.includes("ai_answered")) {
+          newChat = await ChatModel.findOneAndUpdate(
+            { _id: newChat._id },
+            { $push: { tags: "ai_answered" } },
+            { new: true }
+          );
+        }
         const mess6 = {
           chatId: newChat?._id?.toString(),
           sender: null,
@@ -984,10 +972,9 @@ const whatsappMessages = async (req, res) => {
           receiverType: "admin",
           content: message.text?.body,
         };
-        // console.log(mess, "message from userside");
+        console.log(mess, "message from userside");
 
         sendMessageToAdmins(socketObj, mess, existingChat?.department?._id);
-
         // const isDepartmentSelected = existingChat?.department;
         // if (!isDepartmentSelected) {
         //   await sendInterectiveMessageConfirmation(
@@ -1109,7 +1096,7 @@ const whatsappMessages = async (req, res) => {
           };
           console.log(sessionId, "response typebot");
           const response = await continueChat(sessionId, userInput);
-          console.log(response.interactivePayload, "hey ankit");
+          // console.log(response, "response typebot");
           // const assistantMessage = response.data.messages[0]?.content?.richText[0]?.children[0]?.children[0]?.text;
 
           // const results = await vectorStore.similaritySearch(userInput, 5);
@@ -1134,21 +1121,6 @@ const whatsappMessages = async (req, res) => {
                 messageID,
                 "",
                 response?.finaloutput
-              ));
-            const mess = {
-              chatId: existingChat?._id,
-              wpId: message?.id,
-              sender: null,
-              receiver: existingChat?.customerId?.toString(),
-              sendType: "admin",
-              receiverType: "user",
-              content: response?.finaloutput,
-            };
-            response?.finaloutput &&
-              (await sendMessageToAdmins(
-                socketObj,
-                mess,
-                existingChat?.department?._id
               ));
             await sendInteractiveMessage(
               messageSender,
@@ -1251,15 +1223,13 @@ const whatsappMessages = async (req, res) => {
               mess,
               existingChat?.department?._id
             );
-            if (response?.finaloutput) {
-              await sendWhatsAppMessage(
-                messageSender,
-                undefined,
-                messageID,
-                displayPhoneNumber,
-                response.finaloutput
-              );
-            }
+            await sendWhatsAppMessage(
+              messageSender,
+              undefined,
+              messageID,
+              displayPhoneNumber,
+              response?.finaloutput
+            );
           }
         }
       } else if (message?.type === "interactive") {
@@ -1445,17 +1415,71 @@ const whatsappMessages = async (req, res) => {
               existingChat?.department?._id
             );
           } else {
-            if (userInputmessage) {
-              await sendWhatsAppMessage(
-                messageSender,
-                undefined,
-                messageID,
-                displayPhoneNumber,
-                userInputmessage
-              );
-            }
+            await sendWhatsAppMessage(
+              messageSender,
+              undefined,
+              messageID,
+              displayPhoneNumber,
+              userInputmessage
+            );
           }
+
+          // const embeddings = new OpenAIEmbeddings({
+          //   openAIApiKey: process.env.OPENAI_API_KEY,
+          // });
+          // const index = pinecone.Index(environment.pinecone.indexName);
+          // const vectorStore = await PineconeStore.fromExistingIndex(
+          //   embeddings,
+          //   {
+          //     //@ts-ignore
+          //     pineconeIndex: index,
+          //   }
+          // );
+
+          // const results = await vectorStore.similaritySearch(userInput, 5);
+          // const results = await vectorStore.similaritySearch(
+          //   (query = userInput),
+          //   (k = 5),
+          //   (filter = {
+          //     departmentName: { $eq: existingChat?.department?.name },
+          //   }),
+          //   (include_metadata = true)
+          // );
+          //console.log(results, "resilrrfsgd");
+
+          // let context = results.map((r) => r.pageContent).join("\n\n");
+          // const response = await generateAIResponse(
+          //   context,
+          //   userInput,
+          //   existingChat
+          // );
+          // const response = await handleUserMessage(
+          //   departmentThread,
+          //   userInput,
+          //   existingChat?.department?.assistantDetails?.id,
+          //   null,
+          //   null,
+          //   existingChat?.department?.prompt
+          // );
+          // console.log(response, "messageSendermessageSender");
+          // const mess = {
+          //   chatId: existingChat?._id,
+          //   sender: null,
+          //   sendType: "assistant",
+          //   content: response,
+          //   receiver: existingChat?.customerId?.toString(),
+          //   receiverType: "user",
+          // };
+          // sendMessageToAdmins(socketObj, mess, existingChat?.department?._id);
+          // await sendWhatsAppMessage(
+          //   messageSender,
+          //   undefined,
+          //   messageID,
+          //   displayPhoneNumber,
+          //   response
+          // );
         }
+        // }
       } else if (message?.type === "audio") {
         const audioID = message.audio.id;
         const audioUrl = await downloadMedia(audioID);
@@ -1545,6 +1569,14 @@ const whatsappMessages = async (req, res) => {
                 existingChat?.department?._id
               );
             }
+            // response?.finaloutput &&
+            //   (await sendWhatsAppMessage(
+            //     messageSender,
+            //     "",
+            //     messageID,
+            //     "",
+            //     response?.finaloutput
+            //   ));
             await sendListMessage(
               messageSender,
               messageID,
@@ -1587,17 +1619,21 @@ const whatsappMessages = async (req, res) => {
               mess,
               existingChat?.department?._id
             );
-
-            if (response?.finaloutput) {
-              await sendWhatsAppMessage(
-                messageSender,
-                undefined,
-                messageID,
-                displayPhoneNumber,
-                response.finaloutput
-              );
-            }
+            await sendWhatsAppMessage(
+              messageSender,
+              undefined,
+              messageID,
+              displayPhoneNumber,
+              response?.finaloutput
+            );
           }
+          // const formalMessage =
+          //   "We are audio sorry, but we cannot process this type of content.";
+          // await sendWhatsAppMessageFromalMessage(
+          //   messageSender,
+          //   messageID,
+          //   formalMessage
+          // );
         }
       } else if (
         message?.type === "video" ||
