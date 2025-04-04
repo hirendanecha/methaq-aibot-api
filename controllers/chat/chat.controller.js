@@ -669,13 +669,13 @@ const whatsappMessages = async (req, res) => {
           displayPhoneNumber,
           secMess.finaloutput
         );
-        if (!newChat?.tags?.includes("ai_answered")) {
-          newChat = await ChatModel.findOneAndUpdate(
-            { _id: newChat._id },
-            { $push: { tags: "ai_answered" } },
-            { new: true }
-          );
-        }
+        // if (!newChat?.tags?.includes("ai_answered")) {
+        //   newChat = await ChatModel.findOneAndUpdate(
+        //     { _id: newChat._id },
+        //     { $push: { tags: "ai_answered" } },
+        //     { new: true }
+        //   );
+        // }
         const mess6 = {
           chatId: newChat?._id?.toString(),
           sender: null,
