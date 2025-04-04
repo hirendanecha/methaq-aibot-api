@@ -276,7 +276,7 @@ const closeChatController = async (req, res) => {
     // console.log(threadId, "rbbbjkb");
     const { sessionId } = req.params || {};
     console.log(sessionId, "sessionId");
-
+    const extraPayload = {};
     const chat = await ChatModel.findOne({ currentSessionId: sessionId })
       .populate("customerId department")
       .lean();
@@ -284,7 +284,11 @@ const closeChatController = async (req, res) => {
       return res.status(404).json({ error: "Chat not found" });
     }
     console.log(chat, "chatdf");
-
+    if (!chat?.adminId && !chat?.tags?.includes("ai_answered")) {
+      extraPayload = {
+        $push: { tags: "ai_answered" },
+      }
+    }
     const timestamp = dayjs(); // Current time using dayjs
     const createdAt = dayjs(chat.createdAt); // Convert createdAt to dayjs object
     const chatTime = timestamp.diff(createdAt); // Time in milliseconds
@@ -302,6 +306,7 @@ const closeChatController = async (req, res) => {
         isHuman: false,
         department: null,
         chatTime,
+        ...extraPayload
       },
       { new: true }
     ).lean();
@@ -406,10 +411,10 @@ const completedDocumentController = async (req, res) => {
       {
         tags: !chatDetails?.tags?.includes("document_received")
           ? [
-              ...(chatDetails?.tags?.filter((tag) => tag !== "pending") || []),
-              "document_received",
-              "qulified_lead",
-            ]
+            ...(chatDetails?.tags?.filter((tag) => tag !== "pending") || []),
+            "document_received",
+            "qulified_lead",
+          ]
           : chatDetails?.tags,
       },
       {
@@ -666,13 +671,13 @@ const whatsappMessages = async (req, res) => {
           displayPhoneNumber,
           secMess.finaloutput
         );
-        if (!newChat?.tags?.includes("ai_answered")) {
-          newChat = await ChatModel.findOneAndUpdate(
-            { _id: newChat._id },
-            { $push: { tags: "ai_answered" } },
-            { new: true }
-          );
-        }
+        // if (!newChat?.tags?.includes("ai_answered")) {
+        //   newChat = await ChatModel.findOneAndUpdate(
+        //     { _id: newChat._id },
+        //     { $push: { tags: "ai_answered" } },
+        //     { new: true }
+        //   );
+        // }
         const mess6 = {
           chatId: newChat?._id?.toString(),
           sender: null,
