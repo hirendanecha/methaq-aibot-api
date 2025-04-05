@@ -883,21 +883,7 @@ socketObj.config = (server) => {
             receiverType: "user",
             messageType: "tooltip",
           };
-          await sendMessageToAdmins(socketObj, mess, updatedChat?.department);
-          const receivers = await UserModel.find({
-            $or: [
-              { role: { $in: ["Admin", "Supervisor"] } },
-              { _id: { $in: [assigneeAgent?._id, oldAssignee] } },
-            ],
-          });
-          receivers.forEach((receiver) => {
-            socketObj.io
-              .to(receiver._id?.toString())
-              .emit("update-chat", updatedChat);
-            socketObj.io
-              .to(receiver._id?.toString())
-              .emit("message", { ...updatedChat, latestMessage: final });
-          });
+          await sendMessageToAdmins(socketObj, mess, updatedChat?.department,[{ _id: { $in: [oldAssignee] }}],true);
           if (typeof cb === "function")
             cb({
               success: true,
