@@ -586,27 +586,33 @@ const whatsappMessages = async (req, res) => {
     const { messages, metadata, contacts } =
       req.body.entry?.[0]?.changes?.[0].value ?? {};
       const messageTimestamp = messages?.length > 0 ? messages[0].timestamp : null;
+      const currentTime = Date.now();
       console.log(messageTimestamp, "messageTimestamp");
       if (!messageTimestamp) {
-        return res.status(400).send("No messages found");
+        return res.status(400);
       }
+      if ((currentTime - messageTimestamp) > 120000) {
+        console.log("Ignoring old queued message:", message.id);
+        return res.status(200);
+      }
+
     const displayPhoneNumber = metadata?.phone_number_id;
     const phoneNumberId = metadata?.display_phone_number;
 
     if (!messages) return res.status(400).send("No messages found");
 
-    const currentTimestamp = Math.floor(Date.now() / 1000);
+    // const currentTimestamp = Math.floor(Date.now() / 1000);
 
     // const currentTime = Date.now();
     // req.body.entry[0].changes[0].value.messages = messages.filter(
     //   (message) => message.timestamp > currentTime - 1000 * 60 * 12
     // );
 
-    if (req.body.entry[0]?.changes[0]?.value?.messages) {
-      req.body.entry[0].changes[0].value.messages = req.body.entry[0].changes[0].value.messages.filter(
-        (message) => message.timestamp > (Date.now() - 1000 * 60 * 60 * 0.2) / 1000
-      );
-    }
+    // if (req.body.entry[0]?.changes[0]?.value?.messages) {
+    //   req.body.entry[0].changes[0].value.messages = req.body.entry[0].changes[0].value.messages.filter(
+    //     (message) => message.timestamp > (Date.now() - 1000 * 60 * 60 * 0.2) / 1000
+    //   );
+    // }
 
     const message = messages[0];
     const messInDB = await MessageModel.findOne({ wpId: message.id });
