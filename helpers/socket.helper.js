@@ -840,7 +840,7 @@ socketObj.config = (server) => {
             { new: true }
           ).lean();
           const receivers = await UserModel.find({
-            $or: [{ role: { $in: ["Admin", "Supervisor"] } }],
+            $or: [{ role: { $in: ["Admin", "Supervisor"] } },{ _id: { $in: [oldAssignee] } }],
           }).lean();
           console.log(chatDetails?.customerId, "finalfinalfinalfinal");
           [...receivers, chatDetails?.customerId].forEach((receiver) => {
@@ -884,6 +884,20 @@ socketObj.config = (server) => {
             messageType: "tooltip",
           };
           await sendMessageToAdmins(socketObj, mess, updatedChat?.department);
+          const receivers = await UserModel.find({
+            $or: [
+              { role: { $in: ["Admin", "Supervisor"] } },
+              { _id: { $in: [assigneeAgent?._id, oldAssignee] } },
+            ],
+          });
+          receivers.forEach((receiver) => {
+            socketObj.io
+              .to(receiver._id?.toString())
+              .emit("update-chat", updatedChat);
+            socketObj.io
+              .to(receiver._id?.toString())
+              .emit("message", { ...updatedChat, latestMessage: final });
+          });
           if (typeof cb === "function")
             cb({
               success: true,
