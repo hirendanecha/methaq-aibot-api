@@ -41,8 +41,9 @@ exports.createAgent = async (req, res) => {
     }
 
     const existingUser = await UserModel.findOne({
-      $or: [{ email: email }, { mobileNumber: mobileNumber }],
+      $or: [{ email: email }],
     });
+    console.log(existingUser, "existingUser123");
     if (!existingUser) {
       const user = new UserModel({
         fullName,
@@ -70,7 +71,7 @@ exports.createAgent = async (req, res) => {
     } else {
       return sendErrorResponse(
         res,
-        "Account with that email address or mobile number already exists.",
+        "Account with that email address already exists.",
         400,
         true,
         true

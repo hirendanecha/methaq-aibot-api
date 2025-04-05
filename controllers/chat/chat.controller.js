@@ -587,7 +587,7 @@ const whatsappMessages = async (req, res) => {
       req.body.entry?.[0]?.changes?.[0].value ?? {};
       const messageTimestamp = messages?.length > 0 ? +messages[0].timestamp * 1000 : null;
       const currentTime = Date.now();
-      console.log(statuses,messages?.length > 0&&messages[0].text, "messageTimestamp");
+      // console.log(statuses,messages?.length > 0&&messages[0].text, "messageTimestamp");
       if (!messageTimestamp) {
         return res.status(400);
       }
