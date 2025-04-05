@@ -775,6 +775,7 @@ socketObj.config = (server) => {
         return;
       }
       const oldAssignee = chat.adminId;
+      const oldDepartment = chat.department;
       if (adminId) {
         const adminDetails = await UserModel.findById(adminId).lean();
         const chatDetails = await ChatModel.findOne({ _id: chatId }).lean();
@@ -801,10 +802,15 @@ socketObj.config = (server) => {
           },
           { new: true }
         ).lean();
+        const users = [adminId];
+        const departments = [updatedChat?.department?.toString()];
+        if(oldAssignee) users.push(oldAssignee?.toString());
+        if(oldDepartment) departments.push(oldDepartment?.toString());
         const receivers = await UserModel.find({
           $or: [
             { role: { $in: ["Admin", "Supervisor"] } },
-            { _id: { $in: [adminId, oldAssignee] } },
+            { _id: { $in: users } },
+            { department: { $in: departments } },
           ],
         });
         receivers.forEach((receiver) => {
@@ -840,7 +846,7 @@ socketObj.config = (server) => {
             { new: true }
           ).lean();
           const receivers = await UserModel.find({
-            $or: [{ role: { $in: ["Admin", "Supervisor"] } },{ _id: { $in: [oldAssignee] } }],
+            $or: [{ role: { $in: ["Admin", "Supervisor"] } },{ department: chatDetails?.department?.toString() }],
           }).lean();
           console.log(chatDetails?.customerId, "finalfinalfinalfinal");
           [...receivers, chatDetails?.customerId].forEach((receiver) => {
