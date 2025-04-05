@@ -585,7 +585,7 @@ const whatsappMessages = async (req, res) => {
     //res.status(200).send("EVENT_RECEIVED");
     const { messages, metadata, contacts } =
       req.body.entry?.[0]?.changes?.[0].value ?? {};
-      const messageTimestamp = messages?.length > 0 ? messages[0].timestamp : null;
+      const messageTimestamp = messages?.length > 0 ? +messages[0].timestamp * 1000 : null;
       const currentTime = Date.now();
       console.log(messageTimestamp, "messageTimestamp");
       if (!messageTimestamp) {
@@ -593,10 +593,10 @@ const whatsappMessages = async (req, res) => {
       }
       console.log(currentTime,messageTimestamp,"dfsdffs");
       
-      // if ((currentTime - messageTimestamp) > 120000) {
-      //   console.log("Ignoring old queued message:", messages[0].id);
-      //   return res.status(200);
-      // }
+      if ((currentTime - messageTimestamp) > 120000) {
+        console.log("Ignoring old queued message:", messages[0].id);
+        return res.status(200);
+      }
 
     const displayPhoneNumber = metadata?.phone_number_id;
     const phoneNumberId = metadata?.display_phone_number;
