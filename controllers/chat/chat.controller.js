@@ -464,16 +464,16 @@ const getDepartmentAvailability = async (req, res) => {
 const getChatReports = async (req, res) => {
   try {
     // Total number of chats
-    const totalChats = await ChatModel.countDocuments();
+    const totalChats = await ChatModel.countDocuments({latestMessage: { $ne: null }});
 
     // Number of open chats
-    const openChats = await ChatModel.countDocuments({ status: "active" });
+    const openChats = await ChatModel.countDocuments({latestMessage: { $ne: null }, status: "active" });
 
     // Number of closed chats
-    const closedChats = await ChatModel.countDocuments({ status: "archived" });
+    const closedChats = await ChatModel.countDocuments({latestMessage: { $ne: null }, status: "archived" });
 
     // Number of chats answered by AI
-    const aiAnsweredChats = await ChatModel.countDocuments({ isHuman: false });
+    const aiAnsweredChats = await ChatModel.countDocuments({latestMessage: { $ne: null }, tags: "ai_answered" });
 
     const totalHandlingTime = await ChatModel.aggregate([
       {
