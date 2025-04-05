@@ -585,6 +585,11 @@ const whatsappMessages = async (req, res) => {
     //res.status(200).send("EVENT_RECEIVED");
     const { messages, metadata, contacts } =
       req.body.entry?.[0]?.changes?.[0].value ?? {};
+      const messageTimestamp = messages?.length > 0 ? messages[0].timestamp : null;
+      console.log(messageTimestamp, "messageTimestamp");
+      if (!messageTimestamp) {
+        return res.status(400).send("No messages found");
+      }
     const displayPhoneNumber = metadata?.phone_number_id;
     const phoneNumberId = metadata?.display_phone_number;
 
