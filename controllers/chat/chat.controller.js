@@ -592,7 +592,7 @@ const whatsappMessages = async (req, res) => {
         return res.status(400);
       }
       if ((currentTime - messageTimestamp) > 120000) {
-        console.log("Ignoring old queued message:", message.id);
+        console.log("Ignoring old queued message:", messages[0].id);
         return res.status(200);
       }
 
