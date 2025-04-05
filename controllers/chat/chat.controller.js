@@ -582,16 +582,16 @@ const images = {};
 const whatsappMessages = async (req, res) => {
   try {
     // Added async
-    //res.status(200).send("EVENT_RECEIVED");
-    const { messages, metadata, contacts } =
+    res.status(200);
+    const { messages, metadata, contacts,statuses } =
       req.body.entry?.[0]?.changes?.[0].value ?? {};
       const messageTimestamp = messages?.length > 0 ? +messages[0].timestamp * 1000 : null;
       const currentTime = Date.now();
-      console.log(messageTimestamp, "messageTimestamp");
+      console.log(statuses,messages[0].text?.body, "messageTimestamp");
       if (!messageTimestamp) {
         return res.status(400);
       }
-      console.log(currentTime,messageTimestamp,"dfsdffs");
+      console.log(currentTime,messageTimestamp,messages,"dfsdffs");
       
       if ((currentTime - messageTimestamp) > 120000) {
         console.log("Ignoring old queued message:", messages[0].id);
