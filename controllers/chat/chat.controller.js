@@ -591,10 +591,12 @@ const whatsappMessages = async (req, res) => {
       if (!messageTimestamp) {
         return res.status(400);
       }
-      if ((currentTime - messageTimestamp) > 120000) {
-        console.log("Ignoring old queued message:", messages[0].id);
-        return res.status(200);
-      }
+      console.log(currentTime,messageTimestamp,"dfsdffs");
+      
+      // if ((currentTime - messageTimestamp) > 120000) {
+      //   console.log("Ignoring old queued message:", messages[0].id);
+      //   return res.status(200);
+      // }
 
     const displayPhoneNumber = metadata?.phone_number_id;
     const phoneNumberId = metadata?.display_phone_number;
