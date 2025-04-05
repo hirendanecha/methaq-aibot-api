@@ -555,7 +555,8 @@ socketObj.config = (server) => {
       const receivers = await UserModel.find({
         $or: [
           { role: { $in: ["Admin", "Supervisor"] } },
-          { _id: { $in: [chatDetails?.customerId?._id?.toString()] } },
+          { _id: { $in: [chatDetails?.customerId?._id?.toString(), chatDetails?.adminId?.toString()] } },
+          { department: chatDetails?.department?.toString() },
         ],
       });
       receivers.forEach((receiver) => {
