@@ -116,6 +116,7 @@ socketObj.config = (server) => {
       const chat = new ChatModel({
         customerId: updatedCus._id,
         currentSessionId: sessionId,
+        tags: ["pending"],
         // sessionId: sessionId,
         // threadId: threadId,
         source: "bot",
@@ -169,7 +170,7 @@ socketObj.config = (server) => {
           const secMess = await continueChat(sessionId, sessionId);
           const updatedChat = await ChatModel.findOneAndUpdate(
             { _id: params?.chatId },
-            { currentSessionId: sessionId, tags: ["pending"] },
+            { currentSessionId: sessionId },
             { new: true }
           );
         }
