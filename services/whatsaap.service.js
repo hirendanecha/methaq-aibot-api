@@ -53,7 +53,7 @@ const sendWhatsAppMessage = async (
     messaging_product: "whatsapp",
     recipient_type: "individual",
     to: messageSender,
-    ...(messageID ? { context: { message_id: messageID } } : {}),
+    // ...(messageID ? { context: { message_id: messageID } } : {}),
     type: "text",
     text: {
       preview_url: false,
