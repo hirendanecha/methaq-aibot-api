@@ -257,7 +257,7 @@ const continueChat = async (sessionId, message, urls = null) => {
       textBubbleContentFormat: "richText", // Set the text bubble content format
       message: {
         type: "text", // Set the message type
-        text: urls ? " " : message, // Set the text message
+        text: urls ? "Check this Document" : message, // Set the text message
         ...(urls && {
           attachedFileUrls: urls.length === 1 ? [urls[0]] : urls,
         }),
