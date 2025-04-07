@@ -144,8 +144,6 @@ router.put("/update-setting/:id", updateSettings); // Updated to include ID
 // Route to rewrite a message
 router.post("/settings/rewrite", rewriteMessage);
 
-//chat-reports
-router.get("/reports", getChatReports);
 //
 
 module.exports = router;

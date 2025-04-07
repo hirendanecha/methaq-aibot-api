@@ -6,6 +6,7 @@ const qnaRoutes = require("./qna.routes")
 const uploadRoutes = require("./upload.routes")
 const agentRoutes = require("./agents.routes")
 const customerRoutes = require("./customers.routes")
+const chatRoutes = require("./chats.routes")
 
 /*
     APIs for Admin
@@ -23,5 +24,6 @@ router.use("/prompt", promptRoutes);
 router.use("/qna", qnaRoutes);
 router.use("/docTraining", uploadRoutes);
 router.use("/customers", customerRoutes);
+router.use("/chats", chatRoutes);
 
 module.exports = router;
