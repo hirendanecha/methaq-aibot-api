@@ -805,8 +805,8 @@ socketObj.config = (server) => {
         ).lean();
         const users = [adminId];
         const departments = [updatedChat?.department?.toString()];
-        if(oldAssignee) users.push(oldAssignee?.toString());
-        if(oldDepartment) departments.push(oldDepartment?.toString());
+        if (oldAssignee) users.push(oldAssignee?.toString());
+        if (oldDepartment) departments.push(oldDepartment?.toString());
         const receivers = await UserModel.find({
           $or: [
             { role: { $in: ["Admin", "Supervisor"] } },
@@ -847,7 +847,7 @@ socketObj.config = (server) => {
             { new: true }
           ).lean();
           const receivers = await UserModel.find({
-            $or: [{ role: { $in: ["Admin", "Supervisor"] } },{ department: chatDetails?.department?.toString() }],
+            $or: [{ role: { $in: ["Admin", "Supervisor"] } }, { department: chatDetails?.department?.toString() }],
           }).lean();
           console.log(chatDetails?.customerId, "finalfinalfinalfinal");
           [...receivers, chatDetails?.customerId].forEach((receiver) => {
@@ -890,7 +890,7 @@ socketObj.config = (server) => {
             receiverType: "user",
             messageType: "tooltip",
           };
-          await sendMessageToAdmins(socketObj, mess, updatedChat?.department,[{ _id: { $in: [oldAssignee] }}],true);
+          await sendMessageToAdmins(socketObj, mess, updatedChat?.department, [{ _id: { $in: [oldAssignee] } }], true);
           if (typeof cb === "function")
             cb({
               success: true,
@@ -1035,7 +1035,8 @@ socketObj.config = (server) => {
             undefined,
             undefined,
             chat?.department?.messages?.chatClosingMessage ||
-            `Chat archived by ${adminDetails?.fullName}`,
+            `This conversation has ended, thank you for contacting Methaq Takaful Insuance ${chat?.department?.name ? chat?.department?.name : ""
+            }. We hope we were able to serve you`,
             updatedChat?.isHuman
           );
         }
