@@ -90,12 +90,12 @@ exports.getAllAgents = async (req, res) => {
       role: { $nin: ["User", "Admin"] },
       ...(search
         ? {
-          $or: [
-            { fullName: new RegExp(search, "i") },
-            { email: new RegExp(search, "i") },
-            { mobileNumber: new RegExp(search, "i") },
-          ],
-        }
+            $or: [
+              { fullName: new RegExp(search, "i") },
+              { email: new RegExp(search, "i") },
+              { mobileNumber: new RegExp(search, "i") },
+            ],
+          }
         : {}),
     });
     const users = await UserModel.find({
@@ -103,12 +103,12 @@ exports.getAllAgents = async (req, res) => {
       ...(department ? { department: { $in: department } } : {}),
       ...(search
         ? {
-          $or: [
-            { fullName: new RegExp(search, "i") },
-            { email: new RegExp(search, "i") },
-            { mobileNumber: new RegExp(search, "i") },
-          ],
-        }
+            $or: [
+              { fullName: new RegExp(search, "i") },
+              { email: new RegExp(search, "i") },
+              { mobileNumber: new RegExp(search, "i") },
+            ],
+          }
         : {}),
     })
       .populate("department")
@@ -288,6 +288,7 @@ exports.getChatList = async (req, res) => {
       status = "active",
       department,
       search,
+      tagsFilter,
     } = req.body;
 
     // const { limit, offset } = getPagination(page, size);
@@ -299,6 +300,10 @@ exports.getChatList = async (req, res) => {
       searchCondition.department = { $in: department };
     }
 
+    if (tagsFilter) {
+      searchCondition.tags = { $in: tagsFilter }; // Assuming tags is an array
+    }
+    
     if (role !== "Admin" && role !== "Supervisor") {
       searchCondition.department = { $in: userDetails?.department };
     }
@@ -318,12 +323,12 @@ exports.getChatList = async (req, res) => {
 
       ...(search
         ? [
-          {
-            $match: {
-              "customerId.name": { $regex: new RegExp(search, "i") },
+            {
+              $match: {
+                "customerId.name": { $regex: new RegExp(search, "i") },
+              },
             },
-          },
-        ]
+          ]
         : []),
 
       {
