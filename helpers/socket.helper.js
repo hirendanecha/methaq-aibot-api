@@ -169,7 +169,7 @@ socketObj.config = (server) => {
           const secMess = await continueChat(sessionId, sessionId);
           const updatedChat = await ChatModel.findOneAndUpdate(
             { _id: params?.chatId },
-            { currentSessionId: sessionId },
+            { currentSessionId: sessionId, tags: ["pending"] },
             { new: true }
           );
         }
