@@ -83,7 +83,7 @@ const getFormattedMessage = (messages) => {
       return "";
     })
     .join("\n")
-    .replace(/^\{\}\n*/, ''); // Remove standalone {} at the start of the string
+    .replace(/^\{\}\n*/, ""); // Remove standalone {} at the start of the string
 };
 
 // const getFormattedMessage = (messages) => {
@@ -123,7 +123,7 @@ const getAllTypeBots = async () => {
 const startChat = async (botId, message) => {
   // const url = `https://typebot-uqjtp-u35950.vm.elestio.app/api/v1/typebots/${botId}/startChat`; // Use the specific URL
   const url = `https://botauto.vionextech.com/api/v1/typebots/${process.env.TYPEBOT_BOT_ID_WELCOME}/startChat`;
-    console.log(process.env.TYPEBOT_BOT_ID_WELCOME);
+  console.log(process.env.TYPEBOT_BOT_ID_WELCOME);
   try {
     const response = await axios.post(
       url
@@ -257,9 +257,9 @@ const continueChat = async (sessionId, message, urls = null) => {
       textBubbleContentFormat: "richText", // Set the text bubble content format
       message: {
         type: "text", // Set the message type
-        text: urls ? "Check this document" : message, // Set the text message
+        text: urls ? " " : message, // Set the text message
         ...(urls && {
-          attachedFileUrls: urls.length === 1 ? [urls[0], urls[0]] : urls, // Duplicate the URL if only one is provided
+          attachedFileUrls: urls.length === 1 ? [urls[0]] : urls,
         }),
       },
     };
