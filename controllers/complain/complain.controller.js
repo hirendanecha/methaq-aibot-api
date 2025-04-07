@@ -14,13 +14,25 @@ const {
 
 const getAllComplaints = async (req, res) => {
   try {
-    let { page, size } = req.query;
-    // search = search?.replace(/^[^a-zA-Z0-9]+/, "");
+    let { page, size, search } = req.query;
+    search = search?.replace(/^[^a-zA-Z0-9]+/, "");
     const { limit, offset } = getPagination(page, size);
 
-    const count = await ComplaintModel.countDocuments();
+    const query = {};
+    if (search) {
+      query.$or = [
+        { customername: { $regex: search, $options: "i" } },
+        { complainstatus: { $regex: search, $options: "i" } }
+      ];
+    }
 
-    const complaints = await ComplaintModel.find();
+    const count = await ComplaintModel.countDocuments(query);
+
+    const complaints = await ComplaintModel.find(query)
+      .sort({ createdAt: -1 })
+      .skip(offset)
+      .limit(limit);
+
     return sendSuccessResponse(
       res,
       getPaginationData({ count, docs: complaints }, page, limit)

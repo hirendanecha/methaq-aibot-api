@@ -276,7 +276,7 @@ const closeChatController = async (req, res) => {
     // console.log(threadId, "rbbbjkb");
     const { sessionId } = req.params || {};
     console.log(sessionId, "sessionId");
-
+    const extraPayload = {};
     const chat = await ChatModel.findOne({ currentSessionId: sessionId })
       .populate("customerId department")
       .lean();
@@ -284,7 +284,11 @@ const closeChatController = async (req, res) => {
       return res.status(404).json({ error: "Chat not found" });
     }
     console.log(chat, "chatdf");
-
+    if (!chat?.adminId && !chat?.tags?.includes("ai_answered")) {
+      extraPayload = {
+        $push: { tags: "ai_answered" },
+      }
+    }
     const timestamp = dayjs(); // Current time using dayjs
     const createdAt = dayjs(chat.createdAt); // Convert createdAt to dayjs object
     const chatTime = timestamp.diff(createdAt); // Time in milliseconds
@@ -302,6 +306,7 @@ const closeChatController = async (req, res) => {
         isHuman: false,
         department: null,
         chatTime,
+        ...extraPayload
       },
       { new: true }
     ).lean();
@@ -406,10 +411,10 @@ const completedDocumentController = async (req, res) => {
       {
         tags: !chatDetails?.tags?.includes("document_received")
           ? [
-              ...(chatDetails?.tags?.filter((tag) => tag !== "pending") || []),
-              "document_received",
-              "qulified_lead",
-            ]
+            ...(chatDetails?.tags?.filter((tag) => tag !== "pending") || []),
+            "document_received",
+            "qulified_lead",
+          ]
           : chatDetails?.tags,
       },
       {
@@ -458,22 +463,30 @@ const getDepartmentAvailability = async (req, res) => {
 
 const getChatReports = async (req, res) => {
   try {
+    const user = req.user;
+
+    const userDetails = await UserModel.findById(user._id);
+    let extraPayload = {}
+    if (userDetails?.role !== "Admin" && userDetails?.role !== "Supervisor") {
+      extraPayload["department"] = userDetails?.department;
+    }
     // Total number of chats
-    const totalChats = await ChatModel.countDocuments();
+    const totalChats = await ChatModel.countDocuments({ latestMessage: { $ne: null }, ...extraPayload });
 
     // Number of open chats
-    const openChats = await ChatModel.countDocuments({ status: "active" });
+    const openChats = await ChatModel.countDocuments({ latestMessage: { $ne: null }, status: "active", ...extraPayload });
 
     // Number of closed chats
-    const closedChats = await ChatModel.countDocuments({ status: "archived" });
+    const closedChats = await ChatModel.countDocuments({ latestMessage: { $ne: null }, status: "archived", ...extraPayload });
 
     // Number of chats answered by AI
-    const aiAnsweredChats = await ChatModel.countDocuments({ isHuman: false });
+    const aiAnsweredChats = await ChatModel.countDocuments({ latestMessage: { $ne: null }, tags: "ai_answered", ...extraPayload });
 
     const totalHandlingTime = await ChatModel.aggregate([
       {
         $match: {
           isHuman: true,
+          ...extraPayload
         },
       },
       {
@@ -488,6 +501,11 @@ const getChatReports = async (req, res) => {
 
     const totalHandlingTimeClose = await ChatModel.aggregate([
       {
+        $match: {
+          ...extraPayload
+        }
+      },
+      {
         $group: {
           _id: null,
           totalChatTime: {
@@ -500,6 +518,7 @@ const getChatReports = async (req, res) => {
 
     const isHumanHandleChats = await ChatModel.countDocuments({
       isHuman: true,
+      ...extraPayload
     });
 
     const average_to_human_responses =
@@ -574,46 +593,57 @@ const isDocumentReceived = async (req, res) => {
   }
 };
 const images = {};
-let accumulatedMessages = [];
-let messageTimeout;
-
 const whatsappMessages = async (req, res) => {
   try {
     // Added async
-    //res.status(200).send("EVENT_RECEIVED");
-    const { messages, metadata, contacts } =
+    res.status(200);
+    const { messages, metadata, contacts, statuses } =
       req.body.entry?.[0]?.changes?.[0].value ?? {};
+    const messageTimestamp = messages?.length > 0 ? +messages[0].timestamp * 1000 : null;
+    const currentTime = Date.now();
+    // console.log(statuses,messages?.length > 0&&messages[0].text, "messageTimestamp");
+    if (!messageTimestamp) {
+      return res.status(400);
+    }
+    console.log(currentTime, messageTimestamp, messages, "dfsdffs");
+
+    if ((currentTime - messageTimestamp) > 120000) {
+      console.log("Ignoring old queued message:", messages[0].id);
+      return res.status(200);
+    }
+
     const displayPhoneNumber = metadata?.phone_number_id;
     const phoneNumberId = metadata?.display_phone_number;
 
     if (!messages) return res.status(400).send("No messages found");
 
-    const currentTimestamp = Math.floor(Date.now() / 1000);
+    // const currentTimestamp = Math.floor(Date.now() / 1000);
 
     // const currentTime = Date.now();
     // req.body.entry[0].changes[0].value.messages = messages.filter(
     //   (message) => message.timestamp > currentTime - 1000 * 60 * 12
     // );
-    if (req.body.entry[0]?.changes[0]?.value?.messages) {
-      req.body.entry[0].changes[0].value.messages =
-        req.body.entry[0].changes[0].value.messages.filter(
-          (message) =>
-            message.timestamp > (Date.now() - 1000 * 60 * 60 * 0.2) / 1000
-        );
-    }
+
+    // if (req.body.entry[0]?.changes[0]?.value?.messages) {
+    //   req.body.entry[0].changes[0].value.messages = req.body.entry[0].changes[0].value.messages.filter(
+    //     (message) => message.timestamp > (Date.now() - 1000 * 60 * 60 * 0.2) / 1000
+    //   );
+    // }
 
     const message = messages[0];
     const messInDB = await MessageModel.findOne({ wpId: message.id });
     if (messInDB) {
-      return res.status(200).send("Message already processed");
+      return res.status(200);
     }
     const messageSender = message.from;
     const messageID = message.id;
     const messaging_product = "whatsaap";
     const profileName = contacts?.[0]?.profile?.name;
-
+    if (messageID) {
+      const read = await markMessageAsRead(messageID);
+    }
     const user = await CustomerModel.findOne({ phone: messageSender });
-
+    //  res.status(200);
     if (!user) {
       const customer = new CustomerModel({
         name: profileName,
@@ -666,13 +696,13 @@ const whatsappMessages = async (req, res) => {
           displayPhoneNumber,
           secMess.finaloutput
         );
-        if (!newChat?.tags?.includes("ai_answered")) {
-          newChat = await ChatModel.findOneAndUpdate(
-            { _id: newChat._id },
-            { $push: { tags: "ai_answered" } },
-            { new: true }
-          );
-        }
+        // if (!newChat?.tags?.includes("ai_answered")) {
+        //   newChat = await ChatModel.findOneAndUpdate(
+        //     { _id: newChat._id },
+        //     { $push: { tags: "ai_answered" } },
+        //     { new: true }
+        //   );
+        // }
         const mess6 = {
           chatId: newChat?._id?.toString(),
           sender: null,
@@ -717,8 +747,17 @@ const whatsappMessages = async (req, res) => {
       // console.log("jjjjjjjj")
 
       if (!existingChat) {
-        return res.status(200).send("Message processed");
+        existingChat = new ChatModel({
+          customerId: user._id,
+          // currentSessionId: sessionId,
+          tags: ["pending"],
+          // sessionId: sessionId,
+          // threadId: threadId,
+          source: "whatsapp",
+        });
+        // return res.status(200);
       }
+
       //console.log(existingChat, "existingChatexistingChat");
       if (!existingChat?.currentSessionId) {
         const startChatResponse = await startChat("");
@@ -967,8 +1006,6 @@ const whatsappMessages = async (req, res) => {
           }, 5000);
         }
       } else if (message.type == "text") {
-        // Initialize an array to accumulate messages
-
         const mess = {
           chatId: existingChat?._id,
           wpId: message?.id,
@@ -978,10 +1015,8 @@ const whatsappMessages = async (req, res) => {
           receiverType: "admin",
           content: message.text?.body,
         };
-        //console.log(mess, "message from userside");
+        console.log(mess, "message from userside");
 
-        // Push the current message to the accumulated messages array
-        accumulatedMessages.push(message.text?.body);
         sendMessageToAdmins(socketObj, mess, existingChat?.department?._id);
         // const isDepartmentSelected = existingChat?.department;
         // if (!isDepartmentSelected) {
@@ -1096,163 +1131,160 @@ const whatsappMessages = async (req, res) => {
         //   }
         // }
         if (!existingChat?.isHuman) {
-          // Clear any existing timeout to reset the 8-second window
-          if (messageTimeout) {
-            clearTimeout(messageTimeout);
-          }
+          const userInput = message.text.body;
+          const sessionId = existingChat.currentSessionId; // Ensure sessionId is available
+          const messageObj = {
+            text: userInput,
+            attachedFileUrls: [], // Add any file URLs if applicable
+          };
+          console.log(sessionId, "response typebot");
+          const response = await continueChat(sessionId, userInput);
+          // console.log(response, "response typebot");
+          // const assistantMessage = response.data.messages[0]?.content?.richText[0]?.children[0]?.children[0]?.text;
 
-          // Set a timeout to process messages after 8 seconds
-          messageTimeout = setTimeout(async () => {
-            // Join accumulated messages into a single string with spaces
-            const userInput = accumulatedMessages.join(" ");
-            const sessionId = existingChat.currentSessionId; // Ensure sessionId is available
-            const messageObj = {
-              text: userInput,
-              attachedFileUrls: [], // Add any file URLs if applicable
-            };
-            console.log(sessionId, "response typebot");
+          // const results = await vectorStore.similaritySearch(userInput, 5);
 
-            const response = await continueChat(sessionId, userInput);
-            // console.log(response, "response typebot");
-            // const assistantMessage = response.data.messages[0]?.content?.richText[0]?.children[0]?.children[0]?.text;
+          //console.log(results, "resilrrfsgd");
 
-            // const results = await vectorStore.similaritySearch(userInput, 5);
+          // const response = await handleUserMessage(
+          //   departmentThread,
+          //   userInput,
+          //   existingChat?.department?.assistantDetails?.id,
+          //   null,
+          //   null,
+          //   existingChat?.department?.prompt
+          // );
+          //console.log(assistantMessage, "messageSendermessageSender");
 
-            //console.log(results, "resilrrfsgd");
-
-            // const response = await handleUserMessage(
-            //   departmentThread,
-            //   userInput,
-            //   existingChat?.department?.assistantDetails?.id,
-            //   null,
-            //   null,
-            //   existingChat?.department?.prompt
-            // );
-            //console.log(assistantMessage, "messageSendermessageSender");
-
-            if (response?.interactiveMsg && response?.interactivePayload) {
-              response?.finaloutput &&
-                (await sendWhatsAppMessage(
-                  messageSender,
-                  "",
-                  messageID,
-                  "",
-                  response?.finaloutput
-                ));
-              await sendInteractiveMessage(
+          if (response?.interactiveMsg && response?.interactivePayload) {
+            response?.finaloutput &&
+              (await sendWhatsAppMessage(
                 messageSender,
+                "",
                 messageID,
-                response?.interactivePayload
+                "",
+                response?.finaloutput
+              ));
+            const mess = {
+              chatId: existingChat?._id,
+              wpId: message?.id,
+              sender: null,
+              receiver: existingChat?.customerId?.toString(),
+              sendType: "admin",
+              receiverType: "user",
+              content: response?.finaloutput,
+            };
+            response?.finaloutput &&
+              (await sendMessageToAdmins(socketObj, mess, existingChat?.department?._id));
+            await sendInteractiveMessage(
+              messageSender,
+              messageID,
+              response?.interactivePayload
+            );
+            const intmessage = {
+              chatId: existingChat._id,
+              sender: null,
+              receiver: existingChat.customerId?.toString(),
+              sendType: "assistant",
+              receiverType: "user",
+              content: "Please select one of the following options:",
+              messageType: "interective",
+              messageOptions: response?.interactivePayload?.options?.map(
+                (department) => ({
+                  label: department.name,
+                  value: department.depId,
+                })
+              ),
+            };
+            await sendMessageToAdmins(
+              socketObj,
+              intmessage,
+              existingChat?.department?._id
+            );
+          } else if (
+            response?.interactiveListButton &&
+            response?.interactiveListPayload
+          ) {
+            if (response?.finaloutput) {
+              await sendWhatsAppMessage(
+                messageSender,
+                "",
+                messageID,
+                "",
+                response?.finaloutput
               );
-              const intmessage = {
+
+              const mess6 = {
                 chatId: existingChat._id,
                 sender: null,
-                receiver: existingChat.customerId?.toString(),
-                sendType: "assistant",
+                receiver: existingChat?.customerId?.toString(),
+                sendType: "admin",
                 receiverType: "user",
-                content: "Please select one of the following options:",
-                messageType: "interective",
-                messageOptions: response?.interactivePayload?.options?.map(
-                  (department) => ({
-                    label: department.name,
-                    value: department.depId,
+                content: response?.finaloutput,
+              };
+              sendMessageToAdmins(
+                socketObj,
+                mess6,
+                existingChat?.department?._id
+              );
+            }
+            // response?.finaloutput &&
+            //   (await sendWhatsAppMessage(
+            //     messageSender,
+            //     "",
+            //     messageID,
+            //     "",
+            //     response?.finaloutput
+            //   ));
+            await sendListMessage(
+              messageSender,
+              messageID,
+              response?.interactiveListPayload
+            );
+            const intmessage = {
+              chatId: existingChat._id,
+              sender: null,
+              receiver: existingChat.customerId?.toString(),
+              sendType: "assistant",
+              receiverType: "user",
+              content: "Please select one of the following options:",
+              messageType: "interective",
+              messageOptions:
+                response?.interactiveListPayload?.action?.buttons?.map(
+                  (btn) => ({
+                    label: btn.reply.title,
+                    value: btn.reply.id,
                   })
                 ),
-              };
-              await sendMessageToAdmins(
-                socketObj,
-                intmessage,
-                existingChat?.department?._id
-              );
-            } else if (
-              response?.interactiveListButton &&
-              response?.interactiveListPayload
-            ) {
-              if (response?.finaloutput) {
-                await sendWhatsAppMessage(
-                  messageSender,
-                  "",
-                  messageID,
-                  "",
-                  response?.finaloutput
-                );
+            };
 
-                const mess6 = {
-                  chatId: existingChat._id,
-                  sender: null,
-                  receiver: existingChat?.customerId?.toString(),
-                  sendType: "admin",
-                  receiverType: "user",
-                  content: response?.finaloutput,
-                };
-                sendMessageToAdmins(
-                  socketObj,
-                  mess6,
-                  existingChat?.department?._id
-                );
-              }
-              // response?.finaloutput &&
-              //   (await sendWhatsAppMessage(
-              //     messageSender,
-              //     "",
-              //     messageID,
-              //     "",
-              //     response?.finaloutput
-              //   ));
-              await sendListMessage(
-                messageSender,
-                messageID,
-                response?.interactiveListPayload
-              );
-              const intmessage = {
-                chatId: existingChat._id,
-                sender: null,
-                receiver: existingChat.customerId?.toString(),
-                sendType: "assistant",
-                receiverType: "user",
-                content: "Please select one of the following options:",
-                messageType: "interective",
-                messageOptions:
-                  response?.interactiveListPayload?.action?.buttons?.map(
-                    (btn) => ({
-                      label: btn.reply.title,
-                      value: btn.reply.id,
-                    })
-                  ),
-              };
-
-              await sendMessageToAdmins(
-                socketObj,
-                intmessage,
-                existingChat?.department?._id
-              );
-            } else {
-              const mess = {
-                chatId: existingChat?._id,
-                sender: null,
-                sendType: "assistant",
-                content: response?.finaloutput,
-                receiver: existingChat?.customerId?.toString(),
-                receiverType: "user",
-              };
-              await sendMessageToAdmins(
-                socketObj,
-                mess,
-                existingChat?.department?._id
-              );
-              if (response?.finaloutput) {
-                await sendWhatsAppMessage(
-                  messageSender,
-                  undefined,
-                  messageID,
-                  displayPhoneNumber,
-                  response.finaloutput
-                );
-              }
-            }
-            // Clear the accumulated messages after processing
-            accumulatedMessages = [];
-          }, 5000); // 8-second delay
+            await sendMessageToAdmins(
+              socketObj,
+              intmessage,
+              existingChat?.department?._id
+            );
+          } else {
+            const mess = {
+              chatId: existingChat?._id,
+              sender: null,
+              sendType: "assistant",
+              content: response?.finaloutput,
+              receiver: existingChat?.customerId?.toString(),
+              receiverType: "user",
+            };
+            await sendMessageToAdmins(
+              socketObj,
+              mess,
+              existingChat?.department?._id
+            );
+            await sendWhatsAppMessage(
+              messageSender,
+              undefined,
+              messageID,
+              displayPhoneNumber,
+              response?.finaloutput
+            );
+          }
         }
       } else if (message?.type === "interactive") {
         console.log(message, "message in interactive");
@@ -1437,15 +1469,13 @@ const whatsappMessages = async (req, res) => {
               existingChat?.department?._id
             );
           } else {
-            if (userInputmessage) {
-              await sendWhatsAppMessage(
-                messageSender,
-                undefined,
-                messageID,
-                displayPhoneNumber,
-                userInputmessage
-              );
-            }
+            await sendWhatsAppMessage(
+              messageSender,
+              undefined,
+              messageID,
+              displayPhoneNumber,
+              userInputmessage
+            );
           }
 
           // const embeddings = new OpenAIEmbeddings({
@@ -1643,16 +1673,13 @@ const whatsappMessages = async (req, res) => {
               mess,
               existingChat?.department?._id
             );
-
-            if (response?.finaloutput) {
-              await sendWhatsAppMessage(
-                messageSender,
-                undefined,
-                messageID,
-                displayPhoneNumber,
-                response.finaloutput
-              );
-            }
+            await sendWhatsAppMessage(
+              messageSender,
+              undefined,
+              messageID,
+              displayPhoneNumber,
+              response?.finaloutput
+            );
           }
           // const formalMessage =
           //   "We are audio sorry, but we cannot process this type of content.";
@@ -1678,10 +1705,10 @@ const whatsappMessages = async (req, res) => {
       }
     }
 
-    return res.status(200).send("EVENT_RECEIVED"); // Added response for successful processing
+    return res.status(200); // Added response for successful processing
   } catch (error) {
     console.log(error.message);
-    return res.status(200).send("EVENT_RECEIVED");
+    return res.status(200);
     //return res.status(500).send("Error processing message");
   }
 };

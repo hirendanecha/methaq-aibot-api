@@ -32,10 +32,7 @@ const {
   getAllComplaints,
   addComplaint,
   updateComplaint,
-  updateComplaintStatus,
   deleteComplaintById,
-  assignAgentToComplaint,
-  getComplaintById,
 } = require("../../../controllers/complain/complain.controller");
 const {
   createSettings,
@@ -131,15 +128,9 @@ router.get("/get-complaints", getAllComplaints);
 // Route to add a new complaint
 router.post("/add-complaints/:sessionId?", addComplaint);
 
-// Route to update a complaint using session ID
-router.put("/update-complaint/:id", updateComplaint);
-
-router.get("/getByIdComplain/:id", getComplaintById);
 
 // Route to delete a complaint using session ID
 router.delete("/delete-complaints/:complainid", deleteComplaintById);
-router.patch("/update-status-complaint/:id", updateComplaintStatus);
-router.patch("/assign-agent-complaint/:id", assignAgentToComplaint);
 
 //openai
 router.post("/create-settings", createSettings);
@@ -153,8 +144,6 @@ router.put("/update-setting/:id", updateSettings); // Updated to include ID
 // Route to rewrite a message
 router.post("/settings/rewrite", rewriteMessage);
 
-//chat-reports
-router.get("/reports", getChatReports);
 //
 
 module.exports = router;

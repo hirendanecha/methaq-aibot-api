@@ -116,6 +116,7 @@ socketObj.config = (server) => {
       const chat = new ChatModel({
         customerId: updatedCus._id,
         currentSessionId: sessionId,
+        tags: ["pending"],
         // sessionId: sessionId,
         // threadId: threadId,
         source: "bot",
@@ -222,7 +223,8 @@ socketObj.config = (server) => {
               sendType: "assistant",
               receiverType: "admin",
               messageType: "tooltip",
-              content: `Chat is transferred to ${userInput?.split("-")[1]} department`,
+              content: `Chat is transferred to ${userInput?.split("-")[1]
+                } department`,
             };
             sendMessageToAdmins(socketObj, mess2, chatDetails?.department);
           }
@@ -245,8 +247,19 @@ socketObj.config = (server) => {
                   receiver: chatDetails?.customerId || null,
                   receiverType: "user",
                 };
-                await sendMessageToUser(socketObj, mess2);
-                await sendMessageToAdmins(socketObj, mess2, chatDetails?.department);
+                // await sendMessageToUser(socketObj, mess2);
+                // await sendMessageToAdmins(
+                //   socketObj,
+                //   mess2,
+                //   chatDetails?.department
+                // );
+
+                const message = await sendMessageToAdmins(
+                  socketObj,
+                  mess2,
+                  chatDetails?.department
+                );
+                await sendMessageToUser(socketObj, message);
               }
 
               const intmessage = {
@@ -264,8 +277,19 @@ socketObj.config = (server) => {
                   })
                 ),
               };
-              await sendMessageToUser(socketObj, intmessage);
-              await sendMessageToAdmins(socketObj, intmessage, chatDetails?.department);
+              // await sendMessageToUser(socketObj, intmessage);
+              // await sendMessageToAdmins(
+              //   socketObj,
+              //   intmessage,
+              //   chatDetails?.department
+              // );
+
+              const message = await sendMessageToAdmins(
+                socketObj,
+                intmessage,
+                chatDetails?.department
+              );
+              await sendMessageToUser(socketObj, message);
             } else if (
               response?.interactiveListButton &&
               response?.interactiveListPayload
@@ -280,8 +304,19 @@ socketObj.config = (server) => {
                   receiver: chatDetails?.customerId || null,
                   receiverType: "user",
                 };
-                await sendMessageToUser(socketObj, mess2);
-                await sendMessageToAdmins(socketObj, mess2, chatDetails?.department);
+                // await sendMessageToUser(socketObj, mess2);
+                // await sendMessageToAdmins(
+                //   socketObj,
+                //   mess2,
+                //   chatDetails?.department
+                // );
+
+                const message = await sendMessageToAdmins(
+                  socketObj,
+                  mess2,
+                  chatDetails?.department
+                );
+                await sendMessageToUser(socketObj, message);
               }
               const intmessage = {
                 chatId: chatDetails._id,
@@ -299,8 +334,19 @@ socketObj.config = (server) => {
                     })
                   ),
               };
-              await sendMessageToUser(socketObj, intmessage);
-              await sendMessageToAdmins(socketObj, intmessage, chatDetails?.department);
+              // await sendMessageToUser(socketObj, intmessage);
+              // await sendMessageToAdmins(
+              //   socketObj,
+              //   intmessage,
+              //   chatDetails?.department
+              // );
+
+              const message = await sendMessageToAdmins(
+                socketObj,
+                intmessage,
+                chatDetails?.department
+              );
+              await sendMessageToUser(socketObj, message);
             } else {
               const mess2 = {
                 chatId: chatDetails._id,
@@ -311,8 +357,19 @@ socketObj.config = (server) => {
                 receiver: chatDetails?.customerId || null,
                 receiverType: "user",
               };
-              await sendMessageToUser(socketObj, mess2);
-              await sendMessageToAdmins(socketObj, mess2, chatDetails?.department);
+              // await sendMessageToUser(socketObj, mess2);
+              // await sendMessageToAdmins(
+              //   socketObj,
+              //   mess2,
+              //   chatDetails?.department
+              // );
+
+              const message = await sendMessageToAdmins(
+                socketObj,
+                mess2,
+                chatDetails?.department
+              );
+              await sendMessageToUser(socketObj, message);
             }
           } else {
             const response = await continueChat(sessionId, userInput);
@@ -328,8 +385,19 @@ socketObj.config = (server) => {
                   receiver: chatDetails?.customerId || null,
                   receiverType: "user",
                 };
-                await sendMessageToAdmins(socketObj, mess2, chatDetails?.department);
-                await sendMessageToUser(socketObj, mess2);
+                // await sendMessageToAdmins(
+                //   socketObj,
+                //   mess2,
+                //   chatDetails?.department
+                // );
+                // await sendMessageToUser(socketObj, mess2);
+
+                const message = await sendMessageToAdmins(
+                  socketObj,
+                  mess2,
+                  chatDetails?.department
+                );
+                await sendMessageToUser(socketObj, message);
               }
 
               const intmessage = {
@@ -347,8 +415,19 @@ socketObj.config = (server) => {
                   })
                 ),
               };
-              await sendMessageToAdmins(socketObj, intmessage, chatDetails?.department);
-              await sendMessageToUser(socketObj, intmessage);
+              // await sendMessageToAdmins(
+              //   socketObj,
+              //   intmessage,
+              //   chatDetails?.department
+              // );
+              // await sendMessageToUser(socketObj, intmessage);
+
+              const message = await sendMessageToAdmins(
+                socketObj,
+                intmessage,
+                chatDetails?.department
+              );
+              await sendMessageToUser(socketObj, message);
             } else if (
               response?.interactiveListButton &&
               response?.interactiveListPayload
@@ -363,9 +442,21 @@ socketObj.config = (server) => {
                   receiver: chatDetails?.customerId || null,
                   receiverType: "user",
                 };
-                await sendMessageToAdmins(socketObj, mess2, chatDetails?.department);
-                await sendMessageToUser(socketObj, mess2);
+                // await sendMessageToAdmins(
+                //   socketObj,
+                //   mess2,
+                //   chatDetails?.department
+                // );
+                // await sendMessageToUser(socketObj, mess2);
+
+                const message = await sendMessageToAdmins(
+                  socketObj,
+                  mess2,
+                  chatDetails?.department
+                );
+                await sendMessageToUser(socketObj, message);
               }
+
               const intmessage = {
                 chatId: chatDetails._id,
                 sender: null,
@@ -382,8 +473,15 @@ socketObj.config = (server) => {
                     })
                   ),
               };
-              await sendMessageToAdmins(socketObj, intmessage, chatDetails?.department);
-              await sendMessageToUser(socketObj, intmessage);
+              // await sendMessageToAdmins(socketObj, intmessage, chatDetails?.department);
+              // await sendMessageToUser(socketObj, intmessage);
+
+              const message = await sendMessageToAdmins(
+                socketObj,
+                intmessage,
+                chatDetails?.department
+              );
+              await sendMessageToUser(socketObj, message);
             } else {
               const mess2 = {
                 chatId: chatDetails._id,
@@ -394,8 +492,12 @@ socketObj.config = (server) => {
                 receiver: chatDetails?.customerId || null,
                 receiverType: "user",
               };
-              await sendMessageToAdmins(socketObj, mess2, chatDetails?.department);
-              await sendMessageToUser(socketObj, mess2);
+              const message = await sendMessageToAdmins(
+                socketObj,
+                mess2,
+                chatDetails?.department
+              );
+              await sendMessageToUser(socketObj, message);
             }
           }
         }
@@ -454,7 +556,8 @@ socketObj.config = (server) => {
       const receivers = await UserModel.find({
         $or: [
           { role: { $in: ["Admin", "Supervisor"] } },
-          { _id: { $in: [chatDetails?.customerId?._id?.toString()] } },
+          { _id: { $in: [chatDetails?.customerId?._id?.toString(), chatDetails?.adminId?.toString()] } },
+          { department: chatDetails?.department?.toString() },
         ],
       });
       receivers.forEach((receiver) => {
@@ -539,6 +642,12 @@ socketObj.config = (server) => {
         };
         const newMessage = new MessageModel(mess);
         const tooltipMess = await newMessage.save();
+        console.log(
+          +chatDetails?.initialHandlingTime ||
+          dayjs().diff(chatDetails?.agentTransferedAt, "minute"),
+          chatDetails?.agentTransferedAt,
+          "chatDetails?.initialHandlingTime"
+        );
         const updatedChat = await ChatModel.findOneAndUpdate(
           { _id: params.chatId },
           {
@@ -547,7 +656,9 @@ socketObj.config = (server) => {
             isHuman: true,
             agentTransferedAt: chatDetails?.agentTransferedAt || dayjs(),
             agentHandledAt: chatDetails?.agentHandledAt || dayjs(),
-            initialHandlingTime: chatDetails?.initialHandlingTime || dayjs().diff(chatDetails?.agentTransferedAt, "minute"),
+            initialHandlingTime:
+              +chatDetails?.initialHandlingTime ||
+              dayjs().diff(chatDetails?.agentTransferedAt || dayjs(), "minute"),
           },
           { new: true }
         )
@@ -634,6 +745,7 @@ socketObj.config = (server) => {
               }
             });
           } else {
+            console.log(final?.content, "final?.content12232");
             sendWhatsAppMessage(
               updatedChat?.customerId?.phone,
               undefined,
@@ -665,6 +777,7 @@ socketObj.config = (server) => {
         return;
       }
       const oldAssignee = chat.adminId;
+      const oldDepartment = chat.department;
       if (adminId) {
         const adminDetails = await UserModel.findById(adminId).lean();
         const chatDetails = await ChatModel.findOne({ _id: chatId }).lean();
@@ -691,10 +804,15 @@ socketObj.config = (server) => {
           },
           { new: true }
         ).lean();
+        const users = [adminId];
+        const departments = [updatedChat?.department?.toString()];
+        if (oldAssignee) users.push(oldAssignee?.toString());
+        if (oldDepartment) departments.push(oldDepartment?.toString());
         const receivers = await UserModel.find({
           $or: [
             { role: { $in: ["Admin", "Supervisor"] } },
-            { _id: { $in: [adminId, oldAssignee] } },
+            { _id: { $in: users } },
+            { department: { $in: departments } },
           ],
         });
         receivers.forEach((receiver) => {
@@ -730,7 +848,7 @@ socketObj.config = (server) => {
             { new: true }
           ).lean();
           const receivers = await UserModel.find({
-            $or: [{ role: { $in: ["Admin", "Supervisor"] } }],
+            $or: [{ role: { $in: ["Admin", "Supervisor"] } }, { department: chatDetails?.department?.toString() }],
           }).lean();
           console.log(chatDetails?.customerId, "finalfinalfinalfinal");
           [...receivers, chatDetails?.customerId].forEach((receiver) => {
@@ -773,7 +891,7 @@ socketObj.config = (server) => {
             receiverType: "user",
             messageType: "tooltip",
           };
-          await sendMessageToAdmins(socketObj, mess, updatedChat?.department);
+          await sendMessageToAdmins(socketObj, mess, updatedChat?.department, [{ _id: { $in: [oldAssignee] } }], true);
           if (typeof cb === "function")
             cb({
               success: true,
@@ -918,7 +1036,8 @@ socketObj.config = (server) => {
             undefined,
             undefined,
             chat?.department?.messages?.chatClosingMessage ||
-            `Chat archived by ${adminDetails?.fullName}`,
+            `This conversation has ended, thank you for contacting Methaq Takaful Insuance ${chat?.department?.name ? chat?.department?.name : ""
+            }. We hope we were able to serve you`,
             updatedChat?.isHuman
           );
         }

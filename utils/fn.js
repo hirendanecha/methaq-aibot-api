@@ -271,15 +271,18 @@ const fetchDepartmentsAndPrompts = async () => {
     throw error;
   }
 };
-exports.sendMessageToAdmins = async (socketObj, message, department) => {
+exports.sendMessageToAdmins = async (socketObj, message, department,extraReceiver,sendUpdate) => {
   try {
     const newMessage = new MessageModel(message);
     const latestMess = await newMessage.save();
     const conditions = [
       { role: { $in: ["Admin", "Supervisor"] } },
     ]
-    if(department){
+    if (department) {
       conditions.push({ department: department })
+    }
+    if(extraReceiver?.length > 0){
+      conditions.push(...extraReceiver)
     }
     const receivers = await UserModel.find({
       $or: conditions,
@@ -292,10 +295,12 @@ exports.sendMessageToAdmins = async (socketObj, message, department) => {
       .populate("adminId customerId")
       .lean();
     [...receivers].forEach((receiver) => {
+      sendUpdate&&socketObj.io.to(receiver._id?.toString()).emit("update-chat", { ...updatedChat, latestMessage: latestMess });
       socketObj.io
         .to(receiver._id?.toString())
         .emit("message", { ...updatedChat, latestMessage: latestMess });
     });
+    return latestMess;
   } catch (error) {
     console.error("Error sending message to admins:", error);
     throw error;
@@ -304,10 +309,10 @@ exports.sendMessageToAdmins = async (socketObj, message, department) => {
 exports.sendMessageToUser = async (socketObj, message) => {
   try {
 
-    console.log(message,"sendMessageToUser message");
-    
-    const newMessage = new MessageModel(message);
-    const latestMess = await newMessage.save();
+    console.log(message, "sendMessageToUser message");
+
+    // const newMessage = new MessageModel(message);
+    const latestMess = message;
     // const conditions = [
     //   { role: { $in: ["Admin", "Supervisor"] } },
     // ]
@@ -317,8 +322,6 @@ exports.sendMessageToUser = async (socketObj, message) => {
     // const receivers = await UserModel.find({
     //   $or: conditions,
     // }).lean();
-
-    
     const updatedChat = await ChatModel.findOneAndUpdate(
       { _id: message?.chatId },
       { latestMessage: latestMess?._id, status: "active" },
@@ -326,11 +329,10 @@ exports.sendMessageToUser = async (socketObj, message) => {
     )
       .populate("adminId customerId")
       .lean();
-      socketObj.io
+    socketObj.io
       .to(updatedChat?.customerId?._id?.toString())
       .emit("message", { ...updatedChat, latestMessage: latestMess });
     // [...receivers].forEach((receiver) => {
-      
 
     // });
   } catch (error) {
