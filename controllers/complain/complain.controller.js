@@ -22,7 +22,7 @@ const getAllComplaints = async (req, res) => {
     if (search) {
       query.$or = [
         { customername: { $regex: search, $options: "i" } },
-        { complainstatus: { $regex: search, $options: "i" } }
+        { complainstatus: { $regex: search, $options: "i" } },
       ];
     }
 
@@ -72,6 +72,18 @@ const addComplaint = async (req, res) => {
 
     // Object"67e6d17332f102190438fa1d"
     // Create a new complaint using the chat ID and customer details
+    let uniqueDocuments = [];
+    // Check if req.body.complaindocuments exists
+    if (req.body.complaindocuments) {
+      // Normalize and ensure unique documents
+      const normalizedDocuments = req.body.complaindocuments.map((url) =>
+        url.trim()
+      ); // Trim whitespace
+      uniqueDocuments = [...new Set(normalizedDocuments)]; // Ensure uniqueness
+    }
+
+    console.log(uniqueDocuments, req.body, "uniqueDocuments");
+
     const newComplaint = new ComplaintModel({
       chatId: chat ? chat._id : null,
       custid: customer ? customer._id : null,
@@ -79,10 +91,13 @@ const addComplaint = async (req, res) => {
       customeremail: customer ? customer.email : req.body.customeremail,
       customerphone: customer ? customer.phone : req.body.customerphone,
       adminId: agent ? agent._id : null,
-      ...req.body, // Include any additional details from the request body
+      ...req.body,
+      complaindocuments: uniqueDocuments,
+      // Include any additional details from the request body
     });
 
     const savedComplaint = await newComplaint.save();
+    console.log("Saved Complaint:", savedComplaint); // Log the saved complaint
     return sendSuccessResponse(res, { data: savedComplaint });
   } catch (error) {
     return sendErrorResponse(res, error.message);
