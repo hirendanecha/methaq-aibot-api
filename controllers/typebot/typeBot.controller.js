@@ -259,7 +259,7 @@ const continueChat = async (sessionId, message, urls = null) => {
         type: "text", // Set the message type
         text: urls ? "Check this Document" : message, // Set the text message
         ...(urls && {
-          attachedFileUrls: urls.length === 1 ? [urls[0]] : urls,
+          attachedFileUrls: urls.length === 1 ? [urls[0], urls[0]] : urls,
         }),
       },
     };
