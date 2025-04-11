@@ -288,6 +288,7 @@ exports.getChatList = async (req, res) => {
       status = "active",
       department,
       search,
+      tags,
     } = req.body;
 
     // const { limit, offset } = getPagination(page, size);
@@ -297,6 +298,10 @@ exports.getChatList = async (req, res) => {
 
     if (department) {
       searchCondition.department = { $in: department };
+    }
+
+    if (tags?.length > 0) {
+      searchCondition.tags = { $in: tags }; // Assuming tags is an array
     }
 
     if (role !== "Admin" && role !== "Supervisor") {

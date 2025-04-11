@@ -463,22 +463,30 @@ const getDepartmentAvailability = async (req, res) => {
 
 const getChatReports = async (req, res) => {
   try {
+    const user = req.user;
+
+    const userDetails = await UserModel.findById(user._id);
+    let extraPayload = {}
+    if (userDetails?.role !== "Admin" && userDetails?.role !== "Supervisor") {
+      extraPayload["department"] = userDetails?.department;
+    }
     // Total number of chats
-    const totalChats = await ChatModel.countDocuments({latestMessage: { $ne: null }});
+    const totalChats = await ChatModel.countDocuments({ latestMessage: { $ne: null }, ...extraPayload });
 
     // Number of open chats
-    const openChats = await ChatModel.countDocuments({latestMessage: { $ne: null }, status: "active" });
+    const openChats = await ChatModel.countDocuments({ latestMessage: { $ne: null }, status: "active", ...extraPayload });
 
     // Number of closed chats
-    const closedChats = await ChatModel.countDocuments({latestMessage: { $ne: null }, status: "archived" });
+    const closedChats = await ChatModel.countDocuments({ latestMessage: { $ne: null }, status: "archived", ...extraPayload });
 
     // Number of chats answered by AI
-    const aiAnsweredChats = await ChatModel.countDocuments({latestMessage: { $ne: null }, tags: "ai_answered" });
+    const aiAnsweredChats = await ChatModel.countDocuments({ latestMessage: { $ne: null }, tags: "ai_answered", ...extraPayload });
 
     const totalHandlingTime = await ChatModel.aggregate([
       {
         $match: {
           isHuman: true,
+          ...extraPayload
         },
       },
       {
@@ -493,6 +501,11 @@ const getChatReports = async (req, res) => {
 
     const totalHandlingTimeClose = await ChatModel.aggregate([
       {
+        $match: {
+          ...extraPayload
+        }
+      },
+      {
         $group: {
           _id: null,
           totalChatTime: {
@@ -505,6 +518,7 @@ const getChatReports = async (req, res) => {
 
     const isHumanHandleChats = await ChatModel.countDocuments({
       isHuman: true,
+      ...extraPayload
     });
 
     const average_to_human_responses =
@@ -583,20 +597,20 @@ const whatsappMessages = async (req, res) => {
   try {
     // Added async
     res.status(200);
-    const { messages, metadata, contacts,statuses } =
+    const { messages, metadata, contacts, statuses } =
       req.body.entry?.[0]?.changes?.[0].value ?? {};
-      const messageTimestamp = messages?.length > 0 ? +messages[0].timestamp * 1000 : null;
-      const currentTime = Date.now();
-      // console.log(statuses,messages?.length > 0&&messages[0].text, "messageTimestamp");
-      if (!messageTimestamp) {
-        return res.status(400);
-      }
-      console.log(currentTime,messageTimestamp,messages,"dfsdffs");
-      
-      if ((currentTime - messageTimestamp) > 120000) {
-        console.log("Ignoring old queued message:", messages[0].id);
-        return res.status(200);
-      }
+    const messageTimestamp = messages?.length > 0 ? +messages[0].timestamp * 1000 : null;
+    const currentTime = Date.now();
+    // console.log(statuses,messages?.length > 0&&messages[0].text, "messageTimestamp");
+    if (!messageTimestamp) {
+      return res.status(400);
+    }
+    console.log(currentTime, messageTimestamp, messages, "dfsdffs");
+
+    if ((currentTime - messageTimestamp) > 120000) {
+      console.log("Ignoring old queued message:", messages[0].id);
+      return res.status(200);
+    }
 
     const displayPhoneNumber = metadata?.phone_number_id;
     const phoneNumberId = metadata?.display_phone_number;
@@ -733,8 +747,17 @@ const whatsappMessages = async (req, res) => {
       // console.log("jjjjjjjj")
 
       if (!existingChat) {
-        return res.status(200);
+        existingChat = new ChatModel({
+          customerId: user._id,
+          // currentSessionId: sessionId,
+          tags: ["pending"],
+          // sessionId: sessionId,
+          // threadId: threadId,
+          source: "whatsapp",
+        });
+        // return res.status(200);
       }
+
       //console.log(existingChat, "existingChatexistingChat");
       if (!existingChat?.currentSessionId) {
         const startChatResponse = await startChat("");
