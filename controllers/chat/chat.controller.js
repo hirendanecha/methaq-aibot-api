@@ -726,7 +726,7 @@ const whatsappMessages = async (req, res) => {
           receiver: newChat.customerId?.toString(),
           sendType: "assistant",
           receiverType: "user",
-          content: "Please select one of the following options:",
+          content: secMess.interactivePayload?.bodyText || "Please select one of the following options:",
           messageType: "interective",
           messageOptions: secMess.interactivePayload?.options?.map(
             (department) => ({
