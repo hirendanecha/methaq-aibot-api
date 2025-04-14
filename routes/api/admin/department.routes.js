@@ -4,6 +4,7 @@ const { fileUpload } = require("../../../middleware/file-upload");
 const departmentCtrl = require("../../../controllers/admin/department.controller");
 const { permissionAuthorization } = require("../../../middleware/authorization");
 const { updateComplaintStatus, getAllComplaints, getComplaintById, assignAgentToComplaint, updateComplaint } = require("../../../controllers/complain/complain.controller");
+const { assignAgentToMotorInquiry, updatedMotorInquiry, getMotorInquiryById, updatMotorInquiryStatus } = require("../../../controllers/motorInquiry/motor.controller");
 
 /* APIs for Department
   1. Get all Department
@@ -53,6 +54,12 @@ router.delete("/:id", permissionAuthorization("commonPermission.department", ["d
 
 router.patch("/assign-agent-complaint/:id", permissionAuthorization("commonPermission.complain", ["update"], ['Admin']), assignAgentToComplaint);
 
+
+router.patch("/assign-agent-motor-inquiry/:id", permissionAuthorization("commonPermission.motorInquiry", ["update"], ['Admin']), assignAgentToMotorInquiry); 
+router.put("/update-motor-inquiry/:id", permissionAuthorization("commonPermission.motorInquiry", ["update"], ['Admin']), updatedMotorInquiry);
+router.patch("/update-status-motor-inquiry/:id", permissionAuthorization("commonPermission.motorInquiry", ["update"], ['Admin']), updatMotorInquiryStatus);
+router.get("/getByIdMotorInquiry/:id", permissionAuthorization("commonPermission.motorInquiry", ["read"], ['Admin']), getMotorInquiryById);  //done
+
 router.put("/update-complaint/:id", permissionAuthorization("commonPermission.complain", ["update"], ['Admin']), updateComplaint);
 
 router.patch("/update-status-complaint/:id", permissionAuthorization("commonPermission.complain", ["update"], ['Admin']), updateComplaintStatus);
@@ -60,4 +67,6 @@ router.patch("/update-status-complaint/:id", permissionAuthorization("commonPerm
 router.get("/get-complaints", permissionAuthorization("commonPermission.complain", ["read"], ['Admin']), getAllComplaints);
 
 router.get("/getByIdComplain/:id", permissionAuthorization("commonPermission.complain", ["read"], ['Admin']), getComplaintById);
+
+
 module.exports = router;
