@@ -686,7 +686,14 @@ const whatsappMessages = async (req, res) => {
         // threadId: threadId,
         source: "whatsapp",
       });
-      let newChat = await chat.save();
+      let newChat = null;
+      const exist = await ChatModel.findOne({ customerId: updatedCus._id });
+      if (!exist) {
+        newChat = await chat.save();
+      }
+      else {
+        newChat = exist;
+      }
       const mess2 = {
         chatId: newChat?._id?.toString(),
         wpId: message?.id,
@@ -757,7 +764,7 @@ const whatsappMessages = async (req, res) => {
       // console.log("jjjjjjjj")
 
       if (!existingChat) {
-        existingChat = new ChatModel({
+        const newChatt = new ChatModel({
           customerId: user._id,
           // currentSessionId: sessionId,
           tags: ["pending"],
@@ -765,6 +772,7 @@ const whatsappMessages = async (req, res) => {
           // threadId: threadId,
           source: "whatsapp",
         });
+        existingChat = await newChatt.save();
         // return res.status(200);
       }
 
