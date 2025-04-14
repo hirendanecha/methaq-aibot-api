@@ -287,7 +287,7 @@ const closeChatController = async (req, res) => {
     if (!chat?.adminId && !chat?.tags?.includes("ai_answered")) {
       extraPayload = {
         $push: { tags: "ai_answered" },
-      }
+      };
     }
     const timestamp = dayjs(); // Current time using dayjs
     const createdAt = dayjs(chat.createdAt); // Convert createdAt to dayjs object
@@ -306,7 +306,7 @@ const closeChatController = async (req, res) => {
         isHuman: false,
         department: null,
         chatTime,
-        ...extraPayload
+        ...extraPayload,
       },
       { new: true }
     ).lean();
@@ -411,10 +411,10 @@ const completedDocumentController = async (req, res) => {
       {
         tags: !chatDetails?.tags?.includes("document_received")
           ? [
-            ...(chatDetails?.tags?.filter((tag) => tag !== "pending") || []),
-            "document_received",
-            "qulified_lead",
-          ]
+              ...(chatDetails?.tags?.filter((tag) => tag !== "pending") || []),
+              "document_received",
+              "qulified_lead",
+            ]
           : chatDetails?.tags,
       },
       {
@@ -466,27 +466,42 @@ const getChatReports = async (req, res) => {
     const user = req.user;
 
     const userDetails = await UserModel.findById(user._id);
-    let extraPayload = {}
+    let extraPayload = {};
     if (userDetails?.role !== "Admin" && userDetails?.role !== "Supervisor") {
       extraPayload["department"] = userDetails?.department;
     }
     // Total number of chats
-    const totalChats = await ChatModel.countDocuments({ latestMessage: { $ne: null }, ...extraPayload });
+    const totalChats = await ChatModel.countDocuments({
+      latestMessage: { $ne: null },
+      ...extraPayload,
+    });
 
     // Number of open chats
-    const openChats = await ChatModel.countDocuments({ latestMessage: { $ne: null }, status: "active", ...extraPayload });
+    const openChats = await ChatModel.countDocuments({
+      latestMessage: { $ne: null },
+      status: "active",
+      ...extraPayload,
+    });
 
     // Number of closed chats
-    const closedChats = await ChatModel.countDocuments({ latestMessage: { $ne: null }, status: "archived", ...extraPayload });
+    const closedChats = await ChatModel.countDocuments({
+      latestMessage: { $ne: null },
+      status: "archived",
+      ...extraPayload,
+    });
 
     // Number of chats answered by AI
-    const aiAnsweredChats = await ChatModel.countDocuments({ latestMessage: { $ne: null }, tags: "ai_answered", ...extraPayload });
+    const aiAnsweredChats = await ChatModel.countDocuments({
+      latestMessage: { $ne: null },
+      tags: "ai_answered",
+      ...extraPayload,
+    });
 
     const totalHandlingTime = await ChatModel.aggregate([
       {
         $match: {
           isHuman: true,
-          ...extraPayload
+          ...extraPayload,
         },
       },
       {
@@ -502,8 +517,8 @@ const getChatReports = async (req, res) => {
     const totalHandlingTimeClose = await ChatModel.aggregate([
       {
         $match: {
-          ...extraPayload
-        }
+          ...extraPayload,
+        },
       },
       {
         $group: {
@@ -518,7 +533,7 @@ const getChatReports = async (req, res) => {
 
     const isHumanHandleChats = await ChatModel.countDocuments({
       isHuman: true,
-      ...extraPayload
+      ...extraPayload,
     });
 
     const average_to_human_responses =
@@ -601,7 +616,8 @@ const whatsappMessages = async (req, res) => {
     res.status(200);
     const { messages, metadata, contacts, statuses } =
       req.body.entry?.[0]?.changes?.[0].value ?? {};
-    const messageTimestamp = messages?.length > 0 ? +messages[0].timestamp * 1000 : null;
+    const messageTimestamp =
+      messages?.length > 0 ? +messages[0].timestamp * 1000 : null;
     const currentTime = Date.now();
     // console.log(statuses,messages?.length > 0&&messages[0].text, "messageTimestamp");
     if (!messageTimestamp) {
@@ -609,11 +625,11 @@ const whatsappMessages = async (req, res) => {
     }
     console.log(currentTime, messageTimestamp, messages, "dfsdffs");
 
-    if ((currentTime - messageTimestamp) > 120000) {
+    if (currentTime - messageTimestamp > 120000) {
       console.log("Ignoring old queued message:", messages[0].id);
       return res.status(200);
     }
-   
+
     const displayPhoneNumber = metadata?.phone_number_id;
     const phoneNumberId = metadata?.display_phone_number;
 
@@ -625,7 +641,6 @@ const whatsappMessages = async (req, res) => {
     //   console.log("Message content is blank or missing:", message.id);
     //   return res.status(400).send("Message content is blank or missing");
     // }
-
 
     // const currentTimestamp = Math.floor(Date.now() / 1000);
 
@@ -640,7 +655,6 @@ const whatsappMessages = async (req, res) => {
     //   );
     // }
 
-  
     const messInDB = await MessageModel.findOne({ wpId: message.id });
     if (messInDB) {
       return res.status(200);
@@ -649,10 +663,29 @@ const whatsappMessages = async (req, res) => {
     const messageID = message.id;
     const messaging_product = "whatsaap";
     const profileName = contacts?.[0]?.profile?.name;
+
     if (messageID) {
       const read = await markMessageAsRead(messageID);
     }
     const user = await CustomerModel.findOne({ phone: messageSender });
+
+    if (!user ) {
+      if (
+        message?.type === "video" ||
+        message?.type === "location" ||
+        message?.type === "contacts" ||
+        message?.type === "unsupported"
+      ) {
+        const formalMessage =
+          "We are sorry, but we cannot process this type of content.";
+        await sendWhatsAppMessageFromalMessage(
+          messageSender,
+          messageID,
+          formalMessage
+        );
+        return res.status(200);
+      }
+    }
     //  res.status(200);
     if (!user) {
       const customer = new CustomerModel({
@@ -690,8 +723,7 @@ const whatsappMessages = async (req, res) => {
       const exist = await ChatModel.findOne({ customerId: updatedCus._id });
       if (!exist) {
         newChat = await chat.save();
-      }
-      else {
+      } else {
         newChat = exist;
       }
       const mess2 = {
@@ -743,7 +775,9 @@ const whatsappMessages = async (req, res) => {
           receiver: newChat.customerId?.toString(),
           sendType: "assistant",
           receiverType: "user",
-          content: secMess.interactivePayload?.bodyText || "Please select one of the following options:",
+          content:
+            secMess.interactivePayload?.bodyText ||
+            "Please select one of the following options:",
           messageType: "interective",
           messageOptions: secMess.interactivePayload?.options?.map(
             (department) => ({
@@ -1155,7 +1189,6 @@ const whatsappMessages = async (req, res) => {
             clearTimeout(messageTimeout);
           }
 
-         
           // console.log(response, "response typebot");
           // const assistantMessage = response.data.messages[0]?.content?.richText[0]?.children[0]?.children[0]?.text;
 
@@ -1183,7 +1216,7 @@ const whatsappMessages = async (req, res) => {
             };
             console.log(sessionId, "response typebot");
             const response = await continueChat(sessionId, userInput);
-           
+
             if (response?.interactiveMsg && response?.interactivePayload) {
               response?.finaloutput &&
                 (await sendWhatsAppMessage(
@@ -1203,7 +1236,11 @@ const whatsappMessages = async (req, res) => {
                 content: response?.finaloutput,
               };
               response?.finaloutput &&
-                (await sendMessageToAdmins(socketObj, mess, existingChat?.department?._id));
+                (await sendMessageToAdmins(
+                  socketObj,
+                  mess,
+                  existingChat?.department?._id
+                ));
               await sendInteractiveMessage(
                 messageSender,
                 messageID,
@@ -1241,7 +1278,7 @@ const whatsappMessages = async (req, res) => {
                   "",
                   response?.finaloutput
                 );
-  
+
                 const mess6 = {
                   chatId: existingChat._id,
                   sender: null,
@@ -1285,7 +1322,7 @@ const whatsappMessages = async (req, res) => {
                     })
                   ),
               };
-  
+
               await sendMessageToAdmins(
                 socketObj,
                 intmessage,
@@ -1316,9 +1353,6 @@ const whatsappMessages = async (req, res) => {
             // Clear the accumulated messages after processing
             accumulatedMessages = [];
           }, 8000); // 8-second delay
-
-         
-
         }
       } else if (message?.type === "interactive") {
         console.log(message, "message in interactive");
