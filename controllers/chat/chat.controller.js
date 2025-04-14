@@ -621,10 +621,10 @@ const whatsappMessages = async (req, res) => {
     const message = messages[0];
     const messageContent = message.text?.body;
 
-    if (!messageContent || messageContent.trim() === "") {
-      console.log("Message content is blank or missing:", message.id);
-      return res.status(400).send("Message content is blank or missing");
-    }
+    // if (!messageContent || messageContent.trim() === "") {
+    //   console.log("Message content is blank or missing:", message.id);
+    //   return res.status(400).send("Message content is blank or missing");
+    // }
 
 
     // const currentTimestamp = Math.floor(Date.now() / 1000);
