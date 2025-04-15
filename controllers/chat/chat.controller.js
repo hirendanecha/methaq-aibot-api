@@ -665,10 +665,6 @@ const whatsappMessages = async (req, res) => {
     const messaging_product = "whatsaap";
     const profileName = contacts?.[0]?.profile?.name;
 
-    if (messageSender && messageID) {
-      await sendTypingIndicator(messageSender, messageID);
-    }
-
     if (messageID) {
       const read = await markMessageAsRead(messageID);
     }
@@ -1194,6 +1190,9 @@ const whatsappMessages = async (req, res) => {
         // }
         if (!existingChat?.isHuman) {
           //const userInput = accumulatedMessages.join(" ");
+          if (messageSender && messageID) {
+            await sendTypingIndicator(messageSender, messageID);
+          }
           if (messageTimeout) {
             clearTimeout(messageTimeout);
           }
@@ -1399,6 +1398,9 @@ const whatsappMessages = async (req, res) => {
         //console.log(existingChat, "existingChat123456");
 
         if (!existingChat?.isHuman) {
+          if (messageSender && messageID) {
+            await sendTypingIndicator(messageSender, messageID);
+          }
           const userInput =
             message?.interactive?.list_reply?.title ||
             message?.interactive?.button_reply?.title;
@@ -1640,6 +1642,9 @@ const whatsappMessages = async (req, res) => {
         if (!existingChat?.isHuman) {
           //const userInput = message.text.body;
           const sessionId = existingChat.currentSessionId;
+          if (messageSender && messageID) {
+            await sendTypingIndicator(messageSender, messageID);
+          }
           // const response = await continueChat(sessionId, userInput);
           const response = await continueChat(
             existingChat.currentSessionId,
@@ -1784,6 +1789,7 @@ const whatsappMessages = async (req, res) => {
         message?.type === "contacts" ||
         message?.type === "unsupported"
       ) {
+        sendMessageToAdmins(socketObj, mess1, existingChat?.department?._id);
         const formalMessage =
           "We are sorry, but we cannot process this type of content.";
         await sendWhatsAppMessageFromalMessage(
