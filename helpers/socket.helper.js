@@ -552,7 +552,7 @@ socketObj.config = (server) => {
           department: null,
         },
         { new: true }
-      ).lean();
+      ).populate("adminId customerId").lean();
       const receivers = await UserModel.find({
         $or: [
           { role: { $in: ["Admin", "Supervisor"] } },
@@ -662,7 +662,7 @@ socketObj.config = (server) => {
           },
           { new: true }
         )
-          .populate("customerId")
+          .populate("adminId customerId")
           .lean();
         console.log(updatedChat, "updatedChatupdatedChat");
 
@@ -711,7 +711,7 @@ socketObj.config = (server) => {
           { latestMessage: final?._id },
           { new: true }
         )
-          .populate("customerId")
+          .populate("adminId customerId")
           .lean();
 
         [...receivers, ...customers].forEach((receiver) => {
@@ -803,7 +803,7 @@ socketObj.config = (server) => {
             latestMessage: final?._id,
           },
           { new: true }
-        ).lean();
+        ).populate("adminId customerId").lean();
         const users = [adminId];
         const departments = [updatedChat?.department?.toString()];
         if (oldAssignee) users.push(oldAssignee?.toString());
@@ -846,7 +846,7 @@ socketObj.config = (server) => {
             { _id: chatId },
             { latestMessage: final?._id },
             { new: true }
-          ).lean();
+          ).populate("adminId customerId").lean();
           const receivers = await UserModel.find({
             $or: [{ role: { $in: ["Admin", "Supervisor"] } }, { department: chatDetails?.department?.toString() }],
           }).lean();
@@ -1017,13 +1017,14 @@ socketObj.config = (server) => {
         const receivers = await UserModel.find({
           $or: [
             { role: { $in: ["Admin", "Supervisor"] } },
+            { department: chat?.department?._id?.toString() },
             { _id: { $in: [chat?.customerId?.toString()] } },
           ],
         });
         receivers.forEach((receiver) => {
           socketObj.io
             .to(receiver._id?.toString())
-            .emit("update-chat", updatedChat);
+            .emit("delete-chat", updatedChat);
           socketObj.io
             .to(receiver._id?.toString())
             .emit("message", { ...updatedChat, latestMessage: final });
