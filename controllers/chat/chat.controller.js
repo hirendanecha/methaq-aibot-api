@@ -13,6 +13,7 @@ const {
   markMessageAsRead,
   sendListMessage,
   sendWhatsAppMessageFromalMessage,
+  sendTypingIndicator,
 } = require("../../services/whatsaap.service");
 const CustomerModel = require("../../models/customer.model");
 const ChatModel = require("../../models/chat.model");
@@ -663,6 +664,10 @@ const whatsappMessages = async (req, res) => {
     const messageID = message.id;
     const messaging_product = "whatsaap";
     const profileName = contacts?.[0]?.profile?.name;
+
+    if (messageSender && messageID) {
+      await sendTypingIndicator(messageSender, messageID);
+    }
 
     if (messageID) {
       const read = await markMessageAsRead(messageID);
@@ -1360,7 +1365,7 @@ const whatsappMessages = async (req, res) => {
             }
             // Clear the accumulated messages after processing
             accumulatedMessages = [];
-          },2000); // 2-second delay
+          }, 2000); // 2-second delay
         }
       } else if (message?.type === "interactive") {
         console.log(message, "message in interactive");
