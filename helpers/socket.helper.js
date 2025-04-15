@@ -1017,6 +1017,7 @@ socketObj.config = (server) => {
         const receivers = await UserModel.find({
           $or: [
             { role: { $in: ["Admin", "Supervisor"] } },
+            { department: chat?.department?._id?.toString() },
             { _id: { $in: [chat?.customerId?.toString()] } },
           ],
         });
