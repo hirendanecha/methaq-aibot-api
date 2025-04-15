@@ -412,10 +412,10 @@ const completedDocumentController = async (req, res) => {
       {
         tags: !chatDetails?.tags?.includes("document_received")
           ? [
-              ...(chatDetails?.tags?.filter((tag) => tag !== "pending") || []),
-              "document_received",
-              "qulified_lead",
-            ]
+            ...(chatDetails?.tags?.filter((tag) => tag !== "pending") || []),
+            "document_received",
+            "qulified_lead",
+          ]
           : chatDetails?.tags,
       },
       {
@@ -558,6 +558,38 @@ const getChatReports = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+const getUnReadChatCounts = async (req, res) => {
+  try {
+    const UnReadCounts = await ChatModel.aggregate([
+      {
+        $lookup: {
+          from: "messages",
+          localField: "latestMessage",
+          foreignField: "_id",
+          as: "latestMessage",
+        }
+      },
+      {
+        $match: {
+          "latestMessage.isSeen": false,
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalUnread: { $sum: 1 }
+        }
+      }
+    ]);
+
+    console.log(UnReadCounts, "UnReadCounts");
+
+    return sendSuccessResponse(res, { unreadCounts: UnReadCounts[0]?.totalUnread });
+  } catch (error) {
+    return sendErrorResponse(res, error.message);
+  }
+}
 
 const assignDepartmentController = async (req, res) => {
   try {
@@ -1823,4 +1855,5 @@ module.exports = {
   isDocumentReceived,
   getDepartmentAvailability,
   getChatReports,
+  getUnReadChatCounts
 };

@@ -951,10 +951,42 @@ socketObj.config = (server) => {
     socket.on("seen-messages", async (params) => {
       const { chatId } =
         typeof params === "string" ? JSON.parse(params) : params;
+
+      const chatDetails = await ChatModel.findOne({ _id: chatId });
       const updateMessages = await MessageModel.updateMany(
         { chatId: chatId },
         { isSeen: true }
       );
+      const UnReadCounts = await ChatModel.aggregate([
+        {
+          $lookup: {
+            from: "messages",
+            localField: "latestMessage",
+            foreignField: "_id",
+            as: "latestMessage",
+          }
+        },
+        {
+          $match: {
+            "latestMessage.isSeen": false,
+          }
+        },
+        {
+          $group: {
+            _id: null,
+            totalUnread: { $sum: 1 }
+          }
+        }
+      ]);
+      const receivers = await UserModel.find({
+        $or: [{ role: { $in: ["Admin", "Supervisor"] } }, { department: chatDetails?.department?.toString() }],
+      }).lean();
+      [...receivers, chatDetails?.customerId].forEach((receiver) => {
+        socketObj.io
+          .to(receiver._id?.toString())
+          .emit("unread-count", UnReadCounts[0]?.totalUnread);
+      });
+
       if (typeof cb === "function")
         cb({
           message: "Chat messages seen",
