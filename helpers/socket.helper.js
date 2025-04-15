@@ -952,7 +952,9 @@ socketObj.config = (server) => {
       const { chatId } =
         typeof params === "string" ? JSON.parse(params) : params;
 
-      const chatDetails = await ChatModel.findOne({ _id: chatId });
+      const chatDetails = await ChatModel.findOne({ _id: chatId }).populate("latestMessage").lean();
+      console.log(chatDetails?.latestMessage?.wpId, "chatDetails?.latestMessage");
+
       const updateMessages = await MessageModel.updateMany(
         { chatId: chatId },
         { isSeen: true }
