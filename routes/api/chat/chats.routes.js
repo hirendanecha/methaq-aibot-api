@@ -40,6 +40,7 @@ const {
   updateSettings,
   rewriteMessage,
 } = require("../../../controllers/setting/settings.controller");
+const { addMotorInquiry, getAllMotorInquiry, deleteMotorInquiryById } = require("../../../controllers/motorInquiry/motor.controller");
 const pinecone = new Pinecone({ apiKey: environment.pinecone.apiKey });
 // Route to store chat
 router.post("/store-chat", storeChat);
@@ -143,6 +144,16 @@ router.put("/update-setting/:id", updateSettings); // Updated to include ID
 
 // Route to rewrite a message
 router.post("/settings/rewrite", rewriteMessage);
+
+///motor inquiry
+
+//add-motor-inquiry
+router.post("/add-motor-inquiry/:sessionId?", addMotorInquiry);
+//get-all-motor-inquiry
+router.get("/get-all-motor-inquiry", getAllMotorInquiry);
+//delete-motor-inquiry-by-id
+
+router.delete("/delete-motor-inquiry/:motorInquiryId", deleteMotorInquiryById);
 
 //
 

@@ -669,7 +669,7 @@ const whatsappMessages = async (req, res) => {
     }
     const user = await CustomerModel.findOne({ phone: messageSender });
 
-    if (!user ) {
+    if (!user) {
       if (
         message?.type === "video" ||
         message?.type === "location" ||
@@ -995,7 +995,9 @@ const whatsappMessages = async (req, res) => {
                 receiver: existingChat.customerId,
                 sendType: "assistant",
                 receiverType: "user",
-                content: "Please select one of the following options:",
+                content:
+                  aiResponse.interactivePayload?.bodyText ||
+                  "Please select one of the following options:",
                 messageType: "interective",
                 messageOptions: aiResponse.interactivePayload?.options?.map(
                   (department) => ({
@@ -1038,7 +1040,9 @@ const whatsappMessages = async (req, res) => {
                 receiver: existingChat.customerId?.toString(),
                 sendType: "assistant",
                 receiverType: "user",
-                content: "Please select one of the following options:",
+                content:
+                  aiResponse?.interactiveListPayload?.body?.text ||
+                  "Please select one of the following options:",
                 messageType: "interective",
                 messageOptions:
                   aiResponse?.interactiveListPayload?.action?.buttons?.map(
@@ -1252,7 +1256,9 @@ const whatsappMessages = async (req, res) => {
                 receiver: existingChat.customerId?.toString(),
                 sendType: "assistant",
                 receiverType: "user",
-                content: "Please select one of the following options:",
+                content:
+                  response.interactivePayload?.bodyText ||
+                  "Please select one of the following options:",
                 messageType: "interective",
                 messageOptions: response?.interactivePayload?.options?.map(
                   (department) => ({
@@ -1312,7 +1318,9 @@ const whatsappMessages = async (req, res) => {
                 receiver: existingChat.customerId?.toString(),
                 sendType: "assistant",
                 receiverType: "user",
-                content: "Please select one of the following options:",
+                content:
+                  response?.interactiveListPayload?.body?.text ||
+                  "Please select one of the following options:",
                 messageType: "interective",
                 messageOptions:
                   response?.interactiveListPayload?.action?.buttons?.map(
@@ -1352,7 +1360,7 @@ const whatsappMessages = async (req, res) => {
             }
             // Clear the accumulated messages after processing
             accumulatedMessages = [];
-          }, 8000); // 8-second delay
+          }, 5000); // 5-second delay
         }
       } else if (message?.type === "interactive") {
         console.log(message, "message in interactive");
@@ -1484,7 +1492,9 @@ const whatsappMessages = async (req, res) => {
               receiver: existingChat.customerId?.toString(),
               sendType: "assistant",
               receiverType: "user",
-              content: "Please select one of the following options:",
+              content:
+                aiResponse.interactivePayload?.bodyText ||
+                "Please select one of the following options:",
               messageType: "interective",
               messageOptions: aiResponse?.interactivePayload?.options?.map(
                 (department) => ({
@@ -1521,7 +1531,9 @@ const whatsappMessages = async (req, res) => {
               receiver: existingChat.customerId?.toString(),
               sendType: "assistant",
               receiverType: "user",
-              content: "Please select one of the following options:",
+              content:
+                aiResponse?.interactiveListPayload?.body?.text ||
+                "Please select one of the following options:",
               messageType: "interective",
               messageOptions:
                 aiResponse?.interactiveListPayload?.action?.buttons?.map(
@@ -1650,7 +1662,9 @@ const whatsappMessages = async (req, res) => {
               receiver: existingChat.customerId?.toString(),
               sendType: "assistant",
               receiverType: "user",
-              content: "Please select one of the following options:",
+              content:
+                response.interactivePayload?.bodyText ||
+                "Please select one of the following options:",
               messageType: "interective",
               messageOptions: response?.interactivePayload?.options?.map(
                 (department) => ({
@@ -1710,7 +1724,9 @@ const whatsappMessages = async (req, res) => {
               receiver: existingChat.customerId?.toString(),
               sendType: "assistant",
               receiverType: "user",
-              content: "Please select one of the following options:",
+              content:
+                response?.interactiveListPayload?.body?.text ||
+                "Please select one of the following options:",
               messageType: "interective",
               messageOptions:
                 response?.interactiveListPayload?.action?.buttons?.map(
