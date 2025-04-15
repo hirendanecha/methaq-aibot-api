@@ -1360,7 +1360,7 @@ const whatsappMessages = async (req, res) => {
             }
             // Clear the accumulated messages after processing
             accumulatedMessages = [];
-          }, 5000); // 5-second delay
+          },2000); // 2-second delay
         }
       } else if (message?.type === "interactive") {
         console.log(message, "message in interactive");
