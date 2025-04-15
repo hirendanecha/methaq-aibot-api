@@ -1020,7 +1020,7 @@ socketObj.config = (server) => {
       [...receivers, chatDetails?.customerId].forEach((receiver) => {
         socketObj.io
           .to(receiver._id?.toString())
-          .emit("unread-count", { counts: UnReadCounts[0]?.totalUnread, chatId: chatId, isSeen: true });
+          .emit("unread-count", { counts: UnReadCounts[0]?.totalUnread || 0, chatId: chatId, isSeen: true });
       });
 
       if (typeof cb === "function")

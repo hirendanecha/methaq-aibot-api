@@ -322,7 +322,7 @@ exports.sendMessageToAdmins = async (socketObj, message, department, extraReceiv
         .emit("message", { ...updatedChat, latestMessage: latestMess });
       socketObj.io
         .to(receiver._id?.toString())
-        .emit("unread-count", { counts: UnReadCounts[0]?.totalUnread, chatId: updatedChat?._id?.toString(), isSeen: false });
+        .emit("unread-count", { counts: UnReadCounts[0]?.totalUnread || 0, chatId: updatedChat?._id?.toString(), isSeen: false });
     });
     return latestMess;
   } catch (error) {
