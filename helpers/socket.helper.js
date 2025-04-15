@@ -8,6 +8,7 @@ const {
   sendImageByUrl,
   sendDocumentByUrl,
   markMessageAsRead,
+  sendTypingIndicator,
 } = require("../services/whatsaap.service");
 const environment = require("../utils/environment");
 const jwt = require("jsonwebtoken");
@@ -224,8 +225,9 @@ socketObj.config = (server) => {
               sendType: "assistant",
               receiverType: "admin",
               messageType: "tooltip",
-              content: `Chat is transferred to ${userInput?.split("-")[1]
-                } department`,
+              content: `Chat is transferred to ${
+                userInput?.split("-")[1]
+              } department`,
             };
             sendMessageToAdmins(socketObj, mess2, chatDetails?.department);
           }
@@ -654,7 +656,7 @@ socketObj.config = (server) => {
         const tooltipMess = await newMessage.save();
         console.log(
           +chatDetails?.initialHandlingTime ||
-          dayjs().diff(chatDetails?.agentTransferedAt, "minute"),
+            dayjs().diff(chatDetails?.agentTransferedAt, "minute"),
           chatDetails?.agentTransferedAt,
           "chatDetails?.initialHandlingTime"
         );
@@ -1056,7 +1058,8 @@ socketObj.config = (server) => {
           sendType: "admin",
           content:
             chat?.department?.messages?.chatClosingMessage ||
-            `This conversation has ended, thank you for contacting Methaq Takaful Insuance ${chat?.department?.name ? chat?.department?.name : ""
+            `This conversation has ended, thank you for contacting Methaq Takaful Insuance ${
+              chat?.department?.name ? chat?.department?.name : ""
             }. We hope we were able to serve you`,
           attachments: [],
           timestamp: new Date(),
@@ -1105,8 +1108,9 @@ socketObj.config = (server) => {
             undefined,
             undefined,
             chat?.department?.messages?.chatClosingMessage ||
-            `This conversation has ended, thank you for contacting Methaq Takaful Insuance ${chat?.department?.name ? chat?.department?.name : ""
-            }. We hope we were able to serve you`,
+              `This conversation has ended, thank you for contacting Methaq Takaful Insuance ${
+                chat?.department?.name ? chat?.department?.name : ""
+              }. We hope we were able to serve you`,
             updatedChat?.isHuman
           );
         }
@@ -1173,6 +1177,39 @@ socketObj.config = (server) => {
         id: socket.id,
         method: "disconnect",
       });
+    });
+    socket.on("typeing-whatsapp", async (params, cb) => {
+      try {
+        const { wpId } =
+          typeof params === "string" ? JSON.parse(params) : params;
+
+        if (!wpId) {
+          throw new Error(
+            "Missing required parameters: messageId"
+          );
+        }
+
+        // Call the sendTypingIndicator function
+        await sendTypingIndicator(" ", wpId);
+
+        if (typeof cb === "function") {
+          cb({
+            success: true,
+            message: "Typing indicator sent successfully",
+          });
+        }
+      } catch (error) {
+        console.error(
+          "Error in sendTypingIndicator socket event:",
+          error.message
+        );
+        if (typeof cb === "function") {
+          cb({
+            success: false,
+            message: error.message,
+          });
+        }
+      }
     });
   });
 };
