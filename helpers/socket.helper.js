@@ -984,7 +984,7 @@ socketObj.config = (server) => {
       [...receivers, chatDetails?.customerId].forEach((receiver) => {
         socketObj.io
           .to(receiver._id?.toString())
-          .emit("unread-count", UnReadCounts[0]?.totalUnread);
+          .emit("unread-count", { counts: UnReadCounts[0]?.totalUnread, chatId: chatId });
       });
 
       if (typeof cb === "function")
