@@ -412,10 +412,10 @@ const completedDocumentController = async (req, res) => {
       {
         tags: !chatDetails?.tags?.includes("document_received")
           ? [
-              ...(chatDetails?.tags?.filter((tag) => tag !== "pending") || []),
-              "document_received",
-              "qulified_lead",
-            ]
+            ...(chatDetails?.tags?.filter((tag) => tag !== "pending") || []),
+            "document_received",
+            "qulified_lead",
+          ]
           : chatDetails?.tags,
       },
       {
@@ -586,7 +586,7 @@ const getUnReadChatCounts = async (req, res) => {
     console.log(UnReadCounts, "UnReadCounts");
 
     return sendSuccessResponse(res, {
-      unreadCounts: UnReadCounts[0]?.totalUnread,
+      unreadCounts: UnReadCounts[0]?.totalUnread || 0,
     });
   } catch (error) {
     return sendErrorResponse(res, error.message);
