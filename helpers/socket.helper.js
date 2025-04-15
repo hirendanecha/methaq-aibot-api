@@ -7,6 +7,7 @@ const {
   sendWhatsAppMessage,
   sendImageByUrl,
   sendDocumentByUrl,
+  markMessageAsRead,
 } = require("../services/whatsaap.service");
 const environment = require("../utils/environment");
 const jwt = require("jsonwebtoken");
@@ -223,8 +224,9 @@ socketObj.config = (server) => {
               sendType: "assistant",
               receiverType: "admin",
               messageType: "tooltip",
-              content: `Chat is transferred to ${userInput?.split("-")[1]
-                } department`,
+              content: `Chat is transferred to ${
+                userInput?.split("-")[1]
+              } department`,
             };
             sendMessageToAdmins(socketObj, mess2, chatDetails?.department);
           }
@@ -552,11 +554,20 @@ socketObj.config = (server) => {
           department: null,
         },
         { new: true }
-      ).populate("adminId customerId").lean();
+      )
+        .populate("adminId customerId")
+        .lean();
       const receivers = await UserModel.find({
         $or: [
           { role: { $in: ["Admin", "Supervisor"] } },
-          { _id: { $in: [chatDetails?.customerId?._id?.toString(), chatDetails?.adminId?.toString()] } },
+          {
+            _id: {
+              $in: [
+                chatDetails?.customerId?._id?.toString(),
+                chatDetails?.adminId?.toString(),
+              ],
+            },
+          },
           { department: chatDetails?.department?.toString() },
         ],
       });
@@ -644,7 +655,7 @@ socketObj.config = (server) => {
         const tooltipMess = await newMessage.save();
         console.log(
           +chatDetails?.initialHandlingTime ||
-          dayjs().diff(chatDetails?.agentTransferedAt, "minute"),
+            dayjs().diff(chatDetails?.agentTransferedAt, "minute"),
           chatDetails?.agentTransferedAt,
           "chatDetails?.initialHandlingTime"
         );
@@ -803,7 +814,9 @@ socketObj.config = (server) => {
             latestMessage: final?._id,
           },
           { new: true }
-        ).populate("adminId customerId").lean();
+        )
+          .populate("adminId customerId")
+          .lean();
         const users = [adminId];
         const departments = [updatedChat?.department?.toString()];
         if (oldAssignee) users.push(oldAssignee?.toString());
@@ -846,9 +859,14 @@ socketObj.config = (server) => {
             { _id: chatId },
             { latestMessage: final?._id },
             { new: true }
-          ).populate("adminId customerId").lean();
+          )
+            .populate("adminId customerId")
+            .lean();
           const receivers = await UserModel.find({
-            $or: [{ role: { $in: ["Admin", "Supervisor"] } }, { department: chatDetails?.department?.toString() }],
+            $or: [
+              { role: { $in: ["Admin", "Supervisor"] } },
+              { department: chatDetails?.department?.toString() },
+            ],
           }).lean();
           console.log(chatDetails?.customerId, "finalfinalfinalfinal");
           [...receivers, chatDetails?.customerId].forEach((receiver) => {
@@ -891,7 +909,13 @@ socketObj.config = (server) => {
             receiverType: "user",
             messageType: "tooltip",
           };
-          await sendMessageToAdmins(socketObj, mess, updatedChat?.department, [{ _id: { $in: [oldAssignee] } }], true);
+          await sendMessageToAdmins(
+            socketObj,
+            mess,
+            updatedChat?.department,
+            [{ _id: { $in: [oldAssignee] } }],
+            true
+          );
           if (typeof cb === "function")
             cb({
               success: true,
@@ -952,9 +976,17 @@ socketObj.config = (server) => {
       const { chatId } =
         typeof params === "string" ? JSON.parse(params) : params;
 
-      const chatDetails = await ChatModel.findOne({ _id: chatId }).populate("latestMessage").lean();
-      console.log(chatDetails?.latestMessage?.wpId, "chatDetails?.latestMessage");
+      const chatDetails = await ChatModel.findOne({ _id: chatId })
+        .populate("latestMessage")
+        .lean();
+      console.log(
+        chatDetails?.latestMessage?.wpId,
+        "chatDetails?.latestMessage"
+      );
 
+      if (chatDetails?.latestMessage?.wpId) {
+        await markMessageAsRead(chatDetails?.latestMessage?.wpId);
+      }
       const updateMessages = await MessageModel.updateMany(
         { chatId: chatId },
         { isSeen: true }
@@ -966,27 +998,33 @@ socketObj.config = (server) => {
             localField: "latestMessage",
             foreignField: "_id",
             as: "latestMessage",
-          }
+          },
         },
         {
           $match: {
             "latestMessage.isSeen": false,
-          }
+          },
         },
         {
           $group: {
             _id: null,
-            totalUnread: { $sum: 1 }
-          }
-        }
+            totalUnread: { $sum: 1 },
+          },
+        },
       ]);
       const receivers = await UserModel.find({
-        $or: [{ role: { $in: ["Admin", "Supervisor"] } }, { department: chatDetails?.department?.toString() }],
+        $or: [
+          { role: { $in: ["Admin", "Supervisor"] } },
+          { department: chatDetails?.department?.toString() },
+        ],
       }).lean();
       [...receivers, chatDetails?.customerId].forEach((receiver) => {
         socketObj.io
           .to(receiver._id?.toString())
-          .emit("unread-count", { counts: UnReadCounts[0]?.totalUnread, chatId: chatId });
+          .emit("unread-count", {
+            counts: UnReadCounts[0]?.totalUnread,
+            chatId: chatId,
+          });
       });
 
       if (typeof cb === "function")
@@ -1022,7 +1060,8 @@ socketObj.config = (server) => {
           sendType: "admin",
           content:
             chat?.department?.messages?.chatClosingMessage ||
-            `This conversation has ended, thank you for contacting Methaq Takaful Insuance ${chat?.department?.name ? chat?.department?.name : ""
+            `This conversation has ended, thank you for contacting Methaq Takaful Insuance ${
+              chat?.department?.name ? chat?.department?.name : ""
             }. We hope we were able to serve you`,
           attachments: [],
           timestamp: new Date(),
@@ -1071,8 +1110,9 @@ socketObj.config = (server) => {
             undefined,
             undefined,
             chat?.department?.messages?.chatClosingMessage ||
-            `This conversation has ended, thank you for contacting Methaq Takaful Insuance ${chat?.department?.name ? chat?.department?.name : ""
-            }. We hope we were able to serve you`,
+              `This conversation has ended, thank you for contacting Methaq Takaful Insuance ${
+                chat?.department?.name ? chat?.department?.name : ""
+              }. We hope we were able to serve you`,
             updatedChat?.isHuman
           );
         }

@@ -412,10 +412,10 @@ const completedDocumentController = async (req, res) => {
       {
         tags: !chatDetails?.tags?.includes("document_received")
           ? [
-            ...(chatDetails?.tags?.filter((tag) => tag !== "pending") || []),
-            "document_received",
-            "qulified_lead",
-          ]
+              ...(chatDetails?.tags?.filter((tag) => tag !== "pending") || []),
+              "document_received",
+              "qulified_lead",
+            ]
           : chatDetails?.tags,
       },
       {
@@ -568,28 +568,30 @@ const getUnReadChatCounts = async (req, res) => {
           localField: "latestMessage",
           foreignField: "_id",
           as: "latestMessage",
-        }
+        },
       },
       {
         $match: {
           "latestMessage.isSeen": false,
-        }
+        },
       },
       {
         $group: {
           _id: null,
-          totalUnread: { $sum: 1 }
-        }
-      }
+          totalUnread: { $sum: 1 },
+        },
+      },
     ]);
 
     console.log(UnReadCounts, "UnReadCounts");
 
-    return sendSuccessResponse(res, { unreadCounts: UnReadCounts[0]?.totalUnread });
+    return sendSuccessResponse(res, {
+      unreadCounts: UnReadCounts[0]?.totalUnread,
+    });
   } catch (error) {
     return sendErrorResponse(res, error.message);
   }
-}
+};
 
 const assignDepartmentController = async (req, res) => {
   try {
@@ -697,9 +699,6 @@ const whatsappMessages = async (req, res) => {
     const messaging_product = "whatsaap";
     const profileName = contacts?.[0]?.profile?.name;
 
-    if (messageID) {
-      const read = await markMessageAsRead(messageID);
-    }
     const user = await CustomerModel.findOne({ phone: messageSender });
 
     if (!user) {
@@ -711,6 +710,10 @@ const whatsappMessages = async (req, res) => {
       ) {
         const formalMessage =
           "We are sorry, but we cannot process this type of content.";
+
+        if (messageID) {
+          const read = await markMessageAsRead(messageID);
+        }
         await sendWhatsAppMessageFromalMessage(
           messageSender,
           messageID,
@@ -768,6 +771,16 @@ const whatsappMessages = async (req, res) => {
         receiverType: "admin",
         content: message.text?.body,
       };
+      console.log(newChat, "newChat");
+
+      if (!newChat?.isHuman) {
+        if (messageSender && messageID) {
+          await sendTypingIndicator(messageSender, messageID);
+        }
+        if (messageID) {
+          const read = await markMessageAsRead(messageID);
+        }
+      }
       sendMessageToAdmins(socketObj, mess2, newChat?.department);
 
       if (secMess.finaloutput) {
@@ -862,6 +875,14 @@ const whatsappMessages = async (req, res) => {
         const downloadResult = await downloadMedia(mediaID, existingChat);
 
         const { url, filePath, fileType, file } = downloadResult?.data || {};
+        if (!existingChat?.isHuman) {
+          if (messageID) {
+            const read = await markMessageAsRead(messageID);
+          }
+          if (messageSender && messageID) {
+            await sendTypingIndicator(messageSender, messageID);
+          }
+        }
 
         // Send acknowledgment for each image received
         // const acknowledgmentMess = {
@@ -1225,6 +1246,9 @@ const whatsappMessages = async (req, res) => {
           if (messageSender && messageID) {
             await sendTypingIndicator(messageSender, messageID);
           }
+          if (messageID) {
+            const read = await markMessageAsRead(messageID);
+          }
           if (messageTimeout) {
             clearTimeout(messageTimeout);
           }
@@ -1432,6 +1456,9 @@ const whatsappMessages = async (req, res) => {
         if (!existingChat?.isHuman) {
           if (messageSender && messageID) {
             await sendTypingIndicator(messageSender, messageID);
+          }
+          if (messageID) {
+            const read = await markMessageAsRead(messageID);
           }
           const userInput =
             message?.interactive?.list_reply?.title ||
@@ -1677,6 +1704,9 @@ const whatsappMessages = async (req, res) => {
           if (messageSender && messageID) {
             await sendTypingIndicator(messageSender, messageID);
           }
+          if (messageID) {
+            const read = await markMessageAsRead(messageID);
+          }
           // const response = await continueChat(sessionId, userInput);
           const response = await continueChat(
             existingChat.currentSessionId,
@@ -1855,5 +1885,5 @@ module.exports = {
   isDocumentReceived,
   getDepartmentAvailability,
   getChatReports,
-  getUnReadChatCounts
+  getUnReadChatCounts,
 };
