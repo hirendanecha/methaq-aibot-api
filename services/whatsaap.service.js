@@ -376,6 +376,32 @@ const sendInteractiveMessage = async (messageSender, messageID, payload) => {
     throw error; // Rethrow the error to be handled by the caller
   }
 };
+
+const sendTypingIndicator = async (messageSender, messageID) => {
+  const data = JSON.stringify({
+    messaging_product: "whatsapp",
+    status: "read",
+    message_id: messageID,
+    typing_indicator: {
+      type: "text",
+    },
+  });
+
+  try {
+    const response = await axios.post(url, data, {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${environment.whatsaap.whatAuthT}`,
+      },
+    });
+
+    console.log("Typing indicator sent. Status:", response.data);
+  } catch (error) {
+    console.error("Error sending typing indicator:", error.message);
+    throw error; // Rethrow the error to be handled by the caller
+  }
+};
+
 module.exports = {
   sendWhatsAppMessage,
   sendWhatsAppMessageFromalMessage,
@@ -385,4 +411,5 @@ module.exports = {
   sendImageByUrl,
   sendDocumentByUrl,
   sendListMessage,
+  sendTypingIndicator,
 };

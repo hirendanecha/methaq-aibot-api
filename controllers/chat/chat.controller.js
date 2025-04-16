@@ -13,6 +13,7 @@ const {
   markMessageAsRead,
   sendListMessage,
   sendWhatsAppMessageFromalMessage,
+  sendTypingIndicator,
 } = require("../../services/whatsaap.service");
 const CustomerModel = require("../../models/customer.model");
 const ChatModel = require("../../models/chat.model");
@@ -558,6 +559,40 @@ const getChatReports = async (req, res) => {
   }
 };
 
+const getUnReadChatCounts = async (req, res) => {
+  try {
+    const UnReadCounts = await ChatModel.aggregate([
+      {
+        $lookup: {
+          from: "messages",
+          localField: "latestMessage",
+          foreignField: "_id",
+          as: "latestMessage",
+        },
+      },
+      {
+        $match: {
+          "latestMessage.isSeen": false,
+        },
+      },
+      {
+        $group: {
+          _id: null,
+          totalUnread: { $sum: 1 },
+        },
+      },
+    ]);
+
+    console.log(UnReadCounts, "UnReadCounts");
+
+    return sendSuccessResponse(res, {
+      unreadCounts: UnReadCounts[0]?.totalUnread || 0,
+    });
+  } catch (error) {
+    return sendErrorResponse(res, error.message);
+  }
+};
+
 const assignDepartmentController = async (req, res) => {
   try {
     const { sessionId } = req.params;
@@ -664,9 +699,6 @@ const whatsappMessages = async (req, res) => {
     const messaging_product = "whatsaap";
     const profileName = contacts?.[0]?.profile?.name;
 
-    if (messageID) {
-      const read = await markMessageAsRead(messageID);
-    }
     const user = await CustomerModel.findOne({ phone: messageSender });
 
     if (!user) {
@@ -678,6 +710,10 @@ const whatsappMessages = async (req, res) => {
       ) {
         const formalMessage =
           "We are sorry, but we cannot process this type of content.";
+
+        if (messageID) {
+          const read = await markMessageAsRead(messageID);
+        }
         await sendWhatsAppMessageFromalMessage(
           messageSender,
           messageID,
@@ -735,6 +771,16 @@ const whatsappMessages = async (req, res) => {
         receiverType: "admin",
         content: message.text?.body,
       };
+      console.log(newChat, "newChat");
+
+      if (!newChat?.isHuman) {
+        if (messageSender && messageID) {
+          await sendTypingIndicator(messageSender, messageID);
+        }
+        if (messageID) {
+          const read = await markMessageAsRead(messageID);
+        }
+      }
       sendMessageToAdmins(socketObj, mess2, newChat?.department);
 
       if (secMess.finaloutput) {
@@ -756,7 +802,7 @@ const whatsappMessages = async (req, res) => {
           chatId: newChat?._id?.toString(),
           sender: null,
           receiver: newChat?.customerId?.toString(),
-          sendType: "admin",
+          sendType: "assistant",
           receiverType: "user",
           content: secMess.finaloutput,
         };
@@ -787,6 +833,64 @@ const whatsappMessages = async (req, res) => {
           ),
         };
         await sendMessageToAdmins(socketObj, intmessage, newChat?.department);
+      }
+
+      if (secMess?.interactiveListButton && secMess?.interactiveListPayload) {
+        // if (secMess?.finaloutput) {
+        //   await sendWhatsAppMessage(
+        //     messageSender,
+        //     "",
+        //     messageID,
+        //     "",
+        //     secMess?.finaloutput
+        //   );
+
+        //   const mess6 = {
+        //     chatId: newChat._id,
+        //     sender: null,
+        //     receiver: newChat?.customerId?.toString(),
+        //     sendType: "admin",
+        //     receiverType: "user",
+        //     content: secMess?.finaloutput,
+        //   };
+        //   sendMessageToAdmins(socketObj, mess6, newChat?.department?._id);
+        // }
+        // response?.finaloutput &&
+        //   (await sendWhatsAppMessage(
+        //     messageSender,
+        //     "",
+        //     messageID,
+        //     "",
+        //     response?.finaloutput
+        //   ));
+        await sendListMessage(
+          messageSender,
+          messageID,
+          secMess?.interactiveListPayload
+        );
+        const intmessage = {
+          chatId: newChat._id,
+          sender: null,
+          receiver: newChat.customerId?.toString(),
+          sendType: "assistant",
+          receiverType: "user",
+          content:
+            secMess?.interactiveListPayload?.body?.text ||
+            "Please select one of the following options:",
+          messageType: "interective",
+          messageOptions: secMess?.interactiveListPayload?.action?.buttons?.map(
+            (btn) => ({
+              label: btn.reply.title,
+              value: btn.reply.id,
+            })
+          ),
+        };
+
+        await sendMessageToAdmins(
+          socketObj,
+          intmessage,
+          newChat?.department?._id
+        );
       }
     } else {
       //console.log(message, "message for checking");
@@ -829,6 +933,14 @@ const whatsappMessages = async (req, res) => {
         const downloadResult = await downloadMedia(mediaID, existingChat);
 
         const { url, filePath, fileType, file } = downloadResult?.data || {};
+        if (!existingChat?.isHuman) {
+          if (messageID) {
+            const read = await markMessageAsRead(messageID);
+          }
+          if (messageSender && messageID) {
+            await sendTypingIndicator(messageSender, messageID);
+          }
+        }
 
         // Send acknowledgment for each image received
         // const acknowledgmentMess = {
@@ -1189,6 +1301,12 @@ const whatsappMessages = async (req, res) => {
         // }
         if (!existingChat?.isHuman) {
           //const userInput = accumulatedMessages.join(" ");
+          if (messageSender && messageID) {
+            await sendTypingIndicator(messageSender, messageID);
+          }
+          if (messageID) {
+            const read = await markMessageAsRead(messageID);
+          }
           if (messageTimeout) {
             clearTimeout(messageTimeout);
           }
@@ -1360,7 +1478,7 @@ const whatsappMessages = async (req, res) => {
             }
             // Clear the accumulated messages after processing
             accumulatedMessages = [];
-          }, 5000); // 5-second delay
+          }, 2000); // 2-second delay
         }
       } else if (message?.type === "interactive") {
         console.log(message, "message in interactive");
@@ -1394,6 +1512,12 @@ const whatsappMessages = async (req, res) => {
         //console.log(existingChat, "existingChat123456");
 
         if (!existingChat?.isHuman) {
+          if (messageSender && messageID) {
+            await sendTypingIndicator(messageSender, messageID);
+          }
+          if (messageID) {
+            const read = await markMessageAsRead(messageID);
+          }
           const userInput =
             message?.interactive?.list_reply?.title ||
             message?.interactive?.button_reply?.title;
@@ -1635,6 +1759,12 @@ const whatsappMessages = async (req, res) => {
         if (!existingChat?.isHuman) {
           //const userInput = message.text.body;
           const sessionId = existingChat.currentSessionId;
+          if (messageSender && messageID) {
+            await sendTypingIndicator(messageSender, messageID);
+          }
+          if (messageID) {
+            const read = await markMessageAsRead(messageID);
+          }
           // const response = await continueChat(sessionId, userInput);
           const response = await continueChat(
             existingChat.currentSessionId,
@@ -1779,6 +1909,7 @@ const whatsappMessages = async (req, res) => {
         message?.type === "contacts" ||
         message?.type === "unsupported"
       ) {
+        sendMessageToAdmins(socketObj, mess1, existingChat?.department?._id);
         const formalMessage =
           "We are sorry, but we cannot process this type of content.";
         await sendWhatsAppMessageFromalMessage(
@@ -1812,4 +1943,5 @@ module.exports = {
   isDocumentReceived,
   getDepartmentAvailability,
   getChatReports,
+  getUnReadChatCounts,
 };

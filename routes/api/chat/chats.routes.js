@@ -33,6 +33,7 @@ const {
   addComplaint,
   updateComplaint,
   deleteComplaintById,
+  assignDepartmentBySessionId,
 } = require("../../../controllers/complain/complain.controller");
 const {
   createSettings,
@@ -154,6 +155,10 @@ router.get("/get-all-motor-inquiry", getAllMotorInquiry);
 //delete-motor-inquiry-by-id
 
 router.delete("/delete-motor-inquiry/:motorInquiryId", deleteMotorInquiryById);
+
+
+router.post('/assign-departmentbysessionid',assignDepartmentBySessionId);
+
 
 //
 

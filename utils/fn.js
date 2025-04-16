@@ -271,7 +271,7 @@ const fetchDepartmentsAndPrompts = async () => {
     throw error;
   }
 };
-exports.sendMessageToAdmins = async (socketObj, message, department,extraReceiver,sendUpdate) => {
+exports.sendMessageToAdmins = async (socketObj, message, department, extraReceiver, sendUpdate) => {
   try {
     const newMessage = new MessageModel(message);
     const latestMess = await newMessage.save();
@@ -281,7 +281,7 @@ exports.sendMessageToAdmins = async (socketObj, message, department,extraReceive
     if (department) {
       conditions.push({ department: department })
     }
-    if(extraReceiver?.length > 0){
+    if (extraReceiver?.length > 0) {
       conditions.push(...extraReceiver)
     }
     const receivers = await UserModel.find({
@@ -294,11 +294,35 @@ exports.sendMessageToAdmins = async (socketObj, message, department,extraReceive
     )
       .populate("adminId customerId")
       .lean();
+    const UnReadCounts = await ChatModel.aggregate([
+      {
+        $lookup: {
+          from: "messages",
+          localField: "latestMessage",
+          foreignField: "_id",
+          as: "latestMessage",
+        }
+      },
+      {
+        $match: {
+          "latestMessage.isSeen": false,
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalUnread: { $sum: 1 }
+        }
+      }
+    ]);
     [...receivers].forEach((receiver) => {
-      sendUpdate&&socketObj.io.to(receiver._id?.toString()).emit("update-chat", { ...updatedChat, latestMessage: latestMess });
+      sendUpdate && socketObj.io.to(receiver._id?.toString()).emit("update-chat", { ...updatedChat, latestMessage: latestMess });
       socketObj.io
         .to(receiver._id?.toString())
         .emit("message", { ...updatedChat, latestMessage: latestMess });
+      socketObj.io
+        .to(receiver._id?.toString())
+        .emit("unread-count", { counts: UnReadCounts[0]?.totalUnread || 0, chatId: updatedChat?._id?.toString(), isSeen: false });
     });
     return latestMess;
   } catch (error) {
