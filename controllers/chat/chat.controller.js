@@ -412,10 +412,10 @@ const completedDocumentController = async (req, res) => {
       {
         tags: !chatDetails?.tags?.includes("document_received")
           ? [
-            ...(chatDetails?.tags?.filter((tag) => tag !== "pending") || []),
-            "document_received",
-            "qulified_lead",
-          ]
+              ...(chatDetails?.tags?.filter((tag) => tag !== "pending") || []),
+              "document_received",
+              "qulified_lead",
+            ]
           : chatDetails?.tags,
       },
       {
@@ -802,7 +802,7 @@ const whatsappMessages = async (req, res) => {
           chatId: newChat?._id?.toString(),
           sender: null,
           receiver: newChat?.customerId?.toString(),
-          sendType: "admin",
+          sendType: "assistant",
           receiverType: "user",
           content: secMess.finaloutput,
         };
@@ -833,6 +833,64 @@ const whatsappMessages = async (req, res) => {
           ),
         };
         await sendMessageToAdmins(socketObj, intmessage, newChat?.department);
+      }
+
+      if (secMess?.interactiveListButton && secMess?.interactiveListPayload) {
+        // if (secMess?.finaloutput) {
+        //   await sendWhatsAppMessage(
+        //     messageSender,
+        //     "",
+        //     messageID,
+        //     "",
+        //     secMess?.finaloutput
+        //   );
+
+        //   const mess6 = {
+        //     chatId: newChat._id,
+        //     sender: null,
+        //     receiver: newChat?.customerId?.toString(),
+        //     sendType: "admin",
+        //     receiverType: "user",
+        //     content: secMess?.finaloutput,
+        //   };
+        //   sendMessageToAdmins(socketObj, mess6, newChat?.department?._id);
+        // }
+        // response?.finaloutput &&
+        //   (await sendWhatsAppMessage(
+        //     messageSender,
+        //     "",
+        //     messageID,
+        //     "",
+        //     response?.finaloutput
+        //   ));
+        await sendListMessage(
+          messageSender,
+          messageID,
+          secMess?.interactiveListPayload
+        );
+        const intmessage = {
+          chatId: newChat._id,
+          sender: null,
+          receiver: newChat.customerId?.toString(),
+          sendType: "assistant",
+          receiverType: "user",
+          content:
+            secMess?.interactiveListPayload?.body?.text ||
+            "Please select one of the following options:",
+          messageType: "interective",
+          messageOptions: secMess?.interactiveListPayload?.action?.buttons?.map(
+            (btn) => ({
+              label: btn.reply.title,
+              value: btn.reply.id,
+            })
+          ),
+        };
+
+        await sendMessageToAdmins(
+          socketObj,
+          intmessage,
+          newChat?.department?._id
+        );
       }
     } else {
       //console.log(message, "message for checking");
