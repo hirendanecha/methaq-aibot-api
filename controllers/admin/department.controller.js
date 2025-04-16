@@ -144,54 +144,57 @@ exports.addDepartment = async (req, res) => {
       ...mergedObject,
     });
     const savedDepartment = await newDepartment.save();
-    // const tools = [];
-    // if (savedDepartment) {
-    // console.log(savedDepartment, "savedDepartment");
-    // for (const id of savedDepartment?.functionId) {
-    //   const toolFunction = toolFunctions[id];
-    //   if (!toolFunction) {
-    //     return sendErrorResponse(
-    //       res,
-    //       `Tool function not found for ID: ${id}`
-    //     );
-    //   }
-    //   tools.push(toolFunction);
-    // }
-    // console.log(tools, "tools");
+    const tools = [];
+    if (savedDepartment) {
+      console.log(savedDepartment, "savedDepartment");
+      for (const id of savedDepartment?.functionId) {
+        const toolFunction = toolFunctions[id];
+        if (!toolFunction) {
+          return sendErrorResponse(
+            res,
+            `Tool function not found for ID: ${id}`
+          );
+        }
+        tools.push(toolFunction);
+      }
+      console.log(tools, "tools");
 
-    // const newAssistant = await createAssistant(
-    //   savedDepartment?.name,
-    //   savedDepartment?.prompt,
-    //   tools
-    // );
-    // const updatedAssistant = await openai.beta.assistants.update(
-    //   newAssistant?.assistantData?.id,
-    //   {
-    //     tools: tools,
-    //   }
-    // );
-    // const updatedDepartment = await DepartmentModel.findByIdAndUpdate(
-    //   savedDepartment?._id,
-    //   {
-    //     assistantDetails: newAssistant?.assistantData,
-    //   },
-    //   {
-    //     new: true,
-    //   }
-    // );
+      const newAssistant = await createAssistant(
+        savedDepartment?.name,
+         " ",
+        tools
+      );
+      const updatedAssistant = await openai.beta.assistants.update(
+        newAssistant?.assistantData?.id,
+        {
+          tools: tools,
+        }
+      );
+      const updatedDepartment = await DepartmentModel.findByIdAndUpdate(
+        savedDepartment?._id,
+        {
+          assistantDetails: newAssistant?.assistantData,
+        },
+        {
+          new: true,
+        }
+      );
 
-    // Add tool functions if functionId is provided
-    // if (req.body.functionId && Array.isArray(req.body.functionId)) {
-    //   for (const functionId of req.body.functionId) {
-    //     await addToolToAssistant({
-    //       body: {
-    //         assistantId: newAssistant?.assistantData?.id,
-    //         functionId: functionId
-    //       }
-    //     }, res);
-    //   }
-    // }
-    // }
+      //Add tool functions if functionId is provided
+      if (req.body.functionId && Array.isArray(req.body.functionId)) {
+        for (const functionId of req.body.functionId) {
+          await addToolToAssistant(
+            {
+              body: {
+                assistantId: newAssistant?.assistantData?.id,
+                functionId: functionId,
+              },
+            },
+            res
+          );
+        }
+      }
+    }
 
     return sendSuccessResponse(res, { data: newDepartment }, 201);
   } catch (error) {
@@ -249,20 +252,20 @@ exports.updateDepartment = async (req, res) => {
       }
     );
 
-    // if (updatedDepartment) {
-    //   // console.log(updatedDepartment, "updatedDepartment")
-    //   const updatedAssistant = await updateAssistant(
-    //     updatedDepartment?.assistantDetails?.id,
-    //     {
-    //       name: updatedDepartment?.name,
-    //       instructions: updatedDepartment?.prompt,
-    //       tools: updatedDepartment?.functionId,
-    //     }
-    //   );
-    //   console.log(updatedAssistant, "updatedAssistant");
-    // }
+    if (updatedDepartment) {
+      // console.log(updatedDepartment, "updatedDepartment")
+      const updatedAssistant = await updateAssistant(
+        updatedDepartment?.assistantDetails?.id,
+        {
+          name: updatedDepartment?.name,
+          instructions: updatedDepartment?.prompt,
+          tools: updatedDepartment?.functionId,
+        }
+      );
+      console.log(updatedAssistant, "updatedAssistant");
+    }
 
-    // await enableFIleSearch(updatedDepartment?.assistantDetails?.id);
+    await enableFIleSearch(updatedDepartment?.assistantDetails?.id);
     return sendSuccessResponse(res, { data: updatedDepartment });
   } catch (error) {
     return sendErrorResponse(res, error.message);
