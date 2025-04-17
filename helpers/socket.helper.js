@@ -586,6 +586,73 @@ socketObj.config = (server) => {
         });
     });
 
+    //ay transfer to main-menu
+    socket.on("transfer-to-main-menu", async (params, cb) => {
+      params = typeof params === "string" ? JSON.parse(params) : params;
+      const chatDetails = await ChatModel.findById(params.chatId)
+        .populate("customerId")
+        .lean();
+      console.log(chatDetails?.customerId, "chatDetails?.customerId");
+      const mess = {
+        chatId: chatDetails?._id,
+        sender: null,
+        sendType: "admin",
+        content: "Chat is transferred to Main Menu",
+        attachments: [],
+        timestamp: new Date(),
+        receiver: chatDetails?.customerId?._id?.toString(),
+        receiverType: "user",
+        messageType: "tooltip",
+      };
+      const newMessage = new MessageModel(mess);
+      const final = await newMessage.save();
+      const startChatResponse = await startChat("");
+      const sessionId = startChatResponse?.response?.data?.sessionId;
+      const firstMess = await continueChat(sessionId, sessionId);
+      // const secMess = await continueChat(sessionId, message.text?.body);
+      const updatedChat = await ChatModel.findOneAndUpdate(
+        { _id: chatDetails?._id },
+        {
+          latestMessage: final?._id,
+          isHuman: false,
+          adminId: null,
+          currentSessionId: sessionId,
+          department: null,
+        },
+        { new: true }
+      )
+        .populate("adminId customerId")
+        .lean();
+      const receivers = await UserModel.find({
+        $or: [
+          { role: { $in: ["Admin", "Supervisor"] } },
+          {
+            _id: {
+              $in: [
+                chatDetails?.customerId?._id?.toString(),
+                chatDetails?.adminId?.toString(),
+              ],
+            },
+          },
+          { department: chatDetails?.department?.toString() },
+        ],
+      });
+      receivers.forEach((receiver) => {
+        socketObj.io
+          .to(receiver._id?.toString())
+          .emit("update-chat", updatedChat);
+        socketObj.io
+          .to(receiver._id?.toString())
+          .emit("message", { ...updatedChat, latestMessage: final });
+      });
+      if (typeof cb === "function")
+        cb({
+          success: true,
+          message: "Chat transfered to Main Menu",
+        });
+    });
+
+    //
     socket.on("get-messages", async (params, cb) => {
       params = typeof params === "string" ? JSON.parse(params) : params;
       const messages = await MessageModel.find({ chatId: params.chatId })

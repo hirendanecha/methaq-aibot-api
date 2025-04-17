@@ -6,11 +6,14 @@ const {
   getPagination,
   getPaginationData,
   getAssigneeAgent,
+  sendMessageToAdmins,
 } = require("../../utils/fn");
 const {
   sendSuccessResponse,
   sendErrorResponse,
 } = require("../../utils/response");
+const DepartmentModel = require("../../models/department.model");
+const socketObj = require("../../helpers/socket.helper");
 
 const getAllComplaints = async (req, res) => {
   try {
@@ -207,6 +210,62 @@ const deleteComplaintById = async (req, res) => {
   }
 };
 
+const assignDepartmentBySessionId = async (req, res) => {
+  try {
+    const { sessionId, deptId } = req.body;
+
+    if (!sessionId || !deptId) {
+      return res
+        .status(400)
+        .json({ error: "Session ID and Department ID are required" });
+    }
+
+    // Find the chat by session ID
+    const chat = await ChatModel.findOne({ currentSessionId: sessionId });
+
+    if (!chat) {
+      return res.status(404).json({ error: "Chat not found" });
+    }
+
+    // Find the department by depId
+    const department = await DepartmentModel.findOne({ depId: deptId });
+
+    if (!department) {
+      return res.status(404).json({ error: "Department not found" });
+    }
+
+    // Update the chat with the new department
+    chat.department = department._id;
+    chat.depId = department.depId;
+    await chat.save();
+
+    const mess2 = {
+      chatId: chat._id,
+      sender: null,
+      receiver: null,
+      sendType: "assistant",
+      receiverType: "admin",
+      messageType: "tooltip",
+      content: `Chat is transferred to ${department.name} department`,
+    };
+
+    // Send the message to admins
+    sendMessageToAdmins(socketObj, mess2, department._id);
+
+    // Send a success response
+    res
+      .status(200)
+      .json({
+        success: true,
+        message: "Department assigned successfully",
+        chat,
+      });
+  } catch (error) {
+    console.error("Error assigning department:", error.message);
+    res.status(500).json({ error: "Internal server error" });
+  }
+};
+
 module.exports = {
   getAllComplaints,
   deleteComplaintById,
@@ -215,4 +274,5 @@ module.exports = {
   updateComplaintStatus,
   assignAgentToComplaint,
   getComplaintById,
+  assignDepartmentBySessionId,
 };
