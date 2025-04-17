@@ -225,9 +225,8 @@ socketObj.config = (server) => {
               sendType: "assistant",
               receiverType: "admin",
               messageType: "tooltip",
-              content: `Chat is transferred to ${
-                userInput?.split("-")[1]
-              } department`,
+              content: `Chat is transferred to ${userInput?.split("-")[1]
+                } department`,
             };
             sendMessageToAdmins(socketObj, mess2, chatDetails?.department);
           }
@@ -656,7 +655,7 @@ socketObj.config = (server) => {
         const tooltipMess = await newMessage.save();
         console.log(
           +chatDetails?.initialHandlingTime ||
-            dayjs().diff(chatDetails?.agentTransferedAt, "minute"),
+          dayjs().diff(chatDetails?.agentTransferedAt, "minute"),
           chatDetails?.agentTransferedAt,
           "chatDetails?.initialHandlingTime"
         );
@@ -833,7 +832,7 @@ socketObj.config = (server) => {
           socketObj.io
             .to(receiver._id?.toString())
             .emit("update-chat", updatedChat);
-          socketObj.io
+          receiver?.department?.toString() === updatedChat?.department?.toString() && socketObj.io
             .to(receiver._id?.toString())
             .emit("message", { ...updatedChat, latestMessage: final });
         });
@@ -1058,8 +1057,7 @@ socketObj.config = (server) => {
           sendType: "admin",
           content:
             chat?.department?.messages?.chatClosingMessage ||
-            `This conversation has ended, thank you for contacting Methaq Takaful Insuance ${
-              chat?.department?.name ? chat?.department?.name : ""
+            `This conversation has ended, thank you for contacting Methaq Takaful Insuance ${chat?.department?.name ? chat?.department?.name : ""
             }. We hope we were able to serve you`,
           attachments: [],
           timestamp: new Date(),
@@ -1108,9 +1106,8 @@ socketObj.config = (server) => {
             undefined,
             undefined,
             chat?.department?.messages?.chatClosingMessage ||
-              `This conversation has ended, thank you for contacting Methaq Takaful Insuance ${
-                chat?.department?.name ? chat?.department?.name : ""
-              }. We hope we were able to serve you`,
+            `This conversation has ended, thank you for contacting Methaq Takaful Insuance ${chat?.department?.name ? chat?.department?.name : ""
+            }. We hope we were able to serve you`,
             updatedChat?.isHuman
           );
         }
