@@ -27,8 +27,8 @@ exports.createAssistant = async (name, instructions, toolNames = []) => {
       .filter((tool) => tool !== undefined); // Remove undefined tools
     // Merge selected tools
     tools = tools.concat(selectedTools);
-
-    const assistant = await openai.beta.assistants.create({
+    const openaiClient = await openai;
+    const assistant = await openaiClient.beta.assistants.create({
       name,
       instructions,
       model: process.env.OPENAI_MODEL || "gpt-4o-mini",
@@ -66,7 +66,8 @@ exports.updateAssistant = async (assistantId, updates) => {
     }
 
     // Retrieve the existing assistant details
-    const existingAssistant = await openai.beta.assistants.retrieve(
+    const openaiClient = await openai;
+    const existingAssistant = await openaiClient.beta.assistants.retrieve(
       assistantId
     );
 
@@ -85,12 +86,15 @@ exports.updateAssistant = async (assistantId, updates) => {
     }
 
     const { name, instructions } = updates;
-
-    const updatedAssistant = await openai.beta.assistants.update(assistantId, {
-      name,
-      instructions,
-      tools: updatedTools, // Update tools dynamically
-    });
+   
+    const updatedAssistant = await openaiClient.beta.assistants.update(
+      assistantId,
+      {
+        name,
+        instructions,
+        tools: updatedTools, // Update tools dynamically
+      }
+    );
 
     console.log(
       `Assistant updated: ${updatedAssistant.name} (ID: ${updatedAssistant.id})`
@@ -116,8 +120,8 @@ exports.deleteAssistant = async (assistantId) => {
     if (!assistantId) {
       throw new Error("Assistant ID is required to delete an assistant.");
     }
-
-    await openai.beta.assistants.del(assistantId);
+    const openaiClient = await openai;
+    await openaiClient.beta.assistants.del(assistantId);
 
     console.log(`Assistant deleted: ID ${assistantId}`);
 
@@ -144,7 +148,8 @@ exports.addToolToAssistant = async (req, res) => {
     const functionIds = Array.isArray(functionId) ? functionId : [functionId];
 
     // Retrieve existing assistant
-    const existingAssistant = await openai.beta.assistants.retrieve(
+    const openaiClient = await openai;
+    const existingAssistant = await openaiClient.beta.assistants.retrieve(
       assistantId
     );
 
@@ -162,7 +167,8 @@ exports.addToolToAssistant = async (req, res) => {
     console.log(updatedTools, "updatedTools");
 
     // Update the assistant with the new tools
-    const updatedAssistant = await openai.beta.assistants.update(assistantId, {
+   
+    const updatedAssistant = await openaiClient.beta.assistants.update(assistantId, {
       tools: updatedTools,
     });
 
@@ -189,7 +195,8 @@ exports.enableFIleSearch = async (assistantId) => {
     }
 
     // Retrieve the existing assistant details
-    const existingAssistant = await openai.beta.assistants.retrieve(
+    const openaiClient = await openai;
+    const existingAssistant = await openaiClient.beta.assistants.retrieve(
       assistantId
     );
 
@@ -211,7 +218,8 @@ exports.enableFIleSearch = async (assistantId) => {
       });
 
       // Update the assistant with the new tools
-      const updatedAssistant = await openai.beta.assistants.update(
+      const openaiClient = await openai;
+      const updatedAssistant = await openaiClient.beta.assistants.update(
         assistantId,
         {
           tools: existingAssistant.tools,

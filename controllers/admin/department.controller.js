@@ -5,6 +5,9 @@ const QnaModel = require("../../models/qna.model");
 const UploadModel = require("../../models/uploade.model");
 const UserModel = require("../../models/user.model");
 const Embedding = require("../../models/embeddings.modal");
+const { openai } = require("../../services/openai/openai-config/openai-config");
+// const { openai } = require("../openai-config/openai-config");
+
 const {
   sendSuccessResponse,
   sendErrorResponse,
@@ -18,7 +21,7 @@ const {
   addToolToAssistant,
   enableFIleSearch,
 } = require("../../services/openai/controller/openai.assistant.controller");
-const { openai } = require("../../services/openai/openai-config/openai-config");
+
 const {
   toolFunctions,
 } = require("../../services/openai/openai-functions/function-schema/functionsSchema");
@@ -164,7 +167,8 @@ exports.addDepartment = async (req, res) => {
          " ",
         tools
       );
-      const updatedAssistant = await openai.beta.assistants.update(
+      const openaiClient = await openai;
+      const updatedAssistant = await openaiClient.beta.assistants.update(
         newAssistant?.assistantData?.id,
         {
           tools: tools,
@@ -277,9 +281,9 @@ exports.deleteDepartment = async (req, res) => {
   try {
     const department = await DepartmentModel.findByIdAndDelete(id);
     console.log(department, "department");
-    // const deletedAssistant = await deleteAssistant(
-    //   department?.assistantDetails?.id
-    // );
+    const deletedAssistant = await deleteAssistant(
+      department?.assistantDetails?.id
+    );
     // await QnaModel.deleteMany({ department: id });
     const uploadFiles = await UploadModel.find({ department: id });
     for (let i = 0; i < uploadFiles?.length; i++) {

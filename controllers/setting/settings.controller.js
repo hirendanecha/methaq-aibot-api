@@ -1,10 +1,65 @@
 const { OpenAI } = require("openai");
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
 const SettingsModel = require("../../models/setting/settings.model");
+const crypto = require("crypto");
+const OpenAIApiKeyModel = require("../../models/setting/openai-configration/openaiApiKey.model");
+
+const ENCRYPTION_SECRET =
+  process.env.ENCRYPTION_SECRET ||
+  "00112233445566778899aabbccddeeff00112233445566778899aabbccddeeff";
+
+const decryptValue = (encryptedText, key, iv) => {
+  const decipher = crypto.createDecipheriv(
+    "aes-256-cbc",
+    Buffer.from(key, "hex"),
+    Buffer.from(iv, "hex")
+  );
+  let decrypted = decipher.update(encryptedText, "hex", "utf-8");
+  decrypted += decipher.final("utf-8");
+  return decrypted;
+};
+const getApiKey = async () => {
+  try {
+    // Attempt to fetch the API key from the database
+    const apiKeyRecord = await OpenAIApiKeyModel.findOne({ verified: true });
+
+    const apiKey = decryptValue(
+      apiKeyRecord.apiKey,
+      ENCRYPTION_SECRET,
+      apiKeyRecord.iv
+    );
+    console.log(apiKey, "ahahaha");
+    if (apiKey) {
+      return apiKey;
+    } else {
+      console.warn(
+        "No valid API key found in the database. Falling back to environment variable."
+      );
+      // Fallback to environment variable
+      if (process.env.OPENAI_API_KEY) {
+        return process.env.OPENAI_API_KEY;
+      } else {
+        throw new Error(
+          "No API key found in the database or environment variables."
+        );
+      }
+    }
+  } catch (error) {
+    console.error("Error fetching API key:", error.message);
+    throw error;
+  }
+};
+
+const initializeOpenAI = async () => {
+  try {
+    const apiKey = await getApiKey();
+    return new OpenAI({
+      apiKey: apiKey,
+    });
+  } catch (error) {
+    console.error("Failed to initialize OpenAI:", error.message);
+    throw error;
+  }
+};
 
 // Get settings
 const createSettings = async (req, res) => {
@@ -58,7 +113,7 @@ const getSettings = async (req, res) => {
 const updateSettings = async (req, res) => {
   try {
     console.log("req.params", req.params);
-    
+
     const { id } = req.params; // Get the settings ID from the URL parameters
     const { rewritePrompt } = req.body;
 
@@ -81,7 +136,7 @@ const updateSettings = async (req, res) => {
 const rewriteMessage = async (req, res) => {
   try {
     const { userMessage } = req.body;
-
+    const openai = await initializeOpenAI();
     // Get the rewrite prompt from settings
     const settings = await SettingsModel.findOne();
     if (!settings || !settings.rewritePrompt) {
