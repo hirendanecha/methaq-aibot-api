@@ -980,7 +980,7 @@ socketObj.config = (server) => {
             socketObj,
             mess,
             updatedChat?.department,
-            [{ _id: { $in: [oldAssignee] } }],
+            [],
             true
           );
           if (typeof cb === "function")
