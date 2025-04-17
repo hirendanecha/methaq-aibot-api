@@ -1929,6 +1929,109 @@ const whatsappMessages = async (req, res) => {
   }
 };
 
+const getChatTrends = async (req, res) => {
+  try {
+    const { startDate, endDate, mode } = req.query;
+
+    let dateFilter = {};
+    if (startDate || endDate) {
+      dateFilter["createdAt"] = {};
+      if (startDate) {
+        const start = new Date(startDate);
+        start.setUTCHours(0, 0, 0, 0);
+        dateFilter["createdAt"]["$gte"] = start;
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setUTCHours(23, 59, 59, 999);
+        dateFilter["createdAt"]["$lte"] = end;
+      }
+    }
+
+    const groupByDate =
+      mode === "month"
+        ? {
+          month: { $month: "$createdAt" },
+          year: { $year: "$createdAt" },
+        }
+        : {
+          day: { $dayOfMonth: "$createdAt" },
+          month: { $month: "$createdAt" },
+          year: { $year: "$createdAt" },
+        };
+
+    const chatTrends = await ChatModel.aggregate([
+      { $match: dateFilter },
+      {
+        $group: {
+          _id: {
+            ...groupByDate,
+            status: "$status",
+          },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1 } },
+    ]);
+
+    const unreadCounts = await ChatModel.aggregate([
+      { $match: dateFilter },
+      {
+        $lookup: {
+          from: "messages",
+          localField: "latestMessage",
+          foreignField: "_id",
+          as: "latestMessage",
+        },
+      },
+      { $unwind: "$latestMessage" },
+      {
+        $group: {
+          _id: {
+            ...groupByDate,
+            isSeen: "$latestMessage.isSeen",
+          },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1 } },
+    ]);
+
+    const formatGroupKey = (id) => {
+      if (mode === "month") {
+        return {
+          month: id.month,
+          year: id.year,
+        };
+      }
+      return new Date(id.year, id.month - 1, id.day);
+    };
+
+    res.status(200).json({
+      trends: chatTrends.map((item) => ({
+        date: formatGroupKey(item._id),
+        status: item._id.status,
+        count: item.count,
+      })),
+      unreadCounts: unreadCounts
+        .filter((x) => !x._id.isSeen)
+        .map((item) => ({
+          date: formatGroupKey(item._id),
+          count: item.count,
+        })),
+      readCounts: unreadCounts
+        .filter((x) => x._id.isSeen)
+        .map((item) => ({
+          date: formatGroupKey(item._id),
+          count: item.count,
+        })),
+    });
+  } catch (error) {
+    console.error("Error fetching chat trends:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+};
+
 module.exports = {
   storeChat,
   getChatHistory,
@@ -1945,4 +2048,5 @@ module.exports = {
   getDepartmentAvailability,
   getChatReports,
   getUnReadChatCounts,
+  getChatTrends
 };
