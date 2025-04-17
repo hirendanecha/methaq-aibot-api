@@ -277,9 +277,9 @@ exports.deleteDepartment = async (req, res) => {
   try {
     const department = await DepartmentModel.findByIdAndDelete(id);
     console.log(department, "department");
-    // const deletedAssistant = await deleteAssistant(
-    //   department?.assistantDetails?.id
-    // );
+    const deletedAssistant = await deleteAssistant(
+      department?.assistantDetails?.id
+    );
     // await QnaModel.deleteMany({ department: id });
     const uploadFiles = await UploadModel.find({ department: id });
     for (let i = 0; i < uploadFiles?.length; i++) {
