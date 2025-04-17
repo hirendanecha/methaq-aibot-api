@@ -53,9 +53,7 @@ const sendWhatsAppMessage = async (
     messaging_product: "whatsapp",
     recipient_type: "individual",
     to: messageSender,
-    // context: {
-    //   message_id: messageID,
-    // },
+    // ...(messageID ? { context: { message_id: messageID } } : {}),
     type: "text",
     text: {
       preview_url: false,
@@ -68,7 +66,7 @@ const sendWhatsAppMessage = async (
       Authorization: `Bearer ${environment.whatsaap.whatAuthT}`,
     },
   });
-  await markMessageAsRead(messageID);
+  // messageID && (await markMessageAsRead(messageID));
 };
 
 const sendWhatsAppMessageFromalMessage = async (
@@ -95,7 +93,7 @@ const sendWhatsAppMessageFromalMessage = async (
       Authorization: `Bearer ${environment.whatsaap.whatAuthT}`,
     },
   });
-  await markMessageAsRead(messageID);
+  //await markMessageAsRead(messageID);
 };
 
 //convert pdf to image//
@@ -152,7 +150,7 @@ async function downloadMedia(fileID, existingChat) {
 
     // return response.data;
     writeFileSync(filePath, response.data);
-  
+
     const month = new Date().toLocaleString("default", { month: "long" });
     const url = await s3.uploadPublic(
       filePath,
@@ -161,8 +159,7 @@ async function downloadMedia(fileID, existingChat) {
       `WhatsappImages/${month}`
     );
     console.log(url, "ppppp");
-
-   
+    unlinkSync(filePath);
     return {
       status: "success",
       data: { url, filePath, fileType, file: response.data },
@@ -300,16 +297,19 @@ const sendListMessage = async (messageSender, messageID, buttonPayload) => {
     recipient_type: "individual",
     to: messageSender,
     type: "interactive",
-    interactive: buttonInteractivePayload,
+    interactive: buttonPayload,
   });
 
   try {
     const response = await axios.post(url, data, config);
     console.log("Button interactive message sent:", response.data);
-    await markMessageAsRead(messageID);
+    // messageID && (await markMessageAsRead(messageID));
     return response.data; // Return the response data
   } catch (error) {
-    console.error("Error sending button interactive message:", error.message);
+    console.error(
+      "Error sending button interactive message:",
+      error.response.data.message
+    );
     throw error; // Rethrow the error to be handled by the caller
   }
 };
@@ -332,22 +332,24 @@ const sendInteractiveMessage = async (messageSender, messageID, payload) => {
   // ];
   // const combinedDepartments = [...departmentsData.data];
 
+  // console.log(payload, "yyypayload");
+
   const interactivePayload = {
     type: "list",
     header: {
       type: "text",
-      text: payload?.headerText, // Header for the list
+      text: payload?.headerText || "Default body text", // Header for the list
     },
     body: {
-      text: payload?.bodyText,
+      text: payload?.bodyText || "Default body text",
     },
     action: {
-      button: payload?.actionButtonText, // Button text to open the list
+      button: payload?.actionButtonText || "Default body text", // Button text to open the list
       sections: [
         {
           title: payload?.actionSectionTitle, // Section title
-          rows: payload?.options.map((op) => ({
-            id: op?.typeBotId||"y5laof1",
+          rows: payload?.options?.map((op) => ({
+            id: op?.depId || "y5laof1",
             title: op?.name,
             description: `${op?.description ?? ""}`, // Optional description
           })),
@@ -367,13 +369,39 @@ const sendInteractiveMessage = async (messageSender, messageID, payload) => {
   try {
     const response = await axios.post(url, data, config);
     console.log("Interactive list message sent:", response.data);
-    await markMessageAsRead(messageID);
+    // await markMessageAsRead(messageID);
     return response.data; // Return the response data
   } catch (error) {
     console.error("Error sending interactive list message:", error.message);
     throw error; // Rethrow the error to be handled by the caller
   }
 };
+
+const sendTypingIndicator = async (messageSender, messageID) => {
+  const data = JSON.stringify({
+    messaging_product: "whatsapp",
+    status: "read",
+    message_id: messageID,
+    typing_indicator: {
+      type: "text",
+    },
+  });
+
+  try {
+    const response = await axios.post(url, data, {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${environment.whatsaap.whatAuthT}`,
+      },
+    });
+
+    console.log("Typing indicator sent. Status:", response.data);
+  } catch (error) {
+    console.error("Error sending typing indicator:", error.message);
+    throw error; // Rethrow the error to be handled by the caller
+  }
+};
+
 module.exports = {
   sendWhatsAppMessage,
   sendWhatsAppMessageFromalMessage,
@@ -383,4 +411,5 @@ module.exports = {
   sendImageByUrl,
   sendDocumentByUrl,
   sendListMessage,
+  sendTypingIndicator,
 };

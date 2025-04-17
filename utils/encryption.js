@@ -7,20 +7,37 @@ exports.generateKey = () => {
 
 // Function to encrypt a message
 exports.encryptMessage = async (message, key) => {
-  const iv = crypto.randomBytes(16); // Initialization vector
-  const cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(key, 'hex'), iv);
-  let encrypted = cipher.update(message, 'utf-8', 'hex');
-  encrypted += cipher.final('hex');
-  return { iv: iv.toString('hex'), encryptedMessage: encrypted };
-}
+  if (!key || key.length !== 64) {
+    throw new Error("Encryption key must be 32 bytes in hex (64 characters)");
+  }
 
-// Function to decrypt a message
+  const iv = crypto.randomBytes(16);
+  const cipher = crypto.createCipheriv("aes-256-cbc", Buffer.from(key, "hex"), iv);
+  let encrypted = cipher.update(message, "utf-8", "hex");
+  encrypted += cipher.final("hex");
+
+  return {
+    iv: iv.toString("hex"),
+    encryptedMessage: encrypted,
+  };
+};
+
+// Function to decrypt a message// Decrypt function
 exports.decryptMessage = async (encryptedMessage, key, iv) => {
-  const decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(key, 'hex'), Buffer.from(iv, 'hex'));
-  let decrypted = decipher.update(encryptedMessage, 'hex', 'utf-8');
-  decrypted += decipher.final('utf-8');
+  if (!key || key.length !== 64) {
+    throw new Error("Decryption key must be 32 bytes in hex (64 characters)");
+  }
+
+  const decipher = crypto.createDecipheriv(
+    "aes-256-cbc",
+    Buffer.from(key, "hex"),
+    Buffer.from(iv, "hex")
+  );
+  let decrypted = decipher.update(encryptedMessage, "hex", "utf-8");
+  decrypted += decipher.final("utf-8");
+
   return decrypted;
-}
+};
 
 exports.uaePass = {
   encrypt: (text, secret) => {

@@ -12,6 +12,9 @@ const {
   completedDocumentController,
   assignDepartmentController,
   assignAgentController,
+  getDepartmentAvailability,
+  isDocumentReceived,
+  getChatReports,
 } = require("../../../controllers/chat/chat.controller");
 const {
   getAgentChats,
@@ -25,6 +28,20 @@ const {
   getToolFunctions,
   addToolToAssistant,
 } = require("../../../services/openai/controller/openai.assistant.controller");
+const {
+  getAllComplaints,
+  addComplaint,
+  updateComplaint,
+  deleteComplaintById,
+  assignDepartmentBySessionId,
+} = require("../../../controllers/complain/complain.controller");
+const {
+  createSettings,
+  getSettings,
+  updateSettings,
+  rewriteMessage,
+} = require("../../../controllers/setting/settings.controller");
+const { addMotorInquiry, getAllMotorInquiry, deleteMotorInquiryById } = require("../../../controllers/motorInquiry/motor.controller");
 const pinecone = new Pinecone({ apiKey: environment.pinecone.apiKey });
 // Route to store chat
 router.post("/store-chat", storeChat);
@@ -48,7 +65,7 @@ router.post(
   "/uploadDocument",
   fileUpload(
     "file",
-    ["pdf", "image"],
+    ["pdf", "word", "text", "json", "csv", "image", ""],
     [
       {
         name: "file",
@@ -95,10 +112,54 @@ router.get("/received-document/:sessionId", completedDocumentController);
 
 router.post("/assign-department/:sessionId", assignDepartmentController);
 
+router.get("/check-document-received/:sessionId", isDocumentReceived);
+
 router.get("/assign-agent/:sessionId", assignAgentController);
+
+router.get(
+  "/check-department-availability/:sessionId",
+  getDepartmentAvailability
+);
 
 router.get("/get-tools", getToolFunctions);
 
 router.post("/addtool", addToolToAssistant);
+
+router.get("/get-complaints", getAllComplaints);
+
+// Route to add a new complaint
+router.post("/add-complaints/:sessionId?", addComplaint);
+
+
+// Route to delete a complaint using session ID
+router.delete("/delete-complaints/:complainid", deleteComplaintById);
+
+//openai
+router.post("/create-settings", createSettings);
+
+// Route to get settings
+router.get("/get-settings", getSettings);
+
+// Route to update settings by ID
+router.put("/update-setting/:id", updateSettings); // Updated to include ID
+
+// Route to rewrite a message
+router.post("/settings/rewrite", rewriteMessage);
+
+///motor inquiry
+
+//add-motor-inquiry
+router.post("/add-motor-inquiry/:sessionId?", addMotorInquiry);
+//get-all-motor-inquiry
+router.get("/get-all-motor-inquiry", getAllMotorInquiry);
+//delete-motor-inquiry-by-id
+
+router.delete("/delete-motor-inquiry/:motorInquiryId", deleteMotorInquiryById);
+
+
+router.post('/assign-departmentbysessionid',assignDepartmentBySessionId);
+
+
+//
 
 module.exports = router;

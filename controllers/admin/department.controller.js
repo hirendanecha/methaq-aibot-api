@@ -5,6 +5,9 @@ const QnaModel = require("../../models/qna.model");
 const UploadModel = require("../../models/uploade.model");
 const UserModel = require("../../models/user.model");
 const Embedding = require("../../models/embeddings.modal");
+const { openai } = require("../../services/openai/openai-config/openai-config");
+// const { openai } = require("../openai-config/openai-config");
+
 const {
   sendSuccessResponse,
   sendErrorResponse,
@@ -18,7 +21,7 @@ const {
   addToolToAssistant,
   enableFIleSearch,
 } = require("../../services/openai/controller/openai.assistant.controller");
-const { openai } = require("../../services/openai/openai-config/openai-config");
+
 const {
   toolFunctions,
 } = require("../../services/openai/openai-functions/function-schema/functionsSchema");
@@ -161,10 +164,11 @@ exports.addDepartment = async (req, res) => {
 
       const newAssistant = await createAssistant(
         savedDepartment?.name,
-        savedDepartment?.prompt,
+         " ",
         tools
       );
-      const updatedAssistant = await openai.beta.assistants.update(
+      const openaiClient = await openai;
+      const updatedAssistant = await openaiClient.beta.assistants.update(
         newAssistant?.assistantData?.id,
         {
           tools: tools,
@@ -180,17 +184,20 @@ exports.addDepartment = async (req, res) => {
         }
       );
 
-      // Add tool functions if functionId is provided
-      // if (req.body.functionId && Array.isArray(req.body.functionId)) {
-      //   for (const functionId of req.body.functionId) {
-      //     await addToolToAssistant({
-      //       body: {
-      //         assistantId: newAssistant?.assistantData?.id,
-      //         functionId: functionId
-      //       }
-      //     }, res);
-      //   }
-      // }
+      //Add tool functions if functionId is provided
+      if (req.body.functionId && Array.isArray(req.body.functionId)) {
+        for (const functionId of req.body.functionId) {
+          await addToolToAssistant(
+            {
+              body: {
+                assistantId: newAssistant?.assistantData?.id,
+                functionId: functionId,
+              },
+            },
+            res
+          );
+        }
+      }
     }
 
     return sendSuccessResponse(res, { data: newDepartment }, 201);
@@ -277,11 +284,11 @@ exports.deleteDepartment = async (req, res) => {
     const deletedAssistant = await deleteAssistant(
       department?.assistantDetails?.id
     );
-    await QnaModel.deleteMany({ department: id });
+    // await QnaModel.deleteMany({ department: id });
     const uploadFiles = await UploadModel.find({ department: id });
     for (let i = 0; i < uploadFiles?.length; i++) {
-      await UploadModel.findByIdAndDelete(uploadFiles[i]?._id);
-      await Embedding.deleteMany({ documentId: uploadFiles[i]?._id });
+      // await UploadModel.findByIdAndDelete(uploadFiles[i]?._id);
+      // await Embedding.deleteMany({ documentId: uploadFiles[i]?._id });
       if (uploadFiles[i]?.file) {
         await files
           .deleteFileByPath(
@@ -290,11 +297,11 @@ exports.deleteDepartment = async (req, res) => {
           .catch((err) => console.log(err));
       }
     }
-    if (department?.logo) {
-      await files
-        .deleteFileByPath(`${department?.logo}`)
-        .catch((err) => console.log(err));
-    }
+    // if (department?.logo) {
+    // await files
+    //   .deleteFileByPath(`${department?.logo}`)
+    //   .catch((err) => console.log(err));
+    // }
     return sendSuccessResponse(res, "Department deleted successfully.");
   } catch (error) {
     return sendErrorResponse(res, error.message);

@@ -8,7 +8,7 @@ const DepartmentSchema = new Schema(
     description: { type: String },
     logo: { type: String },
     jobId: { type: Object },
-    typeBotId: { type: String },
+    depId: { type: String },
     messages: {
       afterHoursResponse: { type: String },
       allAgentsOfflineResponse: { type: String },

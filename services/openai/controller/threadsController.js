@@ -298,14 +298,15 @@ exports.createVectorStore = async (departmentDetails, files) => {
   }
 
   try {
+    const openaiClient = await openai;
     await enableFIleSearch(departmentDetails?.assistantDetails?.id);
     let vectorStoreId = "";
     if (!departmentDetails?.assistantDetails?.vectorId) {
-      const vectorStore = await openai.beta.vectorStores.create({
+      const vectorStore = await openaiClient.beta.vectorStores.create({
         name: departmentDetails?.name,
       });
       console.log("Vector Store Created:", vectorStore);
-      await openai.beta.assistants.update(
+      await openaiClient.beta.assistants.update(
         departmentDetails?.assistantDetails?.id,
         {
           tool_resources: {
@@ -341,7 +342,7 @@ exports.createVectorStore = async (departmentDetails, files) => {
 
         const fileStream = fs.createReadStream(newFilePath);
         let response = {};
-        response = await openai.files.create({
+        response = await openaiClient.files.create({
           file: fileStream,
           purpose: "assistants",
         });
@@ -370,7 +371,8 @@ exports.createVectorStore = async (departmentDetails, files) => {
             new: true,
           }
         );
-        await openai.beta.vectorStores.files.createAndPoll(vectorStoreId, {
+    
+        await openaiClient.beta.vectorStores.files.createAndPoll(vectorStoreId, {
           file_id: response?.id,
         });
 

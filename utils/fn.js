@@ -271,15 +271,24 @@ const fetchDepartmentsAndPrompts = async () => {
     throw error;
   }
 };
-exports.sendMessageToAdmins = async (socketObj, message, department) => {
+exports.sendMessageToAdmins = async (socketObj, message, department, extraReceiver, sendUpdate, messageToExtr = true) => {
   try {
     const newMessage = new MessageModel(message);
     const latestMess = await newMessage.save();
+    let extraUserIds = [];
+    const conditions = [
+      { role: { $in: ["Admin", "Supervisor"] } },
+    ]
+    if (department) {
+      conditions.push({ department: department })
+    }
+    if (extraReceiver?.length > 0) {
+      conditions.push(...extraReceiver)
+      const extraUsers = await UserModel.find(...extraReceiver).lean();
+      extraUserIds = extraUsers.map((user) => user._id?.toString());
+    }
     const receivers = await UserModel.find({
-      $or: [
-        { role: { $in: ["Admin", "Supervisor"] } },
-        { department: department },
-      ],
+      $or: conditions,
     }).lean();
     const updatedChat = await ChatModel.findOneAndUpdate(
       { _id: message?.chatId },
@@ -288,11 +297,71 @@ exports.sendMessageToAdmins = async (socketObj, message, department) => {
     )
       .populate("adminId customerId")
       .lean();
+    const UnReadCounts = await ChatModel.aggregate([
+      {
+        $lookup: {
+          from: "messages",
+          localField: "latestMessage",
+          foreignField: "_id",
+          as: "latestMessage",
+        }
+      },
+      {
+        $match: {
+          "latestMessage.isSeen": false,
+        }
+      },
+      {
+        $group: {
+          _id: null,
+          totalUnread: { $sum: 1 }
+        }
+      }
+    ]);
     [...receivers].forEach((receiver) => {
-      socketObj.io
+      sendUpdate && socketObj.io.to(receiver._id?.toString()).emit("update-chat", { ...updatedChat, latestMessage: latestMess });
+      (messageToExtr || !extraUserIds?.includes(receiver._id?.toString())) && socketObj.io
         .to(receiver._id?.toString())
         .emit("message", { ...updatedChat, latestMessage: latestMess });
+      (messageToExtr || !extraUserIds?.includes(receiver._id?.toString())) && socketObj.io
+        .to(receiver._id?.toString())
+        .emit("unread-count", { counts: UnReadCounts[0]?.totalUnread || 0, chatId: updatedChat?._id?.toString(), isSeen: false });
     });
+    return latestMess;
+  } catch (error) {
+    console.error("Error sending message to admins:", error);
+    throw error;
+  }
+};
+exports.sendMessageToUser = async (socketObj, message) => {
+  try {
+
+    console.log(message, "sendMessageToUser message");
+
+    // const newMessage = new MessageModel(message);
+    const latestMess = message;
+    // const conditions = [
+    //   { role: { $in: ["Admin", "Supervisor"] } },
+    // ]
+    // if(department){
+    //   conditions.push({ department: department })
+    // }
+    // const receivers = await UserModel.find({
+    //   $or: conditions,
+    // }).lean();
+    const updatedChat = await ChatModel.findOneAndUpdate(
+      { _id: message?.chatId },
+      { latestMessage: latestMess?._id, status: "active" },
+      { new: true }
+    )
+      .populate("adminId customerId")
+      .lean();
+    socketObj.io
+      .to(updatedChat?.customerId?._id?.toString())
+      .emit("message", { ...updatedChat, latestMessage: latestMess });
+    // [...receivers].forEach((receiver) => {
+
+    // });
   } catch (error) {
     console.error("Error sending message to admins:", error);
     throw error;
@@ -300,9 +369,7 @@ exports.sendMessageToAdmins = async (socketObj, message, department) => {
 };
 
 exports.checkDepartmentAvailability = async (
-  socketObj,
-  existingChat,
-  messageSender
+  existingChat
 ) => {
   try {
     if (existingChat?.department?.workingHours?.startTime) {
@@ -330,30 +397,30 @@ exports.checkDepartmentAvailability = async (
       console.log(endHour, "endHour");
 
       if (currentHour < startHour || currentHour > endHour) {
-        const message = {
-          chatId: existingChat?._id,
-          sender: null,
-          receiver: existingChat.customerId?.toString(),
-          sendType: "assistant",
-          receiverType: "user",
-          content: existingChat?.department?.messages?.afterHoursResponse,
-        };
-        exports.sendMessageToAdmins(
-          socketObj,
-          message,
-          existingChat?.department?._id
-        );
-        await sendWhatsAppMessage(
-          messageSender,
-          undefined,
-          undefined,
-          undefined,
-          existingChat?.department?.messages?.afterHoursResponse
-        );
-        return false;
+        // const message = {
+        //   chatId: existingChat?._id,
+        //   sender: null,
+        //   receiver: existingChat.customerId?.toString(),
+        //   sendType: "assistant",
+        //   receiverType: "user",
+        //   content: existingChat?.department?.messages?.afterHoursResponse,
+        // };
+        // exports.sendMessageToAdmins(
+        //   socketObj,
+        //   message,
+        //   existingChat?.department?._id
+        // );
+        // await sendWhatsAppMessage(
+        //   messageSender,
+        //   undefined,
+        //   undefined,
+        //   undefined,
+        //   existingChat?.department?.messages?.afterHoursResponse
+        // );
+        return existingChat?.department?.messages?.afterHoursResponse;
       }
     }
-    return true;
+    return "True";
   } catch (error) {
     console.error("Error checking department availability:", error);
     throw error;

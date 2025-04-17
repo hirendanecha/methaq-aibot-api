@@ -22,7 +22,7 @@ const ChatSchema = Schema(
       ref: "departments",
       default: null,
     },
-    typeBotId: {
+    depId: {
       type: String,
     },
     customerId: {
@@ -53,11 +53,27 @@ const ChatSchema = Schema(
       enum: constants.chatStatus,
       default: "active",
     },
+    chatTime: {
+      type: Number,
+      default: null,
+    },
+    agentTransferedAt: {
+      type: Date,
+      default: null
+    },
+    agentHandledAt: {
+      type: Date,
+      default: null,
+    },
+    initialHandlingTime: {
+      type: Number,
+      default: null
+    },
     tags: [
       {
         type: String,
         enum: constants.chatTags,
-        default: "",
+        default: "pending",
       },
     ],
   },
