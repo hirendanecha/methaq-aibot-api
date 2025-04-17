@@ -297,7 +297,7 @@ exports.login = async (req, res) => {
       return sendErrorResponse(res, "We are not aware of this user.", 403, true, true);
     }
 
-    user.comparePassword(password, (err, isMatch) => {
+    user.comparePassword(password, async (err, isMatch) => {
       if (err) {
         return sendErrorResponse(res, "Invalid email or password", 401, true, true);
       }
@@ -309,11 +309,12 @@ exports.login = async (req, res) => {
         );
 
         const { password: hash, ...data } = user.toJSON();
+        const updatedUser = await UserModel.findOneAndUpdate({ _id: user._id }, { isOnline: true }, { new: true });
         res.cookie("token", token, { domain: `.${environment.domain}` });
         return sendSuccessResponse(res, {
           message: "Success! You are logged in.",
           token,
-          data,
+          data: updatedUser,
         });
       }
       return sendErrorResponse(res, "Invalid email or password.", 401, true, true);
