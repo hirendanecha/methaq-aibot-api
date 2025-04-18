@@ -478,7 +478,7 @@ const addQnaAndUploadToAssistant = async (req, res) => {
     await DepartmentModel.findByIdAndUpdate(departmentId, {
       "assistantDetails.qaFileId": uploadedFile.id,
     });
-    // fs.unlinkSync(tempFilePath); // Clean up temp
+    fs.unlinkSync(tempFilePath); // Clean up temp
     return sendSuccessResponse(res, {
       message: "Q/A added and synced to Assistant successfully.",
       fileId: uploadedFile.id,
