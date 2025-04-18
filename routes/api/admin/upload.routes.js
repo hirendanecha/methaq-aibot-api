@@ -28,4 +28,6 @@ router.post("/fine-tune", fineTuneCtrl.uploadAndFineTune);
 router.get("/status/:jobId", fineTuneCtrl.getFineTuneJobStatus);
 router.delete("/:id", uploadCtrl.deleteDocument);
 
+router.post("/uploadaq",uploadCtrl.addQnaAndUploadToAssistant);
+
 module.exports = router;

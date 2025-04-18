@@ -22,6 +22,7 @@ const DepartmentSchema = new Schema(
     assistantDetails: {
       id: { type: String },
       vectorId: { type: String },
+      qaFileId: { type: String },
       documentIds: [{ type: String }],
       name: { type: String },
       createdAt: { type: String },

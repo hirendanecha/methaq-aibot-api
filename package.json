@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "start": "node ./bin/www",
-    "dev": "nodemon --ignore public/images/ ./bin/www"
+    "dev": "nodemon --ignore public/images/ ./bin/www  temp"
   },
   "dependencies": {
     "@hokify/agenda": "^6.3.0",
