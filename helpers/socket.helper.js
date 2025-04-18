@@ -89,6 +89,7 @@ socketObj.config = (server) => {
     socket.on("joinRoom", (params, cb) => {
       params = typeof params === "string" ? JSON.parse(params) : params;
       socket.join(params.cust_id);
+      socket.join("allUsers");
       if (typeof cb === "function")
         cb({
           room: params.cust_id,
@@ -965,7 +966,7 @@ socketObj.config = (server) => {
           )
             ?.populate("adminId customerId")
             .lean();
-          console.log(updatedChat, "updatedChatupdatedChat");
+          // console.log(updatedChat, "updatedChatupdatedChat");
 
           const mess = {
             chatId: chatId,
@@ -981,7 +982,8 @@ socketObj.config = (server) => {
             mess,
             updatedChat?.department,
             [{ _id: { $in: [oldAssignee] } }],
-            true
+            true,
+            false
           );
           if (typeof cb === "function")
             cb({
@@ -1234,6 +1236,50 @@ socketObj.config = (server) => {
           });
       }
     });
+
+    socket.on("open-chat", async (params, cb) => {
+      try {
+        const authHeader = socket.handshake.headers.authorization || "";
+        const token = authHeader && authHeader.split(" ")[1];
+        let decoded = jwt.decode(token);
+        const { chatId } =
+          typeof params === "string" ? JSON.parse(params) : params;
+
+        socketObj.io.to("allUsers").emit("status", {
+          chatId: chatId,
+          userId: decoded?._id,
+          status: "open"
+        })
+      } catch (error) {
+        console.error("Error archiving chat:", error);
+        if (typeof cb === "function")
+          cb({
+            message: error.message,
+          })
+      }
+    })
+
+    socket.on("close-chat", async (params, cb) => {
+      try {
+        const authHeader = socket.handshake.headers.authorization || "";
+        const token = authHeader && authHeader.split(" ")[1];
+        let decoded = jwt.decode(token);
+        const { chatId } =
+          typeof params === "string" ? JSON.parse(params) : params;
+
+        socketObj.io.to("allUsers").emit("status", {
+          chatId: chatId,
+          userId: decoded?._id,
+          status: "close"
+        })
+      } catch (error) {
+        console.error("Error archiving chat:", error);
+        if (typeof cb === "function")
+          cb({
+            message: error.message,
+          })
+      }
+    })
 
     socket.on("disconnect", () => {
       console.log("A user disconnected:", socket.id);

@@ -22,10 +22,8 @@ const {
 } = require("../../helpers/pineconeupload.helper");
 const DepartmentModel = require("../../models/department.model");
 const { createVectorStore } = require("../../services/openai/controller/threadsController");
-
-const openai = new OpenAIApi({
-  apiKey: environment.openaiApiKey,
-});
+// const { openai } = require("../../services/openai-config/openai-config");
+const { openai } = require("../../services/openai/openai-config/openai-config");
 
 const MAX_TOKENS = 500;
 
@@ -327,17 +325,56 @@ const addUrl = async (req, res) => {
 
 const deleteDocument = async (req, res) => {
   const { id } = req.params;
+
   try {
-    const uploadFile = await UploadModel.findByIdAndDelete(id);
-    await Embedding.deleteMany({ documentId: id });
+    const openaiClient = await openai; // ✅ init OpenAI client
+    const uploadFile = await UploadModel.findById(id);
+
+    if (!uploadFile) {
+      return sendErrorResponse(res, "File not found.");
+    }
+
+    const assistantDocId = uploadFile?.assistantDocId; // 🧠 OpenAI file ID
+    const departmentDetails = await DepartmentModel.findById(uploadFile.department);
+    const vectorId = departmentDetails?.assistantDetails?.vectorId;
+
+    // ✅ 1. Delete file from OpenAI vector store (if attached)
+    if (vectorId && assistantDocId) {
+      try {
+        await openaiClient.beta.vectorStores.files.del(vectorId, assistantDocId);
+        console.log(`File ${assistantDocId} detached from Vector Store`);
+      } catch (err) {
+        console.warn(`Error removing from vector store:`, err.message);
+      }
+    }
+
+    // ✅ 2. Delete file from OpenAI file storage
+    if (assistantDocId) {
+      try {
+        await openaiClient.files.del(assistantDocId);
+        console.log(`OpenAI File ${assistantDocId} deleted`);
+      } catch (err) {
+        console.warn(`Error deleting OpenAI file:`, err.message);
+      }
+    }
+
+    // ✅ 3. Delete local file
     await files
       .deleteFileByPath(
         `${uploadFile?.file?.destination}/${uploadFile?.file?.filename}`
       )
-      .catch((err) => console.log(err));
-    return sendSuccessResponse(res, "file deleted successfully.");
+      .catch((err) => console.log("Local file delete error:", err));
+
+    // ✅ 4. Delete embeddings (if any)
+    await Embedding.deleteMany({ documentId: id });
+
+    // ✅ 5. Delete UploadModel entry
+    await UploadModel.findByIdAndDelete(id);
+
+    return sendSuccessResponse(res, "File deleted successfully.");
   } catch (error) {
+    console.error("deleteDocument error:", error.message);
     return sendErrorResponse(res, error.message);
   }
-};
+}
 module.exports = { addDocument, getAllDocument, addUrl, deleteDocument };

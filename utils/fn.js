@@ -271,10 +271,11 @@ const fetchDepartmentsAndPrompts = async () => {
     throw error;
   }
 };
-exports.sendMessageToAdmins = async (socketObj, message, department, extraReceiver, sendUpdate) => {
+exports.sendMessageToAdmins = async (socketObj, message, department, extraReceiver, sendUpdate, messageToExtr = true) => {
   try {
     const newMessage = new MessageModel(message);
     const latestMess = await newMessage.save();
+    let extraUserIds = [];
     const conditions = [
       { role: { $in: ["Admin", "Supervisor"] } },
     ]
@@ -283,6 +284,8 @@ exports.sendMessageToAdmins = async (socketObj, message, department, extraReceiv
     }
     if (extraReceiver?.length > 0) {
       conditions.push(...extraReceiver)
+      const extraUsers = await UserModel.find(...extraReceiver).lean();
+      extraUserIds = extraUsers.map((user) => user._id?.toString());
     }
     const receivers = await UserModel.find({
       $or: conditions,
@@ -317,10 +320,10 @@ exports.sendMessageToAdmins = async (socketObj, message, department, extraReceiv
     ]);
     [...receivers].forEach((receiver) => {
       sendUpdate && socketObj.io.to(receiver._id?.toString()).emit("update-chat", { ...updatedChat, latestMessage: latestMess });
-      socketObj.io
+      (messageToExtr || !extraUserIds?.includes(receiver._id?.toString())) && socketObj.io
         .to(receiver._id?.toString())
         .emit("message", { ...updatedChat, latestMessage: latestMess });
-      socketObj.io
+      (messageToExtr || !extraUserIds?.includes(receiver._id?.toString())) && socketObj.io
         .to(receiver._id?.toString())
         .emit("unread-count", { counts: UnReadCounts[0]?.totalUnread || 0, chatId: updatedChat?._id?.toString(), isSeen: false });
     });

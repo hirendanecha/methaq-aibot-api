@@ -412,10 +412,10 @@ const completedDocumentController = async (req, res) => {
       {
         tags: !chatDetails?.tags?.includes("document_received")
           ? [
-              ...(chatDetails?.tags?.filter((tag) => tag !== "pending") || []),
-              "document_received",
-              "qulified_lead",
-            ]
+            ...(chatDetails?.tags?.filter((tag) => tag !== "pending") || []),
+            "document_received",
+            "qulified_lead",
+          ]
           : chatDetails?.tags,
       },
       {
@@ -465,16 +465,49 @@ const getDepartmentAvailability = async (req, res) => {
 const getChatReports = async (req, res) => {
   try {
     const user = req.user;
+    const { departmentId, startDate, endDate } = req.query;
+    console.log(
+      departmentId,
+      startDate,
+      endDate,
+      "departmentId, startDate, endDate "
+    );
 
     const userDetails = await UserModel.findById(user._id);
     let extraPayload = {};
+
     if (userDetails?.role !== "Admin" && userDetails?.role !== "Supervisor") {
       extraPayload["department"] = userDetails?.department;
+    }
+
+    console.log(extraPayload, "extraPayload");
+
+    // Add department filter if provided
+    if (departmentId) {
+      extraPayload["department"] = departmentId;
+    }
+
+    console.log(extraPayload, "extraPayload");
+    // Add date range filter if provided
+    let dateFilter = {};
+    if (startDate || endDate) {
+      dateFilter["createdAt"] = {};
+      if (startDate) {
+        const start = new Date(startDate);
+        start.setUTCHours(0, 0, 0, 0); // Start of the day
+        dateFilter["createdAt"]["$gte"] = start;
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setUTCHours(23, 59, 59, 999); // End of the day
+        dateFilter["createdAt"]["$lte"] = end;
+      }
     }
     // Total number of chats
     const totalChats = await ChatModel.countDocuments({
       latestMessage: { $ne: null },
       ...extraPayload,
+      ...dateFilter,
     });
 
     // Number of open chats
@@ -482,6 +515,7 @@ const getChatReports = async (req, res) => {
       latestMessage: { $ne: null },
       status: "active",
       ...extraPayload,
+      ...dateFilter,
     });
 
     // Number of closed chats
@@ -489,6 +523,7 @@ const getChatReports = async (req, res) => {
       latestMessage: { $ne: null },
       status: "archived",
       ...extraPayload,
+      ...dateFilter,
     });
 
     // Number of chats answered by AI
@@ -496,6 +531,7 @@ const getChatReports = async (req, res) => {
       latestMessage: { $ne: null },
       tags: "ai_answered",
       ...extraPayload,
+      ...dateFilter,
     });
 
     const totalHandlingTime = await ChatModel.aggregate([
@@ -503,6 +539,7 @@ const getChatReports = async (req, res) => {
         $match: {
           isHuman: true,
           ...extraPayload,
+          ...dateFilter,
         },
       },
       {
@@ -519,6 +556,7 @@ const getChatReports = async (req, res) => {
       {
         $match: {
           ...extraPayload,
+          ...dateFilter,
         },
       },
       {
@@ -530,17 +568,18 @@ const getChatReports = async (req, res) => {
         },
       },
     ]);
-    console.log(totalHandlingTimeClose, "totalHandlingTime123");
 
     const isHumanHandleChats = await ChatModel.countDocuments({
       isHuman: true,
       ...extraPayload,
+      ...dateFilter,
     });
 
     const average_to_human_responses =
       totalHandlingTime[0]?.totalHandlingTime || 0;
     const average_to_archive_chats =
       totalHandlingTimeClose[0]?.totalChatTime || 0;
+
     // Prepare the report
     const report = {
       totalChats,
@@ -559,6 +598,109 @@ const getChatReports = async (req, res) => {
   }
 };
 
+
+const getChatTrends = async (req, res) => {
+  try {
+    const { startDate, endDate, mode } = req.query;
+
+    let dateFilter = {};
+    if (startDate || endDate) {
+      dateFilter["createdAt"] = {};
+      if (startDate) {
+        const start = new Date(startDate);
+        start.setUTCHours(0, 0, 0, 0);
+        dateFilter["createdAt"]["$gte"] = start;
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setUTCHours(23, 59, 59, 999);
+        dateFilter["createdAt"]["$lte"] = end;
+      }
+    }
+
+    const groupByDate =
+      mode === "month"
+        ? {
+          month: { $month: "$createdAt" },
+          year: { $year: "$createdAt" },
+        }
+        : {
+          day: { $dayOfMonth: "$createdAt" },
+          month: { $month: "$createdAt" },
+          year: { $year: "$createdAt" },
+        };
+
+    const chatTrends = await ChatModel.aggregate([
+      { $match: dateFilter },
+      {
+        $group: {
+          _id: {
+            ...groupByDate,
+            status: "$status",
+          },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1 } },
+    ]);
+
+    const unreadCounts = await ChatModel.aggregate([
+      { $match: dateFilter },
+      {
+        $lookup: {
+          from: "messages",
+          localField: "latestMessage",
+          foreignField: "_id",
+          as: "latestMessage",
+        },
+      },
+      { $unwind: "$latestMessage" },
+      {
+        $group: {
+          _id: {
+            ...groupByDate,
+            isSeen: "$latestMessage.isSeen",
+          },
+          count: { $sum: 1 },
+        },
+      },
+      { $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1 } },
+    ]);
+
+    const formatGroupKey = (id) => {
+      if (mode === "month") {
+        return {
+          month: id.month,
+          year: id.year,
+        };
+      }
+      return new Date(id.year, id.month - 1, id.day);
+    };
+
+    res.status(200).json({
+      trends: chatTrends.map((item) => ({
+        date: formatGroupKey(item._id),
+        status: item._id.status,
+        count: item.count,
+      })),
+      unreadCounts: unreadCounts
+        .filter((x) => !x._id.isSeen)
+        .map((item) => ({
+          date: formatGroupKey(item._id),
+          count: item.count,
+        })),
+      readCounts: unreadCounts
+        .filter((x) => x._id.isSeen)
+        .map((item) => ({
+          date: formatGroupKey(item._id),
+          count: item.count,
+        })),
+    });
+  } catch (error) {
+    console.error("Error fetching chat trends:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+};
 const getUnReadChatCounts = async (req, res) => {
   try {
     const UnReadCounts = await ChatModel.aggregate([
@@ -573,6 +715,7 @@ const getUnReadChatCounts = async (req, res) => {
       {
         $match: {
           "latestMessage.isSeen": false,
+          status: "active"
         },
       },
       {
@@ -1944,4 +2087,5 @@ module.exports = {
   getDepartmentAvailability,
   getChatReports,
   getUnReadChatCounts,
+  getChatTrends
 };
