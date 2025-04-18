@@ -34,6 +34,7 @@ const {
   updateComplaint,
   deleteComplaintById,
   assignDepartmentBySessionId,
+  transferChatToMainMenu,
 } = require("../../../controllers/complain/complain.controller");
 const {
   createSettings,
@@ -129,7 +130,7 @@ router.get("/get-complaints", getAllComplaints);
 
 // Route to add a new complaint
 router.post("/add-complaints/:sessionId?", addComplaint);
-
+router.post("/transfer-to-mainmenu/:sessionId?", transferChatToMainMenu);
 
 // Route to delete a complaint using session ID
 router.delete("/delete-complaints/:complainid", deleteComplaintById);

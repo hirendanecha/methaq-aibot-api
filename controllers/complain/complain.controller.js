@@ -14,6 +14,9 @@ const {
 } = require("../../utils/response");
 const DepartmentModel = require("../../models/department.model");
 const socketObj = require("../../helpers/socket.helper");
+const MessageModel = require("../../models/message.model");
+const { startChat, continueChat } = require("../typebot/typeBot.controller");
+const UserModel = require("../../models/user.model");
 
 const getAllComplaints = async (req, res) => {
   try {
@@ -107,6 +110,100 @@ const addComplaint = async (req, res) => {
   }
 };
 
+const transferChatToMainMenu = async (req, res) => {
+  try {
+    const { sessionId } = req.params; // Get session ID from request parameters
+
+    if (!sessionId) {
+      return res.status(400).json({ success: false, message: "Session ID is required." });
+    }
+
+    // Find the chat by session ID
+    const chat = await ChatModel.findOne({ currentSessionId: sessionId }).lean();
+    if (!chat) {
+      return res.status(404).json({ success: false, message: "Chat not found." });
+    }
+
+    // Get chat details and populate customer information
+    const chatDetails = await ChatModel.findById(chat._id).populate("customerId").lean();
+    if (!chatDetails) {
+      return res.status(404).json({ success: false, message: "Chat details not found." });
+    }
+
+    // Create a message indicating the transfer
+    const mess = {
+      chatId: chatDetails._id,
+      sender: null,
+      sendType: "admin",
+      content: "Chat is transferred to Main Menu",
+      attachments: [],
+      timestamp: new Date(),
+      receiver: chatDetails.customerId?._id?.toString(),
+      receiverType: "user",
+      messageType: "tooltip",
+    };
+
+    // Save the message
+    const newMessage = new MessageModel(mess);
+    const final = await newMessage.save();
+    const startChatResponse = await startChat(" ");
+    const sessionIds = startChatResponse?.response?.data?.sessionId;
+    const firstMess = await continueChat(sessionIds,sessionIds);
+
+    // Update the chat with new session details
+    const updatedChat = await ChatModel.findOneAndUpdate(
+      { _id: chatDetails?._id },
+      {
+        latestMessage: final?._id,
+        isHuman: false,
+        adminId: null,
+        currentSessionId: sessionIds,
+        department: null,
+      },
+      { new: true }
+    )
+      .populate("adminId customerId")
+      .lean();
+
+    // Find receivers to notify
+    const receivers = await UserModel.find({
+      $or: [
+        { role: { $in: ["Admin", "Supervisor"] } },
+        {
+          _id: {
+            $in: [
+              chatDetails?.customerId?._id?.toString(),
+              chatDetails?.adminId?.toString(),
+            ],
+          },
+        },
+        { department: chatDetails?.department?.toString() },
+      ],
+    });
+
+    // Notify receivers via sockets
+    receivers.forEach((receiver) => {
+      socketObj.io
+        .to(receiver._id?.toString())
+        .emit("update-chat", updatedChat);
+      socketObj.io
+        .to(receiver._id?.toString())
+        .emit("message", { ...updatedChat, latestMessage: final });
+    });
+    // Send success response
+    return res.status(200).json({
+      success: true,
+      message: "Chat transferred to Main Menu successfully.",
+    });
+  } catch (error) {
+    console.error("Error transferring chat to Main Menu:", error);
+    return res.status(500).json({
+      success: false,
+      message: "An error occurred while transferring the chat.",
+      error: error.message,
+    });
+  }
+};
 const getComplaintById = async (req, res) => {
   try {
     const { id } = req.params; // Get complaint ID from URL parameters
@@ -253,13 +350,11 @@ const assignDepartmentBySessionId = async (req, res) => {
     sendMessageToAdmins(socketObj, mess2, department._id);
 
     // Send a success response
-    res
-      .status(200)
-      .json({
-        success: true,
-        message: "Department assigned successfully",
-        chat,
-      });
+    res.status(200).json({
+      success: true,
+      message: "Department assigned successfully",
+      chat,
+    });
   } catch (error) {
     console.error("Error assigning department:", error.message);
     res.status(500).json({ error: "Internal server error" });
@@ -275,4 +370,5 @@ module.exports = {
   assignAgentToComplaint,
   getComplaintById,
   assignDepartmentBySessionId,
+  transferChatToMainMenu
 };

@@ -6,6 +6,8 @@ const {
   getPagination,
   getCount,
 } = require("../../utils/fn");
+const fs = require("fs");
+const path = require("path");
 const OpenAIApi = require("openai");
 const {
   sendSuccessResponse,
@@ -21,9 +23,15 @@ const {
   fetchAndStoreDocuments,
 } = require("../../helpers/pineconeupload.helper");
 const DepartmentModel = require("../../models/department.model");
-const { createVectorStore } = require("../../services/openai/controller/threadsController");
+const {
+  createVectorStore,
+} = require("../../services/openai/controller/threadsController");
 // const { openai } = require("../../services/openai-config/openai-config");
 const { openai } = require("../../services/openai/openai-config/openai-config");
+const {
+  enableFIleSearch,
+} = require("../../services/openai/controller/openai.assistant.controller");
+const QnaModel = require("../../models/qna.model");
 
 const MAX_TOKENS = 500;
 
@@ -150,7 +158,6 @@ const addDocument = async (req, res) => {
 
   const { file = [] } = req.files || {};
   try {
-
     const newVector = await createVectorStore(departmentDetails, file);
     console.log(newVector, "departmentDetails");
 
@@ -202,7 +209,11 @@ const addDocument = async (req, res) => {
     //     documentId: newFile._id,
     //   });
     // }
-    return sendSuccessResponse(res, { message: "File uploaded successfullys" }, 201);
+    return sendSuccessResponse(
+      res,
+      { message: "File uploaded successfullys" },
+      201
+    );
   } catch (error) {
     console.error(error);
     return sendErrorResponse(res, error.message);
@@ -335,13 +346,18 @@ const deleteDocument = async (req, res) => {
     }
 
     const assistantDocId = uploadFile?.assistantDocId; // 🧠 OpenAI file ID
-    const departmentDetails = await DepartmentModel.findById(uploadFile.department);
+    const departmentDetails = await DepartmentModel.findById(
+      uploadFile.department
+    );
     const vectorId = departmentDetails?.assistantDetails?.vectorId;
 
     // ✅ 1. Delete file from OpenAI vector store (if attached)
     if (vectorId && assistantDocId) {
       try {
-        await openaiClient.beta.vectorStores.files.del(vectorId, assistantDocId);
+        await openaiClient.beta.vectorStores.files.del(
+          vectorId,
+          assistantDocId
+        );
         console.log(`File ${assistantDocId} detached from Vector Store`);
       } catch (err) {
         console.warn(`Error removing from vector store:`, err.message);
@@ -376,5 +392,108 @@ const deleteDocument = async (req, res) => {
     console.error("deleteDocument error:", error.message);
     return sendErrorResponse(res, error.message);
   }
-}
-module.exports = { addDocument, getAllDocument, addUrl, deleteDocument };
+};
+
+// ✅ Q/A Add API with upload to Assistant + Vector Store
+const addQnaAndUploadToAssistant = async (req, res) => {
+  try {
+    const { departmentId } = req.body;
+
+    if (!departmentId) {
+      return sendErrorResponse(res, "Missing required fields");
+    }
+
+    let departmentDetails = await DepartmentModel.findById(departmentId);
+    if (!departmentDetails) throw new Error("Department not found");
+
+    const openaiClient = await openai;
+
+    await enableFIleSearch(departmentDetails?.assistantDetails?.id);
+
+    let vectorId = departmentDetails?.assistantDetails?.vectorId;
+    if (!vectorId) {
+      const vectorStore = await openaiClient.beta.vectorStores.create({
+        name: departmentDetails?.name,
+      });
+      vectorId = vectorStore?.id;
+
+      await openaiClient.beta.assistants.update(
+        departmentDetails?.assistantDetails?.id,
+        {
+          tool_resources: {
+            file_search: { vector_store_ids: [vectorId] },
+          },
+        }
+      );
+
+      departmentDetails = await DepartmentModel.findByIdAndUpdate(
+        departmentId,
+        {
+          "assistantDetails.vectorId": vectorId,
+        },
+        { new: true }
+      );
+    }
+
+    const qas = await QnaModel.find({ department: departmentId });
+
+    const fileContent = qas
+      .map((q) => `Q: ${q.question}\nA: ${q.answer}\n`)
+      .join("\n");
+    console.log(qas, fileContent, "qasqasqasqasqas");
+    const tempDir = path.join(__dirname, "../../temp");
+    if (!fs.existsSync(tempDir)) {
+      fs.mkdirSync(tempDir, { recursive: true });
+    }
+    const tempFilePath = path.join(tempDir, `qa-${Date.now()}.txt`);
+    fs.writeFileSync(tempFilePath, fileContent);
+
+    if (departmentDetails?.assistantDetails?.qaFileId) {
+      await openaiClient.files
+        .del(departmentDetails.assistantDetails.qaFileId)
+        .catch(console.log);
+    }
+
+    const fileStream = fs.createReadStream(tempFilePath);
+    const uploadedFile = await openaiClient.files.create({
+      file: fileStream,
+      purpose: "assistants",
+    });
+
+    await openaiClient.beta.vectorStores.files.createAndPoll(vectorId, {
+      file_id: uploadedFile.id,
+    });
+
+    const newUpload = await UploadModel.create({
+      department: departmentId,
+      assistantDocId: uploadedFile.id,
+      file: {
+        name: `qa-${Date.now()}.txt`,
+        size: fileContent.length,
+      },
+      status: "success",
+      content: fileContent,
+    });
+
+    await DepartmentModel.findByIdAndUpdate(departmentId, {
+      "assistantDetails.qaFileId": uploadedFile.id,
+    });
+    // fs.unlinkSync(tempFilePath); // Clean up temp
+    return sendSuccessResponse(res, {
+      message: "Q/A added and synced to Assistant successfully.",
+      fileId: uploadedFile.id,
+      upload: newUpload,
+    });
+  } catch (err) {
+    console.error("addQnaAndUploadToAssistant Error:", err);
+    return sendErrorResponse(res, err.message);
+  }
+};
+
+module.exports = {
+  addDocument,
+  getAllDocument,
+  addUrl,
+  deleteDocument,
+  addQnaAndUploadToAssistant,
+};
