@@ -277,7 +277,7 @@ const closeChatController = async (req, res) => {
     // console.log(threadId, "rbbbjkb");
     const { sessionId } = req.params || {};
     console.log(sessionId, "sessionId");
-    const extraPayload = {};
+    let extraPayload = {};
     const chat = await ChatModel.findOne({ currentSessionId: sessionId })
       .populate("customerId department")
       .lean();
