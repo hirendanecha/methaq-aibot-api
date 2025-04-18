@@ -34,6 +34,7 @@ const UserSchema = new Schema(
       ref: "departments",
     }],
     isActive: { type: Boolean, default: false },
+    activeSocketIds: [{ type: String, default: [] }],
   },
   {
     timestamps: true,

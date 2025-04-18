@@ -76,6 +76,11 @@ const ChatSchema = Schema(
         default: "pending",
       },
     ],
+    currentViewingUser: [{
+      type: Schema.Types.ObjectId,
+      ref: "user",
+      default: []
+    }]
   },
   {
     timestamps: true,
