@@ -380,7 +380,7 @@ exports.getChatDetails = async (req, res) => {
     const { chatId } = req.params;
     let attachments = [];
     const chat = await ChatModel.findById(new mongoose.Types.ObjectId(chatId))
-      .populate("adminId customerId department")
+      .populate("adminId customerId department currentViewingUser")
       .lean();
     console.log(chat, chatId, "chatchatchat");
 

@@ -99,6 +99,21 @@ socketObj.config = (server) => {
         ...params,
       });
     });
+    socket.on("joinAdmin", async (params, cb) => {
+      params = typeof params === "string" ? JSON.parse(params) : params;
+      socket.join(params.cust_id);
+      socket.join("allUsers");
+      console.log(socket.id, "socket.id");
+
+      const updatedUser = await UserModel.findOneAndUpdate(
+        { _id: params.cust_id },
+        { $push: { activeSocketIds: socket.id } },
+        { new: true }
+      )
+      logger.info("joinadmin", {
+        ...params,
+      });
+    })
 
     socket.on("joinChat", async (params, cb) => {
       const customer = new CustomerModel({
@@ -627,22 +642,16 @@ socketObj.config = (server) => {
       const receivers = await UserModel.find({
         $or: [
           { role: { $in: ["Admin", "Supervisor"] } },
-          {
-            _id: {
-              $in: [
-                chatDetails?.customerId?._id?.toString(),
-                chatDetails?.adminId?.toString(),
-              ],
-            },
-          },
           { department: chatDetails?.department?.toString() },
         ],
       });
+      console.log(receivers, "receivers11111");
+
       receivers.forEach((receiver) => {
         socketObj.io
           .to(receiver._id?.toString())
           .emit("update-chat", updatedChat);
-        socketObj.io
+        ["Admin", "Supervisor"]?.includes(receiver?.role) && socketObj.io
           .to(receiver._id?.toString())
           .emit("message", { ...updatedChat, latestMessage: final });
       });
@@ -1242,13 +1251,29 @@ socketObj.config = (server) => {
         const authHeader = socket.handshake.headers.authorization || "";
         const token = authHeader && authHeader.split(" ")[1];
         let decoded = jwt.decode(token);
+        console.log(decoded, "fdgf");
+
         const { chatId } =
           typeof params === "string" ? JSON.parse(params) : params;
+        let chatDetails = await ChatModel.findById(chatId).populate("currentViewingUser");
+        const existing = chatDetails?.currentViewingUser?.find(
+          (user) => user?._id?.toString() === decoded?._id
+        )
+        if (!existing) {
+          chatDetails = await ChatModel.findOneAndUpdate(
+            { _id: chatId },
+            {
+              $push: {
+                currentViewingUser: decoded?._id
+              }
+            },
+            { new: true }
+          ).populate("currentViewingUser");
+        }
 
-        socketObj.io.to("allUsers").emit("status", {
+        socketObj.io.to("allUsers").emit("open-status", {
           chatId: chatId,
-          userId: decoded?._id,
-          status: "open"
+          users: chatDetails?.currentViewingUser,
         })
       } catch (error) {
         console.error("Error archiving chat:", error);
@@ -1267,10 +1292,15 @@ socketObj.config = (server) => {
         const { chatId } =
           typeof params === "string" ? JSON.parse(params) : params;
 
-        socketObj.io.to("allUsers").emit("status", {
-          chatId: chatId,
-          userId: decoded?._id,
-          status: "close"
+        const user = await UserModel.findOne({ _id: decoded?._id });
+        await ChatModel.updateMany(
+          { currentViewingUser: user?._id }, // Find chats where user._id is in the array
+          { $pull: { currentViewingUser: user?._id } } // Remove user._id from the array
+        );
+
+        socketObj.io.to("allUsers").emit("close-status", {
+          chatId: [chatId],
+          users: user,
         })
       } catch (error) {
         console.error("Error archiving chat:", error);
@@ -1281,8 +1311,29 @@ socketObj.config = (server) => {
       }
     })
 
-    socket.on("disconnect", () => {
+    socket.on("disconnect", async () => {
       console.log("A user disconnected:", socket.id);
+      const user = await UserModel.findOne({ activeSocketIds: { $in: [socket.id] } });
+      console.log(user, "user");
+
+      const chats = await ChatModel.find({ currentViewingUser: { $in: [user?._id] } });
+      console.log(chats, "chatsss");
+
+      await ChatModel.updateMany(
+        { currentViewingUser: user?._id }, // Find chats where user._id is in the array
+        { $pull: { currentViewingUser: user?._id } } // Remove user._id from the array
+      );
+      const updatedRecord = await UserModel.findOneAndUpdate(
+        { _id: user?._id }, // Find chats where user._id is in the array
+        { $pull: { activeSocketIds: socket.id } },
+        { new: true } // Remove user._id from the array
+      );
+
+      socketObj.io.to("allUsers").emit("close-status", {
+        chatId: chats.map((chat) => chat._id?.toString()),
+        users: user,
+      })
+
       logger.info("disconnected", {
         id: socket.id,
         method: "disconnect",
