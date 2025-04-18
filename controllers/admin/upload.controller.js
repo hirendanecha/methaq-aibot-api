@@ -468,13 +468,19 @@ const addQnaAndUploadToAssistant = async (req, res) => {
       department: departmentId,
       assistantDocId: uploadedFile.id,
       file: {
-        name: `qa-${Date.now()}.txt`,
+        fieldname: "file",
+        originalname: `qa-${Date.now()}.txt`,
+        filename: `qa-${Date.now()}.txt`,
         size: fileContent.length,
       },
       status: "success",
       content: fileContent,
     });
 
+
+ 
+    const updated = await newUpload.save();
+    console.log("updated", updated);
     await DepartmentModel.findByIdAndUpdate(departmentId, {
       "assistantDetails.qaFileId": uploadedFile.id,
     });
