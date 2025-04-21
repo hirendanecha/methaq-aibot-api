@@ -791,7 +791,7 @@ let messageTimeout;
 const whatsappMessages = async (req, res) => {
   try {
     // Added async
-    res.status(200);
+   // res.status(200);
     const { messages, metadata, contacts, statuses } =
       req.body.entry?.[0]?.changes?.[0].value ?? {};
     const messageTimestamp =

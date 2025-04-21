@@ -109,11 +109,11 @@ socketObj.config = (server) => {
         { _id: params.cust_id },
         { $push: { activeSocketIds: socket.id } },
         { new: true }
-      )
+      );
       logger.info("joinadmin", {
         ...params,
       });
-    })
+    });
 
     socket.on("joinChat", async (params, cb) => {
       const customer = new CustomerModel({
@@ -241,8 +241,9 @@ socketObj.config = (server) => {
               sendType: "assistant",
               receiverType: "admin",
               messageType: "tooltip",
-              content: `Chat is transferred to ${userInput?.split("-")[1]
-                } department`,
+              content: `Chat is transferred to ${
+                userInput?.split("-")[1]
+              } department`,
             };
             sendMessageToAdmins(socketObj, mess2, chatDetails?.department);
           }
@@ -651,9 +652,10 @@ socketObj.config = (server) => {
         socketObj.io
           .to(receiver._id?.toString())
           .emit("update-chat", updatedChat);
-        ["Admin", "Supervisor"]?.includes(receiver?.role) && socketObj.io
-          .to(receiver._id?.toString())
-          .emit("message", { ...updatedChat, latestMessage: final });
+        ["Admin", "Supervisor"]?.includes(receiver?.role) &&
+          socketObj.io
+            .to(receiver._id?.toString())
+            .emit("message", { ...updatedChat, latestMessage: final });
       });
       if (typeof cb === "function")
         cb({
@@ -732,7 +734,7 @@ socketObj.config = (server) => {
         const tooltipMess = await newMessage.save();
         console.log(
           +chatDetails?.initialHandlingTime ||
-          dayjs().diff(chatDetails?.agentTransferedAt, "minute"),
+            dayjs().diff(chatDetails?.agentTransferedAt, "minute"),
           chatDetails?.agentTransferedAt,
           "chatDetails?.initialHandlingTime"
         );
@@ -909,9 +911,11 @@ socketObj.config = (server) => {
           socketObj.io
             .to(receiver._id?.toString())
             .emit("update-chat", updatedChat);
-          receiver?.department?.toString() === updatedChat?.department?.toString() && socketObj.io
-            .to(receiver._id?.toString())
-            .emit("message", { ...updatedChat, latestMessage: final });
+          receiver?.department?.toString() ===
+            updatedChat?.department?.toString() &&
+            socketObj.io
+              .to(receiver._id?.toString())
+              .emit("message", { ...updatedChat, latestMessage: final });
         });
       } else {
         chat.adminId = null;
@@ -1099,7 +1103,11 @@ socketObj.config = (server) => {
       [...receivers, chatDetails?.customerId].forEach((receiver) => {
         socketObj.io
           .to(receiver._id?.toString())
-          .emit("unread-count", { counts: UnReadCounts[0]?.totalUnread || 0, chatId: chatId, isSeen: true });
+          .emit("unread-count", {
+            counts: UnReadCounts[0]?.totalUnread || 0,
+            chatId: chatId,
+            isSeen: true,
+          });
       });
 
       if (typeof cb === "function")
@@ -1135,7 +1143,8 @@ socketObj.config = (server) => {
           sendType: "admin",
           content:
             chat?.department?.messages?.chatClosingMessage ||
-            `This conversation has ended, thank you for contacting Methaq Takaful Insuance ${chat?.department?.name ? chat?.department?.name : ""
+            `This conversation has ended, thank you for contacting Methaq Takaful Insuance ${
+              chat?.department?.name ? chat?.department?.name : ""
             }. We hope we were able to serve you`,
           attachments: [],
           timestamp: new Date(),
@@ -1184,8 +1193,9 @@ socketObj.config = (server) => {
             undefined,
             undefined,
             chat?.department?.messages?.chatClosingMessage ||
-            `This conversation has ended, thank you for contacting Methaq Takaful Insuance ${chat?.department?.name ? chat?.department?.name : ""
-            }. We hope we were able to serve you`,
+              `This conversation has ended, thank you for contacting Methaq Takaful Insuance ${
+                chat?.department?.name ? chat?.department?.name : ""
+              }. We hope we were able to serve you`,
             updatedChat?.isHuman
           );
         }
@@ -1255,17 +1265,19 @@ socketObj.config = (server) => {
 
         const { chatId } =
           typeof params === "string" ? JSON.parse(params) : params;
-        let chatDetails = await ChatModel.findById(chatId).populate("currentViewingUser");
+        let chatDetails = await ChatModel.findById(chatId).populate(
+          "currentViewingUser"
+        );
         const existing = chatDetails?.currentViewingUser?.find(
           (user) => user?._id?.toString() === decoded?._id
-        )
+        );
         if (!existing) {
           chatDetails = await ChatModel.findOneAndUpdate(
             { _id: chatId },
             {
               $push: {
-                currentViewingUser: decoded?._id
-              }
+                currentViewingUser: decoded?._id,
+              },
             },
             { new: true }
           ).populate("currentViewingUser");
@@ -1274,15 +1286,15 @@ socketObj.config = (server) => {
         socketObj.io.to("allUsers").emit("open-status", {
           chatId: chatId,
           users: chatDetails?.currentViewingUser,
-        })
+        });
       } catch (error) {
         console.error("Error archiving chat:", error);
         if (typeof cb === "function")
           cb({
             message: error.message,
-          })
+          });
       }
-    })
+    });
 
     socket.on("close-chat", async (params, cb) => {
       try {
@@ -1301,22 +1313,26 @@ socketObj.config = (server) => {
         socketObj.io.to("allUsers").emit("close-status", {
           chatId: [chatId],
           users: user,
-        })
+        });
       } catch (error) {
         console.error("Error archiving chat:", error);
         if (typeof cb === "function")
           cb({
             message: error.message,
-          })
+          });
       }
-    })
+    });
 
     socket.on("disconnect", async () => {
       console.log("A user disconnected:", socket.id);
-      const user = await UserModel.findOne({ activeSocketIds: { $in: [socket.id] } });
+      const user = await UserModel.findOne({
+        activeSocketIds: { $in: [socket.id] },
+      });
       console.log(user, "user");
 
-      const chats = await ChatModel.find({ currentViewingUser: { $in: [user?._id] } });
+      const chats = await ChatModel.find({
+        currentViewingUser: { $in: [user?._id] },
+      });
       console.log(chats, "chatsss");
 
       await ChatModel.updateMany(
@@ -1332,8 +1348,10 @@ socketObj.config = (server) => {
       socketObj.io.to("allUsers").emit("close-status", {
         chatId: chats.map((chat) => chat._id?.toString()),
         users: user,
-      })
-
+      });
+      if (agents[socket.id]) {
+        delete agents[socket.id];
+      }
       logger.info("disconnected", {
         id: socket.id,
         method: "disconnect",
@@ -1345,9 +1363,7 @@ socketObj.config = (server) => {
           typeof params === "string" ? JSON.parse(params) : params;
 
         if (!wpId) {
-          throw new Error(
-            "Missing required parameters: messageId"
-          );
+          throw new Error("Missing required parameters: messageId");
         }
 
         // Call the sendTypingIndicator function
