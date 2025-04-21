@@ -805,7 +805,7 @@ const whatsappMessages = async (req, res) => {
 
     if (currentTime - messageTimestamp > 120000) {
       console.log("Ignoring old queued message:", messages[0].id);
-      return res.status(200);
+      return res.status(200).send();
     }
 
     const displayPhoneNumber = metadata?.phone_number_id;
@@ -835,7 +835,7 @@ const whatsappMessages = async (req, res) => {
 
     const messInDB = await MessageModel.findOne({ wpId: message.id });
     if (messInDB) {
-      return res.status(200);
+      return res.status(200).send();
     }
     const messageSender = message.from;
     const messageID = message.id;
@@ -862,7 +862,7 @@ const whatsappMessages = async (req, res) => {
           messageID,
           formalMessage
         );
-        return res.status(200);
+        return res.status(200).send();
       }
     }
     //  res.status(200);
@@ -1470,7 +1470,7 @@ const whatsappMessages = async (req, res) => {
           //   existingChat?.department?.prompt
           // );
           //console.log(assistantMessage, "messageSendermessageSender");
-
+        
           messageTimeout = setTimeout(async () => {
             // Join accumulated messages into a single string with spaces
             const userInput = accumulatedMessages.join(" ");
@@ -2063,10 +2063,10 @@ const whatsappMessages = async (req, res) => {
       }
     }
 
-    return res.status(200); // Added response for successful processing
+    return res.status(200).send(); // Added response for successful processing
   } catch (error) {
     console.log(error.message);
-    return res.status(200);
+    return res.status(200).send();
     //return res.status(500).send("Error processing message");
   }
 };
