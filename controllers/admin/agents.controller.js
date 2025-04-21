@@ -289,6 +289,7 @@ exports.getChatList = async (req, res) => {
       department,
       search,
       tags,
+      isRead,
     } = req.body;
 
     // const { limit, offset } = getPagination(page, size);
@@ -310,7 +311,8 @@ exports.getChatList = async (req, res) => {
 
     let pipeline = [
       { $match: searchCondition },
-
+    
+      // Lookup customer
       {
         $lookup: {
           from: "customers",
@@ -320,17 +322,19 @@ exports.getChatList = async (req, res) => {
         },
       },
       { $unwind: "$customerId" },
-
+    
+      // Search on customer name
       ...(search
         ? [
-          {
-            $match: {
-              "customerId.name": { $regex: new RegExp(search, "i") },
+            {
+              $match: {
+                "customerId.name": { $regex: new RegExp(search, "i") },
+              },
             },
-          },
-        ]
+          ]
         : []),
-
+    
+      // Lookup admin
       {
         $lookup: {
           from: "users",
@@ -340,7 +344,8 @@ exports.getChatList = async (req, res) => {
         },
       },
       { $unwind: { path: "$adminId", preserveNullAndEmptyArrays: true } },
-
+    
+      // ✅ Lookup messages before isRead filter
       {
         $lookup: {
           from: "messages",
@@ -350,9 +355,21 @@ exports.getChatList = async (req, res) => {
         },
       },
       { $unwind: { path: "$latestMessage", preserveNullAndEmptyArrays: true } },
-
+    
+      // ✅ Filter on isRead after message details available
+      ...(isRead !== undefined
+        ? [
+            {
+              $match: {
+                "latestMessage.isSeen": isRead,
+              },
+            },
+          ]
+        : []),
+    
+      // Sort & paginate
       { $sort: { "latestMessage.timestamp": -1 } },
-
+    
       {
         $facet: {
           totalCount: [{ $count: "count" }],
@@ -360,7 +377,6 @@ exports.getChatList = async (req, res) => {
         },
       },
     ];
-
     let result = await ChatModel.aggregate(pipeline);
 
     let totalChats = result[0]?.totalCount?.[0]?.count || 0;

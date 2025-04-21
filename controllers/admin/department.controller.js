@@ -163,7 +163,7 @@ exports.addDepartment = async (req, res) => {
       console.log(tools, "tools");
 
       const newAssistant = await createAssistant(
-        savedDepartment?.name,
+        savedDepartment?.assistantName,
          " ",
         tools
       );
@@ -261,7 +261,7 @@ exports.updateDepartment = async (req, res) => {
       const updatedAssistant = await updateAssistant(
         updatedDepartment?.assistantDetails?.id,
         {
-          name: updatedDepartment?.name,
+          name: updatedDepartment?.assistantName,
           instructions: updatedDepartment?.prompt,
           tools: updatedDepartment?.functionId,
         }

@@ -19,6 +19,7 @@ const DepartmentSchema = new Schema(
       startTime: { type: String },
       endTime: { type: String },
     },
+    assistantName: { type: String },
     assistantDetails: {
       id: { type: String },
       vectorId: { type: String },
