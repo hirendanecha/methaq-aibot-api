@@ -10,6 +10,7 @@ const {
   sendWhatsAppMessage,
   sendInteractiveMessage,
 } = require("../services/whatsaap.service");
+const dayjs = require("dayjs");
 
 const baseUrl = "";
 exports.removeFile = (fileName) => {
@@ -372,7 +373,21 @@ exports.checkDepartmentAvailability = async (
   existingChat
 ) => {
   try {
-    if (existingChat?.department?.workingHours?.startTime) {
+    const currentDay = new Date().getDay();
+    console.log(currentDay, "currentDay");
+    const daySchedule = existingChat?.department?.workingHours[`${currentDay}`];
+    const holidays = existingChat?.department?.holidays;
+    let isTodayHoliday = false;
+    if (holidays?.length > 0) {
+      isTodayHoliday = holidays.some((holiday) => dayjs(holiday).isSame(dayjs(), "day"));
+    }
+    console.log(isTodayHoliday, "isTodayHoliday11");
+
+    if (isTodayHoliday) {
+      return existingChat?.department?.messages?.afterHoursResponse;
+    }
+
+    if (daySchedule?.isAvailable) {
       // Get the current hour in the server's local time zone
 
       // const currentHour = Number(
@@ -384,12 +399,12 @@ exports.checkDepartmentAvailability = async (
       // );
 
       const currentHour = new Date().getHours();
-
+      console.log(currentDay, daySchedule, "currentDay");
       const startHour = parseInt(
-        existingChat?.department?.workingHours?.startTime.split(":")[0]
+        daySchedule?.startTime.split(":")[0]
       );
       const endHour = parseInt(
-        existingChat?.department?.workingHours?.endTime.split(":")[0]
+        daySchedule?.endTime.split(":")[0]
       );
 
       console.log(currentHour, "currentHour");
@@ -419,6 +434,9 @@ exports.checkDepartmentAvailability = async (
         // );
         return existingChat?.department?.messages?.afterHoursResponse;
       }
+    }
+    else {
+      return existingChat?.department?.messages?.afterHoursResponse;
     }
     return "True";
   } catch (error) {

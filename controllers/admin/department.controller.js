@@ -164,7 +164,7 @@ exports.addDepartment = async (req, res) => {
 
       const newAssistant = await createAssistant(
         savedDepartment?.assistantName,
-         " ",
+        " ",
         tools
       );
       const openaiClient = await openai;
@@ -307,3 +307,18 @@ exports.deleteDepartment = async (req, res) => {
     return sendErrorResponse(res, error.message);
   }
 };
+
+exports.updateDepartmentsWorkingHours = async (req, res) => {
+  try {
+    const { departmentIds, workingHours, holidays } = req.body;
+    console.log(departmentIds, "departmentIdssss");
+
+    for (let i = 0; i < departmentIds?.length; i++) {
+      const department = await DepartmentModel.findByIdAndUpdate(departmentIds[i], { ...workingHours ? { workingHours: workingHours } : {}, ...holidays ? { holidays: holidays } : {} }, { new: true });
+    }
+
+    return sendSuccessResponse(res, "Working hours updated successfully.");
+  } catch (error) {
+    return sendErrorResponse(res, error.message);
+  }
+}

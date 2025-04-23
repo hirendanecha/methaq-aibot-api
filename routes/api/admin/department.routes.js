@@ -55,7 +55,7 @@ router.delete("/:id", permissionAuthorization("commonPermission.department", ["d
 router.patch("/assign-agent-complaint/:id", permissionAuthorization("commonPermission.complain", ["update"], ['Admin']), assignAgentToComplaint);
 
 
-router.patch("/assign-agent-motor-inquiry/:id", permissionAuthorization("commonPermission.motorInquiry", ["update"], ['Admin']), assignAgentToMotorInquiry); 
+router.patch("/assign-agent-motor-inquiry/:id", permissionAuthorization("commonPermission.motorInquiry", ["update"], ['Admin']), assignAgentToMotorInquiry);
 router.put("/update-motor-inquiry/:id", permissionAuthorization("commonPermission.motorInquiry", ["update"], ['Admin']), updatedMotorInquiry);
 router.patch("/update-status-motor-inquiry/:id", permissionAuthorization("commonPermission.motorInquiry", ["update"], ['Admin']), updatMotorInquiryStatus);
 router.get("/getByIdMotorInquiry/:id", permissionAuthorization("commonPermission.motorInquiry", ["read"], ['Admin']), getMotorInquiryById);  //done
@@ -67,6 +67,8 @@ router.patch("/update-status-complaint/:id", permissionAuthorization("commonPerm
 router.get("/get-complaints", permissionAuthorization("commonPermission.complain", ["read"], ['Admin']), getAllComplaints);
 
 router.get("/getByIdComplain/:id", permissionAuthorization("commonPermission.complain", ["read"], ['Admin']), getComplaintById);
+
+router.post("/update-department-working-hours", permissionAuthorization("commonPermission.department", ["update"], ['Admin']), departmentCtrl.updateDepartmentsWorkingHours);
 
 
 module.exports = router;
