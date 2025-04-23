@@ -64,7 +64,7 @@ router.put("/update-complaint/:id", permissionAuthorization("commonPermission.co
 
 router.patch("/update-status-complaint/:id", permissionAuthorization("commonPermission.complain", ["update"], ['Admin']), updateComplaintStatus);
 
-router.get("/get-complaints", permissionAuthorization("commonPermission.complain", ["read"], ['Admin']), getAllComplaints);
+router.post("/get-complaints", permissionAuthorization("commonPermission.complain", ["read"], ['Admin']), getAllComplaints);
 
 router.get("/getByIdComplain/:id", permissionAuthorization("commonPermission.complain", ["read"], ['Admin']), getComplaintById);
 
