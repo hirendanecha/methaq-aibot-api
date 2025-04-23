@@ -15,7 +15,7 @@ const { assignAgentToMotorInquiry, updatedMotorInquiry, getMotorInquiryById, upd
 
 router.get("/", permissionAuthorization("commonPermission.department", ["read"]), departmentCtrl.getAllDepartment);
 
-router.get("/:id/getdepartmentdetails", permissionAuthorization("commonPermission.department", ["read"]), departmentCtrl.getParticularDepartment);
+router.get("/:id/getdepartmentdetails", permissionAuthorization("commonPermission.department", ["read"], ['Admin', 'Agent', 'Supervisor']), departmentCtrl.getParticularDepartment);
 
 router.post(
   "/",

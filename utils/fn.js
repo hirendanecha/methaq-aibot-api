@@ -379,9 +379,8 @@ exports.checkDepartmentAvailability = async (
     const holidays = existingChat?.department?.holidays;
     let isTodayHoliday = false;
     if (holidays?.length > 0) {
-      isTodayHoliday = holidays.some((holiday) => dayjs(holiday).isSame(dayjs(), "day"));
+      isTodayHoliday = holidays.some((holiday) => dayjs(holiday?.start).isBefore(dayjs()) && dayjs(holiday?.end).isAfter(dayjs()));
     }
-    console.log(isTodayHoliday, "isTodayHoliday11");
 
     if (isTodayHoliday) {
       return existingChat?.department?.messages?.afterHoursResponse;

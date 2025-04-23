@@ -27,7 +27,13 @@ const DepartmentSchema = new Schema(
     assistantName: { type: String },
     isParent: { type: Boolean, default: false },
     parentId: { type: String, default: null },
-    holidays: [{ type: Date, default: [] }],
+    holidays: [{
+      _id: { type: String, default: null },
+      title: { type: String, default: "" },
+      start: { type: Date, default: null },
+      end: { type: Date, default: null },
+      color: { type: String, default: "" },
+    }],
     assistantDetails: {
       id: { type: String },
       vectorId: { type: String },
