@@ -26,7 +26,8 @@ const DepartmentSchema = new Schema(
     },
     assistantName: { type: String },
     isParent: { type: Boolean, default: false },
-    parentId: { type: String, default: null },
+    isChild: { type: Boolean, default: false },
+    parentId: { type: String, default: "" },
     holidays: [{
       _id: { type: String, default: null },
       title: { type: String, default: "" },

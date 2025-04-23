@@ -25,6 +25,7 @@ const {
 const {
   toolFunctions,
 } = require("../../services/openai/openai-functions/function-schema/functionsSchema");
+const { getNextSubDeptId } = require("../../utils/fn");
 
 exports.getAllDepartment = async (req, res) => {
   try {
@@ -142,7 +143,15 @@ exports.addDepartment = async (req, res) => {
 
       mergedObject.logo = url;
     }
-
+    if (mergedObject?.isChild && mergedObject?.parentId) {
+      const updatedDepartment = await DepartmentModel.findOneAndUpdate(
+        { depId: mergedObject?.parentId },
+        { isParent: true },
+        {
+          new: true,
+        }
+      )
+    }
     const newDepartment = new DepartmentModel({
       ...mergedObject,
     });
@@ -318,6 +327,20 @@ exports.updateDepartmentsWorkingHours = async (req, res) => {
     }
 
     return sendSuccessResponse(res, "Working hours updated successfully.");
+  } catch (error) {
+    return sendErrorResponse(res, error.message);
+  }
+}
+
+exports.getSubDepartmentId = async (req, res) => {
+  try {
+    const { departmentId } = req.params;
+    const department = await DepartmentModel.findOne({ parentId: departmentId }).sort({ createdAt: -1 }).lean();
+    const newDeptId = getNextSubDeptId(department?.depId);
+    if (!newDeptId) {
+      return sendErrorResponse(res, "Department is now full.");
+    }
+    return sendSuccessResponse(res, { data: newDeptId });
   } catch (error) {
     return sendErrorResponse(res, error.message);
   }

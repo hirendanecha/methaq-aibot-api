@@ -588,3 +588,20 @@ exports.sendInterectiveMessageReSelectDepartment = async (
 const imagesFormat = ["jpg", "jpeg", "png", "gif", "svg", "webp"];
 exports.isImageType = (attachment) =>
   imagesFormat.some((format) => attachment?.toLowerCase?.().endsWith?.(format));
+
+
+exports.getNextSubDeptId = (deptId) => {
+  const ids = deptId?.split('-');
+  let subDeptId = "";
+  if (ids?.length > 0) {
+    subDeptId = ids[ids.length - 1];
+  }
+  console.log(subDeptId.charCodeAt(0), "subDeptId");
+  if (subDeptId.charCodeAt(0) >= 90) {
+    return false;
+  }
+  const nextSubDeptId = subDeptId.charCodeAt(0) + 1;
+  console.log(nextSubDeptId, "nextSubDeptId");
+
+  return `${ids[0]}-${String.fromCharCode(nextSubDeptId)}`;
+}

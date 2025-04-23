@@ -70,5 +70,6 @@ router.get("/getByIdComplain/:id", permissionAuthorization("commonPermission.com
 
 router.post("/update-department-working-hours", permissionAuthorization("commonPermission.department", ["update"], ['Admin']), departmentCtrl.updateDepartmentsWorkingHours);
 
+router.get('/getSubDepartmentId/:departmentId', departmentCtrl.getSubDepartmentId);
 
 module.exports = router;
