@@ -283,6 +283,7 @@ exports.sendMessageToAdmins = async (socketObj, message, department, extraReceiv
     if (department) {
       conditions.push({ department: department })
     }
+    const oldChatDetails = await ChatModel.findOne({ _id: message?.chatId }).populate("latestMessage").lean();
     if (extraReceiver?.length > 0) {
       conditions.push(...extraReceiver)
       const extraUsers = await UserModel.find(...extraReceiver).lean();
@@ -298,35 +299,35 @@ exports.sendMessageToAdmins = async (socketObj, message, department, extraReceiv
     )
       .populate("adminId customerId")
       .lean();
-    const UnReadCounts = await ChatModel.aggregate([
-      {
-        $lookup: {
-          from: "messages",
-          localField: "latestMessage",
-          foreignField: "_id",
-          as: "latestMessage",
-        }
-      },
-      {
-        $match: {
-          "latestMessage.isSeen": false,
-        }
-      },
-      {
-        $group: {
-          _id: null,
-          totalUnread: { $sum: 1 }
-        }
-      }
-    ]);
+    // const UnReadCounts = await ChatModel.aggregate([
+    //   {
+    //     $lookup: {
+    //       from: "messages",
+    //       localField: "latestMessage",
+    //       foreignField: "_id",
+    //       as: "latestMessage",
+    //     }
+    //   },
+    //   {
+    //     $match: {
+    //       "latestMessage.isSeen": false,
+    //     }
+    //   },
+    //   {
+    //     $group: {
+    //       _id: null,
+    //       totalUnread: { $sum: 1 }
+    //     }
+    //   }
+    // ]);
     [...receivers].forEach((receiver) => {
       sendUpdate && socketObj.io.to(receiver._id?.toString()).emit("update-chat", { ...updatedChat, latestMessage: latestMess });
       (messageToExtr || !extraUserIds?.includes(receiver._id?.toString())) && socketObj.io
         .to(receiver._id?.toString())
         .emit("message", { ...updatedChat, latestMessage: latestMess });
-      (messageToExtr || !extraUserIds?.includes(receiver._id?.toString())) && socketObj.io
+      oldChatDetails?.latestMessage?.isSeen && (messageToExtr || !extraUserIds?.includes(receiver._id?.toString())) && socketObj.io
         .to(receiver._id?.toString())
-        .emit("unread-count", { counts: UnReadCounts[0]?.totalUnread || 0, chatId: updatedChat?._id?.toString(), isSeen: false });
+        .emit("unread-count", { chatId: updatedChat?._id?.toString(), isSeen: false });
     });
     return latestMess;
   } catch (error) {

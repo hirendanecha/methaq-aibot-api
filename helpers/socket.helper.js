@@ -1110,7 +1110,7 @@ socketObj.config = (server) => {
         socketObj.io
           .to(receiver._id?.toString())
           .emit("unread-count", {
-            counts: UnReadCounts[0]?.totalUnread || 0,
+            // counts: UnReadCounts[0]?.totalUnread || 0,
             chatId: chatId,
             isSeen: true,
           });
