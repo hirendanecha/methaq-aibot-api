@@ -412,10 +412,10 @@ const completedDocumentController = async (req, res) => {
       {
         tags: !chatDetails?.tags?.includes("document_received")
           ? [
-              ...(chatDetails?.tags?.filter((tag) => tag !== "pending") || []),
-              "document_received",
-              "qulified_lead",
-            ]
+            ...(chatDetails?.tags?.filter((tag) => tag !== "pending") || []),
+            "document_received",
+            "qulified_lead",
+          ]
           : chatDetails?.tags,
       },
       {
@@ -620,14 +620,14 @@ const getChatTrends = async (req, res) => {
     const groupByDate =
       mode === "month"
         ? {
-            month: { $month: "$createdAt" },
-            year: { $year: "$createdAt" },
-          }
+          month: { $month: "$createdAt" },
+          year: { $year: "$createdAt" },
+        }
         : {
-            day: { $dayOfMonth: "$createdAt" },
-            month: { $month: "$createdAt" },
-            year: { $year: "$createdAt" },
-          };
+          day: { $dayOfMonth: "$createdAt" },
+          month: { $month: "$createdAt" },
+          year: { $year: "$createdAt" },
+        };
 
     const chatTrends = await ChatModel.aggregate([
       { $match: dateFilter },
@@ -702,7 +702,26 @@ const getChatTrends = async (req, res) => {
 };
 const getUnReadChatCounts = async (req, res) => {
   try {
+    const userId = req.user._id;
+    const { _id: adminId, role } = req.user;
+    let condition = {}
+    const adminDetails = await UserModel.findById(adminId);
+    console.log(role, "rolerolerole");
+
+    if (role === "Agent") {
+      condition = {
+        $or: [
+          { assignedTo: userId },
+          {
+            department: { $in: adminDetails?.department }
+          }
+        ]
+      }
+    }
     const UnReadCounts = await ChatModel.aggregate([
+      {
+        $match: Object(condition)?.length > 0 ? condition : {}
+      },
       {
         $lookup: {
           from: "messages",

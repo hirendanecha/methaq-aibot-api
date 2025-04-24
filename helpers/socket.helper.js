@@ -1077,29 +1077,30 @@ socketObj.config = (server) => {
       }
       const updateMessages = await MessageModel.updateMany(
         { chatId: chatId },
-        { isSeen: true }
+        { isSeen: true },
+        { new: true }
       );
-      const UnReadCounts = await ChatModel.aggregate([
-        {
-          $lookup: {
-            from: "messages",
-            localField: "latestMessage",
-            foreignField: "_id",
-            as: "latestMessage",
-          },
-        },
-        {
-          $match: {
-            "latestMessage.isSeen": false,
-          },
-        },
-        {
-          $group: {
-            _id: null,
-            totalUnread: { $sum: 1 },
-          },
-        },
-      ]);
+      // const UnReadCounts = await ChatModel.aggregate([
+      //   {
+      //     $lookup: {
+      //       from: "messages",
+      //       localField: "latestMessage",
+      //       foreignField: "_id",
+      //       as: "latestMessage",
+      //     },
+      //   },
+      //   {
+      //     $match: {
+      //       "latestMessage.isSeen": false,
+      //     },
+      //   },
+      //   {
+      //     $group: {
+      //       _id: null,
+      //       totalUnread: { $sum: 1 },
+      //     },
+      //   },
+      // ]);
       const receivers = await UserModel.find({
         $or: [
           { role: { $in: ["Admin", "Supervisor"] } },
