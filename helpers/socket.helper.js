@@ -33,9 +33,16 @@ socketObj.config = (server) => {
   const io = require("socket.io")(server, {
     transports: ["websocket", "polling"],
     cors: {
-      origin: "*",
+      origin: "*", // Consider restricting in prod for security
+      methods: ["GET", "POST"],
+      credentials: true,
     },
+    pingTimeout: 20000, // 20 seconds timeout to detect dead connections
+    pingInterval: 25000, // Try to keep connection alive
   });
+
+
+
   socketObj.io = io;
 
   // io.use((socket, next) => {
