@@ -248,9 +248,8 @@ socketObj.config = (server) => {
               sendType: "assistant",
               receiverType: "admin",
               messageType: "tooltip",
-              content: `Chat is transferred to ${
-                userInput?.split("-")[1]
-              } department`,
+              content: `Chat is transferred to ${userInput?.split("-")[1]
+                } department`,
             };
             sendMessageToAdmins(socketObj, mess2, chatDetails?.department);
           }
@@ -741,7 +740,7 @@ socketObj.config = (server) => {
         const tooltipMess = await newMessage.save();
         console.log(
           +chatDetails?.initialHandlingTime ||
-            dayjs().diff(chatDetails?.agentTransferedAt, "minute"),
+          dayjs().diff(chatDetails?.agentTransferedAt, "minute"),
           chatDetails?.agentTransferedAt,
           "chatDetails?.initialHandlingTime"
         );
@@ -1150,8 +1149,7 @@ socketObj.config = (server) => {
           sendType: "admin",
           content:
             chat?.department?.messages?.chatClosingMessage ||
-            `This conversation has ended, thank you for contacting Methaq Takaful Insuance ${
-              chat?.department?.name ? chat?.department?.name : ""
+            `This conversation has ended, thank you for contacting Methaq Takaful Insuance ${chat?.department?.name ? chat?.department?.name : ""
             }. We hope we were able to serve you`,
           attachments: [],
           timestamp: new Date(),
@@ -1200,9 +1198,8 @@ socketObj.config = (server) => {
             undefined,
             undefined,
             chat?.department?.messages?.chatClosingMessage ||
-              `This conversation has ended, thank you for contacting Methaq Takaful Insuance ${
-                chat?.department?.name ? chat?.department?.name : ""
-              }. We hope we were able to serve you`,
+            `This conversation has ended, thank you for contacting Methaq Takaful Insuance ${chat?.department?.name ? chat?.department?.name : ""
+            }. We hope we were able to serve you`,
             updatedChat?.isHuman
           );
         }
@@ -1335,6 +1332,16 @@ socketObj.config = (server) => {
       const user = await UserModel.findOne({
         activeSocketIds: { $in: [socket.id] },
       });
+      const updatedRecord = await UserModel.findOneAndUpdate(
+        { _id: user?._id }, // Find chats where user._id is in the array
+        { $pull: { activeSocketIds: socket.id } },
+        { new: true } // Remove user._id from the array
+      );
+
+      socketObj.io.to("allUsers").emit("close-status", {
+        chatId: chats.map((chat) => chat._id?.toString()),
+        users: user,
+      });
       console.log(user, "user");
 
       const chats = await ChatModel.find({
@@ -1346,16 +1353,7 @@ socketObj.config = (server) => {
         { currentViewingUser: user?._id }, // Find chats where user._id is in the array
         { $pull: { currentViewingUser: user?._id } } // Remove user._id from the array
       );
-      const updatedRecord = await UserModel.findOneAndUpdate(
-        { _id: user?._id }, // Find chats where user._id is in the array
-        { $pull: { activeSocketIds: socket.id } },
-        { new: true } // Remove user._id from the array
-      );
 
-      socketObj.io.to("allUsers").emit("close-status", {
-        chatId: chats.map((chat) => chat._id?.toString()),
-        users: user,
-      });
       if (agents[socket.id]) {
         delete agents[socket.id];
       }
