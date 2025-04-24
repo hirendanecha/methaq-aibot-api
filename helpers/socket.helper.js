@@ -1337,17 +1337,13 @@ socketObj.config = (server) => {
         { $pull: { activeSocketIds: socket.id } },
         { new: true } // Remove user._id from the array
       );
-
+      const chats = await ChatModel.find({
+        currentViewingUser: { $in: [user?._id] },
+      });
       socketObj.io.to("allUsers").emit("close-status", {
         chatId: chats.map((chat) => chat._id?.toString()),
         users: user,
       });
-      console.log(user, "user");
-
-      const chats = await ChatModel.find({
-        currentViewingUser: { $in: [user?._id] },
-      });
-      console.log(chats, "chatsss");
 
       await ChatModel.updateMany(
         { currentViewingUser: user?._id }, // Find chats where user._id is in the array
