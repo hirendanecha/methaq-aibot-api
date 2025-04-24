@@ -1101,21 +1101,23 @@ socketObj.config = (server) => {
       //     },
       //   },
       // ]);
-      const receivers = await UserModel.find({
-        $or: [
-          { role: { $in: ["Admin", "Supervisor"] } },
-          { department: chatDetails?.department?.toString() },
-        ],
-      }).lean();
-      [...receivers, chatDetails?.customerId].forEach((receiver) => {
-        socketObj.io
-          .to(receiver._id?.toString())
-          .emit("unread-count", {
-            // counts: UnReadCounts[0]?.totalUnread || 0,
-            chatId: chatId,
-            isSeen: true,
-          });
-      });
+      if (chatDetails?.latestMessage?.isSeen === false) {
+        const receivers = await UserModel.find({
+          $or: [
+            { role: { $in: ["Admin", "Supervisor"] } },
+            { department: chatDetails?.department?.toString() },
+          ],
+        }).lean();
+        [...receivers, chatDetails?.customerId].forEach((receiver) => {
+          socketObj.io
+            .to(receiver._id?.toString())
+            .emit("unread-count", {
+              // counts: UnReadCounts[0]?.totalUnread || 0,
+              chatId: chatId,
+              isSeen: true,
+            });
+        });
+      }
 
       if (typeof cb === "function")
         cb({
