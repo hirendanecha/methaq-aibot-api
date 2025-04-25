@@ -1076,7 +1076,7 @@ socketObj.config = (server) => {
         await markMessageAsRead(chatDetails?.latestMessage?.wpId);
       }
       const updateMessages = await MessageModel.updateMany(
-        { chatId: chatId },
+        { chatId: chatId, isSeen: false },
         { isSeen: true },
         { new: true }
       );
@@ -1101,7 +1101,7 @@ socketObj.config = (server) => {
       //     },
       //   },
       // ]);
-      if (chatDetails?.latestMessage?.isSeen === false) {
+      if (updateMessages.modifiedCount > 0) {
         const receivers = await UserModel.find({
           $or: [
             { role: { $in: ["Admin", "Supervisor"] } },
