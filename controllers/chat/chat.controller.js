@@ -412,10 +412,10 @@ const completedDocumentController = async (req, res) => {
       {
         tags: !chatDetails?.tags?.includes("document_received")
           ? [
-              ...(chatDetails?.tags?.filter((tag) => tag !== "pending") || []),
-              "document_received",
-              "qulified_lead",
-            ]
+            ...(chatDetails?.tags?.filter((tag) => tag !== "pending") || []),
+            "document_received",
+            "qulified_lead",
+          ]
           : chatDetails?.tags,
       },
       {
@@ -600,7 +600,7 @@ const getChatReports = async (req, res) => {
 
 const getChatTrends = async (req, res) => {
   try {
-    const { startDate, endDate, mode } = req.query;
+    const { startDate, endDate, mode } = req.body;
 
     let dateFilter = {};
     if (startDate || endDate) {
@@ -620,14 +620,14 @@ const getChatTrends = async (req, res) => {
     const groupByDate =
       mode === "month"
         ? {
-            month: { $month: "$createdAt" },
-            year: { $year: "$createdAt" },
-          }
+          month: { $month: "$createdAt" },
+          year: { $year: "$createdAt" },
+        }
         : {
-            day: { $dayOfMonth: "$createdAt" },
-            month: { $month: "$createdAt" },
-            year: { $year: "$createdAt" },
-          };
+          day: { $dayOfMonth: "$createdAt" },
+          month: { $month: "$createdAt" },
+          year: { $year: "$createdAt" },
+        };
 
     const chatTrends = await ChatModel.aggregate([
       { $match: dateFilter },
@@ -642,6 +642,7 @@ const getChatTrends = async (req, res) => {
       },
       { $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1 } },
     ]);
+    console.log(chatTrends, "chatTrends111");
 
     const unreadCounts = await ChatModel.aggregate([
       { $match: dateFilter },
