@@ -1068,8 +1068,8 @@ socketObj.config = (server) => {
         .populate("latestMessage")
         .lean();
       console.log(
-        chatDetails?.latestMessage?.wpId,
-        "chatDetails?.latestMessage"
+        chatDetails?.latestMessage,
+        "chatDetails?.latestMessage111111"
       );
 
       if (chatDetails?.latestMessage?.wpId) {
