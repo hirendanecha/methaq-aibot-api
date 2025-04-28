@@ -121,20 +121,22 @@ const addComplaint = async (req, res) => {
       complaindocuments: uniqueDocuments,
       // Include any additional details from the request body
     });
-    const updatedChat = await ChatModel.findOneAndUpdate({ _id: chat?._id }, {
-      $push: { tags: "complaint_submitted" },
-    }, { new: true });
-    const receivers = await UserModel.find({
-      $or: [
-        { role: { $in: ["Admin", "Supervisor"] } },
-        { department: chat?.department?.toString() },
-      ],
-    });
-    receivers.forEach((receiver) => {
-      socketObj.io
-        .to(receiver._id?.toString())
-        .emit("update-chat", updatedChat);
-    });
+    if (!chat?.tags?.includes("complaint_submitted")) {
+      const updatedChat = await ChatModel.findOneAndUpdate({ _id: chat?._id }, {
+        $push: { tags: "complaint_submitted" },
+      }, { new: true });
+      const receivers = await UserModel.find({
+        $or: [
+          { role: { $in: ["Admin", "Supervisor"] } },
+          { department: chat?.department?.toString() },
+        ],
+      });
+      receivers.forEach((receiver) => {
+        socketObj.io
+          .to(receiver._id?.toString())
+          .emit("update-chat", updatedChat);
+      });
+    }
     const savedComplaint = await newComplaint.save();
     console.log("Saved Complaint:", savedComplaint); // Log the saved complaint
     return sendSuccessResponse(res, { data: savedComplaint });
