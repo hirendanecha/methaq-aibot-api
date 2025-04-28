@@ -8,6 +8,10 @@ const ComplaintSchema = new Schema(
       ref: "customers",
       // required: true,
     },
+    complainNumber: {
+      type: String,
+      default: null
+    },
     adminId: {
       type: Schema.Types.ObjectId,
       ref: "user",
