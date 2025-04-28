@@ -290,6 +290,7 @@ exports.getChatList = async (req, res) => {
       search,
       tags,
       isRead,
+      customerId
     } = req.body;
 
     // const { limit, offset } = getPagination(page, size);
@@ -307,6 +308,11 @@ exports.getChatList = async (req, res) => {
 
     if (role !== "Admin" && role !== "Supervisor") {
       searchCondition.department = { $in: userDetails?.department };
+    }
+
+    if (customerId) {
+    
+      searchCondition.customerId = new mongoose.Types.ObjectId(customerId);
     }
 
     let pipeline = [
