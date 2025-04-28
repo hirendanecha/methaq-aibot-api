@@ -126,7 +126,7 @@ router.get("/get-tools", getToolFunctions);
 
 router.post("/addtool", addToolToAssistant);
 
-router.get("/get-complaints", getAllComplaints);
+router.post("/get-complaints", getAllComplaints);
 
 // Route to add a new complaint
 router.post("/add-complaints/:sessionId?", addComplaint);

@@ -21,6 +21,7 @@ const UserModel = require("../../models/user.model");
 const getAllComplaints = async (req, res) => {
   try {
     let { page, size, search } = req.query;
+    let { complaintType } = req.body; // <-- Get from body
     search = search?.replace(/^[^a-zA-Z0-9]+/, "");
     const { limit, offset } = getPagination(page, size);
 
@@ -31,6 +32,14 @@ const getAllComplaints = async (req, res) => {
         { complainstatus: { $regex: search, $options: "i" } },
       ];
     }
+   // console.log("complaintType from body:", complaintType);
+    // Add complaintType filter if provided
+    if (complaintType) {
+      query.complainType = Array.isArray(complaintType)
+        ? { $in: complaintType }
+        : complaintType;
+    }
+
 
     const count = await ComplaintModel.countDocuments(query);
 

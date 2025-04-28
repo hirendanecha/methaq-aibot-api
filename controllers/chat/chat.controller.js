@@ -412,10 +412,10 @@ const completedDocumentController = async (req, res) => {
       {
         tags: !chatDetails?.tags?.includes("document_received")
           ? [
-              ...(chatDetails?.tags?.filter((tag) => tag !== "pending") || []),
-              "document_received",
-              "qulified_lead",
-            ]
+            ...(chatDetails?.tags?.filter((tag) => tag !== "pending") || []),
+            "document_received",
+            "qulified_lead",
+          ]
           : chatDetails?.tags,
       },
       {
@@ -600,7 +600,7 @@ const getChatReports = async (req, res) => {
 
 const getChatTrends = async (req, res) => {
   try {
-    const { startDate, endDate, mode } = req.query;
+    const { startDate, endDate, mode } = req.body;
 
     let dateFilter = {};
     if (startDate || endDate) {
@@ -620,14 +620,14 @@ const getChatTrends = async (req, res) => {
     const groupByDate =
       mode === "month"
         ? {
-            month: { $month: "$createdAt" },
-            year: { $year: "$createdAt" },
-          }
+          month: { $month: "$createdAt" },
+          year: { $year: "$createdAt" },
+        }
         : {
-            day: { $dayOfMonth: "$createdAt" },
-            month: { $month: "$createdAt" },
-            year: { $year: "$createdAt" },
-          };
+          day: { $dayOfMonth: "$createdAt" },
+          month: { $month: "$createdAt" },
+          year: { $year: "$createdAt" },
+        };
 
     const chatTrends = await ChatModel.aggregate([
       { $match: dateFilter },
@@ -642,6 +642,7 @@ const getChatTrends = async (req, res) => {
       },
       { $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1 } },
     ]);
+    console.log(chatTrends, "chatTrends111");
 
     const unreadCounts = await ChatModel.aggregate([
       { $match: dateFilter },
@@ -702,7 +703,26 @@ const getChatTrends = async (req, res) => {
 };
 const getUnReadChatCounts = async (req, res) => {
   try {
+    const userId = req.user._id;
+    const { _id: adminId, role } = req.user;
+    let condition = {};
+    const adminDetails = await UserModel.findById(adminId);
+    console.log(role, "rolerolerole");
+
+    if (role === "Agent") {
+      condition = {
+        $or: [
+          { assignedTo: userId },
+          {
+            department: { $in: adminDetails?.department },
+          },
+        ],
+      };
+    }
     const UnReadCounts = await ChatModel.aggregate([
+      {
+        $match: Object(condition)?.length > 0 ? condition : {},
+      },
       {
         $lookup: {
           from: "messages",
@@ -1152,168 +1172,170 @@ const whatsappMessages = async (req, res) => {
         //   fileType,
         //   file,
         // });
-        if (!images[existingChat._id]) {
-          images[existingChat._id] = [];
-        }
-        images[existingChat._id].push({
-          mediaID,
-          url,
-          filePath,
-          fileType,
-          file,
-        });
-        console.log(images[existingChat._id], "imageUrlsefef");
+        if (!existingChat?.isHuman) {
+          if (!images[existingChat._id]) {
+            images[existingChat._id] = [];
+          }
+          images[existingChat._id].push({
+            mediaID,
+            url,
+            filePath,
+            fileType,
+            file,
+          });
+          console.log(images[existingChat._id], "imageUrlsefef");
 
-        if (images[existingChat._id].length === 1) {
-          // Set timer only when the first image is added
-          setTimeout(async () => {
-            // const numImages = images[existingChat._id].length;
+          if (images[existingChat._id].length === 1) {
+            // Set timer only when the first image is added
+            setTimeout(async () => {
+              // const numImages = images[existingChat._id].length;
 
-            // const numImages = images[departmentThread].length;
-            // Send processing start notification
-            // const processingMess = {
-            //   chatId: existingChat._id,
-            //   sender: null,
-            //   receiver: existingChat?.customerId?.toString(),
-            //   sendType: "assistant",
-            //   receiverType: "user",
-            //   content: `Processing your ${numImages} image${numImages > 1 ? "s" : ""
-            //     }.`,
-            // };
-            // sendMessageToAdmins(
-            //   socketObj,
-            //   processingMess,
-            //   existingChat?.department?._id
-            // );
-            // await sendWhatsAppMessage(
-            //   messageSender,
-            //   undefined,
-            //   messageID,
-            //   displayPhoneNumber,
-            //   `Processing your ${numImages} image${numImages > 1 ? "s" : ""}.`
-            // );
-            const imageUrls = images[existingChat._id].map(
-              (imageObj) => imageObj.url
-            );
-            console.log(imageUrls, "imahesfrinfj");
-
-            // const aiResponse = await handleUserMessage(
-            //   departmentThread,
-            //   null,
-            //   existingChat?.department?.assistantDetails?.id,
-            //   images[departmentThread],
-            //   images[departmentThread]?.map((imageObj) => imageObj?.url),
-            //   existingChat?.department?.prompt
-            // );
-            // images[departmentThread] = [];
-            // console.log(aiResponse, "aiResponseaiResponse");
-            // if (mediaID) {
-            //   await markMessageAsRead(messageID);
-            // }
-            // console.log(imageUrls, "imageUrlsss");
-            const aiResponse = await continueChat(
-              existingChat.currentSessionId,
-              "",
-              imageUrls
-            );
-            console.log(aiResponse, "aiResponse4544545");
-
-            const userInputmessage = aiResponse?.finaloutput || "";
-
-            if (userInputmessage) {
-              const mess2 = {
-                chatId: existingChat._id,
-                sender: null,
-                receiver: existingChat?.customerId?.toString(),
-                sendType: "assistant",
-                receiverType: "user",
-                content: userInputmessage,
-              };
-              await sendMessageToAdmins(
-                socketObj,
-                mess2,
-                existingChat?.department?._id
+              // const numImages = images[departmentThread].length;
+              // Send processing start notification
+              // const processingMess = {
+              //   chatId: existingChat._id,
+              //   sender: null,
+              //   receiver: existingChat?.customerId?.toString(),
+              //   sendType: "assistant",
+              //   receiverType: "user",
+              //   content: `Processing your ${numImages} image${numImages > 1 ? "s" : ""
+              //     }.`,
+              // };
+              // sendMessageToAdmins(
+              //   socketObj,
+              //   processingMess,
+              //   existingChat?.department?._id
+              // );
+              // await sendWhatsAppMessage(
+              //   messageSender,
+              //   undefined,
+              //   messageID,
+              //   displayPhoneNumber,
+              //   `Processing your ${numImages} image${numImages > 1 ? "s" : ""}.`
+              // );
+              const imageUrls = images[existingChat._id].map(
+                (imageObj) => imageObj.url
               );
-              await sendWhatsAppMessage(
-                messageSender,
-                undefined,
-                messageID,
-                displayPhoneNumber,
-                userInputmessage
-              );
-            }
-            if (aiResponse.interactiveMsg && aiResponse.interactivePayload) {
-              const intmessage = {
-                chatId: existingChat._id,
-                sender: null,
-                receiver: existingChat.customerId,
-                sendType: "assistant",
-                receiverType: "user",
-                content:
-                  aiResponse.interactivePayload?.bodyText ||
-                  "Please select one of the following options:",
-                messageType: "interective",
-                messageOptions: aiResponse.interactivePayload?.options?.map(
-                  (department) => ({
-                    label: department.name,
-                    value: department.depId,
-                  })
-                ),
-              };
-              sendMessageToAdmins(
-                socketObj,
-                intmessage,
-                existingChat?.department?._id
-              );
+              console.log(imageUrls, "imahesfrinfj");
 
-              await sendInteractiveMessage(
-                messageSender,
-                messageID,
-                aiResponse.interactivePayload
+              // const aiResponse = await handleUserMessage(
+              //   departmentThread,
+              //   null,
+              //   existingChat?.department?.assistantDetails?.id,
+              //   images[departmentThread],
+              //   images[departmentThread]?.map((imageObj) => imageObj?.url),
+              //   existingChat?.department?.prompt
+              // );
+              // images[departmentThread] = [];
+              // console.log(aiResponse, "aiResponseaiResponse");
+              // if (mediaID) {
+              //   await markMessageAsRead(messageID);
+              // }
+              // console.log(imageUrls, "imageUrlsss");
+              const aiResponse = await continueChat(
+                existingChat.currentSessionId,
+                "",
+                imageUrls
               );
-            } else if (
-              aiResponse?.interactiveListButton &&
-              aiResponse?.interactiveListPayload
-            ) {
-              // aiResponse?.finaloutput &&
-              //   (await sendWhatsAppMessage(
-              //     messageSender,
-              //     "",
-              //     messageID,
-              //     "",
-              //     aiResponse?.finaloutput
-              //   ));
-              await sendListMessage(
-                messageSender,
-                messageID,
-                aiResponse?.interactiveListPayload
-              );
-              const intmessage = {
-                chatId: existingChat._id,
-                sender: null,
-                receiver: existingChat.customerId?.toString(),
-                sendType: "assistant",
-                receiverType: "user",
-                content:
-                  aiResponse?.interactiveListPayload?.body?.text ||
-                  "Please select one of the following options:",
-                messageType: "interective",
-                messageOptions:
-                  aiResponse?.interactiveListPayload?.action?.buttons?.map(
-                    (btn) => ({
-                      label: btn.reply.title,
-                      value: btn.reply.id,
+              console.log(aiResponse, "aiResponse4544545");
+
+              const userInputmessage = aiResponse?.finaloutput || "";
+
+              if (userInputmessage) {
+                const mess2 = {
+                  chatId: existingChat._id,
+                  sender: null,
+                  receiver: existingChat?.customerId?.toString(),
+                  sendType: "assistant",
+                  receiverType: "user",
+                  content: userInputmessage,
+                };
+                await sendMessageToAdmins(
+                  socketObj,
+                  mess2,
+                  existingChat?.department?._id
+                );
+                await sendWhatsAppMessage(
+                  messageSender,
+                  undefined,
+                  messageID,
+                  displayPhoneNumber,
+                  userInputmessage
+                );
+              }
+              if (aiResponse.interactiveMsg && aiResponse.interactivePayload) {
+                const intmessage = {
+                  chatId: existingChat._id,
+                  sender: null,
+                  receiver: existingChat.customerId,
+                  sendType: "assistant",
+                  receiverType: "user",
+                  content:
+                    aiResponse.interactivePayload?.bodyText ||
+                    "Please select one of the following options:",
+                  messageType: "interective",
+                  messageOptions: aiResponse.interactivePayload?.options?.map(
+                    (department) => ({
+                      label: department.name,
+                      value: department.depId,
                     })
                   ),
-              };
-              await sendMessageToAdmins(
-                socketObj,
-                intmessage,
-                existingChat?.department?._id
-              );
-            }
-            images[existingChat._id] = [];
-          }, 5000);
+                };
+                sendMessageToAdmins(
+                  socketObj,
+                  intmessage,
+                  existingChat?.department?._id
+                );
+
+                await sendInteractiveMessage(
+                  messageSender,
+                  messageID,
+                  aiResponse.interactivePayload
+                );
+              } else if (
+                aiResponse?.interactiveListButton &&
+                aiResponse?.interactiveListPayload
+              ) {
+                // aiResponse?.finaloutput &&
+                //   (await sendWhatsAppMessage(
+                //     messageSender,
+                //     "",
+                //     messageID,
+                //     "",
+                //     aiResponse?.finaloutput
+                //   ));
+                await sendListMessage(
+                  messageSender,
+                  messageID,
+                  aiResponse?.interactiveListPayload
+                );
+                const intmessage = {
+                  chatId: existingChat._id,
+                  sender: null,
+                  receiver: existingChat.customerId?.toString(),
+                  sendType: "assistant",
+                  receiverType: "user",
+                  content:
+                    aiResponse?.interactiveListPayload?.body?.text ||
+                    "Please select one of the following options:",
+                  messageType: "interective",
+                  messageOptions:
+                    aiResponse?.interactiveListPayload?.action?.buttons?.map(
+                      (btn) => ({
+                        label: btn.reply.title,
+                        value: btn.reply.id,
+                      })
+                    ),
+                };
+                await sendMessageToAdmins(
+                  socketObj,
+                  intmessage,
+                  existingChat?.department?._id
+                );
+              }
+              images[existingChat._id] = [];
+            }, 5000);
+          }
         }
       } else if (message.type == "text") {
         const mess = {

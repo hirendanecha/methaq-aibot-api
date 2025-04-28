@@ -10,6 +10,7 @@ const {
   sendWhatsAppMessage,
   sendInteractiveMessage,
 } = require("../services/whatsaap.service");
+const dayjs = require("dayjs");
 
 const baseUrl = "";
 exports.removeFile = (fileName) => {
@@ -282,6 +283,7 @@ exports.sendMessageToAdmins = async (socketObj, message, department, extraReceiv
     if (department) {
       conditions.push({ department: department })
     }
+    const oldChatDetails = await ChatModel.findOne({ _id: message?.chatId }).populate("latestMessage").lean();
     if (extraReceiver?.length > 0) {
       conditions.push(...extraReceiver)
       const extraUsers = await UserModel.find(...extraReceiver).lean();
@@ -297,35 +299,35 @@ exports.sendMessageToAdmins = async (socketObj, message, department, extraReceiv
     )
       .populate("adminId customerId")
       .lean();
-    const UnReadCounts = await ChatModel.aggregate([
-      {
-        $lookup: {
-          from: "messages",
-          localField: "latestMessage",
-          foreignField: "_id",
-          as: "latestMessage",
-        }
-      },
-      {
-        $match: {
-          "latestMessage.isSeen": false,
-        }
-      },
-      {
-        $group: {
-          _id: null,
-          totalUnread: { $sum: 1 }
-        }
-      }
-    ]);
+    // const UnReadCounts = await ChatModel.aggregate([
+    //   {
+    //     $lookup: {
+    //       from: "messages",
+    //       localField: "latestMessage",
+    //       foreignField: "_id",
+    //       as: "latestMessage",
+    //     }
+    //   },
+    //   {
+    //     $match: {
+    //       "latestMessage.isSeen": false,
+    //     }
+    //   },
+    //   {
+    //     $group: {
+    //       _id: null,
+    //       totalUnread: { $sum: 1 }
+    //     }
+    //   }
+    // ]);
     [...receivers].forEach((receiver) => {
       sendUpdate && socketObj.io.to(receiver._id?.toString()).emit("update-chat", { ...updatedChat, latestMessage: latestMess });
       (messageToExtr || !extraUserIds?.includes(receiver._id?.toString())) && socketObj.io
         .to(receiver._id?.toString())
         .emit("message", { ...updatedChat, latestMessage: latestMess });
-      (messageToExtr || !extraUserIds?.includes(receiver._id?.toString())) && socketObj.io
+      oldChatDetails?.latestMessage?.isSeen && (messageToExtr || !extraUserIds?.includes(receiver._id?.toString())) && socketObj.io
         .to(receiver._id?.toString())
-        .emit("unread-count", { counts: UnReadCounts[0]?.totalUnread || 0, chatId: updatedChat?._id?.toString(), isSeen: false });
+        .emit("unread-count", { chatId: updatedChat?._id?.toString(), isSeen: false });
     });
     return latestMess;
   } catch (error) {
@@ -372,7 +374,20 @@ exports.checkDepartmentAvailability = async (
   existingChat
 ) => {
   try {
-    if (existingChat?.department?.workingHours?.startTime) {
+    const currentDay = new Date().getDay();
+    console.log(currentDay, "currentDay");
+    const daySchedule = existingChat?.department?.workingHours[`${currentDay}`];
+    const holidays = existingChat?.department?.holidays;
+    let isTodayHoliday = false;
+    if (holidays?.length > 0) {
+      isTodayHoliday = holidays.some((holiday) => dayjs(holiday?.start).isBefore(dayjs()) && dayjs(holiday?.end).isAfter(dayjs()));
+    }
+
+    if (isTodayHoliday) {
+      return existingChat?.department?.messages?.afterHoursResponse;
+    }
+
+    if (daySchedule?.isAvailable) {
       // Get the current hour in the server's local time zone
 
       // const currentHour = Number(
@@ -384,12 +399,12 @@ exports.checkDepartmentAvailability = async (
       // );
 
       const currentHour = new Date().getHours();
-
+      console.log(currentDay, daySchedule, "currentDay");
       const startHour = parseInt(
-        existingChat?.department?.workingHours?.startTime.split(":")[0]
+        daySchedule?.startTime.split(":")[0]
       );
       const endHour = parseInt(
-        existingChat?.department?.workingHours?.endTime.split(":")[0]
+        daySchedule?.endTime.split(":")[0]
       );
 
       console.log(currentHour, "currentHour");
@@ -419,6 +434,9 @@ exports.checkDepartmentAvailability = async (
         // );
         return existingChat?.department?.messages?.afterHoursResponse;
       }
+    }
+    else {
+      return existingChat?.department?.messages?.afterHoursResponse;
     }
     return "True";
   } catch (error) {
@@ -571,3 +589,20 @@ exports.sendInterectiveMessageReSelectDepartment = async (
 const imagesFormat = ["jpg", "jpeg", "png", "gif", "svg", "webp"];
 exports.isImageType = (attachment) =>
   imagesFormat.some((format) => attachment?.toLowerCase?.().endsWith?.(format));
+
+
+exports.getNextSubDeptId = (deptId) => {
+  const ids = deptId?.split('-');
+  let subDeptId = "";
+  if (ids?.length > 0) {
+    subDeptId = ids[ids.length - 1];
+  }
+  console.log(subDeptId.charCodeAt(0), "subDeptId");
+  if (subDeptId.charCodeAt(0) >= 90) {
+    return false;
+  }
+  const nextSubDeptId = subDeptId.charCodeAt(0) + 1;
+  console.log(nextSubDeptId, "nextSubDeptId");
+
+  return `${ids[0]}-${String.fromCharCode(nextSubDeptId)}`;
+}

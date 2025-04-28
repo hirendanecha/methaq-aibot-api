@@ -33,9 +33,16 @@ socketObj.config = (server) => {
   const io = require("socket.io")(server, {
     transports: ["websocket", "polling"],
     cors: {
-      origin: "*",
+      origin: "*", // Consider restricting in prod for security
+      methods: ["GET", "POST"],
+      credentials: true,
     },
+    pingTimeout: 20000, // 20 seconds timeout to detect dead connections
+    pingInterval: 25000, // Try to keep connection alive
   });
+
+
+
   socketObj.io = io;
 
   // io.use((socket, next) => {
@@ -241,9 +248,8 @@ socketObj.config = (server) => {
               sendType: "assistant",
               receiverType: "admin",
               messageType: "tooltip",
-              content: `Chat is transferred to ${
-                userInput?.split("-")[1]
-              } department`,
+              content: `Chat is transferred to ${userInput?.split("-")[1]
+                } department`,
             };
             sendMessageToAdmins(socketObj, mess2, chatDetails?.department);
           }
@@ -734,7 +740,7 @@ socketObj.config = (server) => {
         const tooltipMess = await newMessage.save();
         console.log(
           +chatDetails?.initialHandlingTime ||
-            dayjs().diff(chatDetails?.agentTransferedAt, "minute"),
+          dayjs().diff(chatDetails?.agentTransferedAt, "minute"),
           chatDetails?.agentTransferedAt,
           "chatDetails?.initialHandlingTime"
         );
@@ -1062,53 +1068,56 @@ socketObj.config = (server) => {
         .populate("latestMessage")
         .lean();
       console.log(
-        chatDetails?.latestMessage?.wpId,
-        "chatDetails?.latestMessage"
+        chatDetails?.latestMessage,
+        "chatDetails?.latestMessage111111"
       );
 
       if (chatDetails?.latestMessage?.wpId) {
         await markMessageAsRead(chatDetails?.latestMessage?.wpId);
       }
       const updateMessages = await MessageModel.updateMany(
-        { chatId: chatId },
-        { isSeen: true }
+        { chatId: chatId, isSeen: false },
+        { isSeen: true },
+        { new: true }
       );
-      const UnReadCounts = await ChatModel.aggregate([
-        {
-          $lookup: {
-            from: "messages",
-            localField: "latestMessage",
-            foreignField: "_id",
-            as: "latestMessage",
-          },
-        },
-        {
-          $match: {
-            "latestMessage.isSeen": false,
-          },
-        },
-        {
-          $group: {
-            _id: null,
-            totalUnread: { $sum: 1 },
-          },
-        },
-      ]);
-      const receivers = await UserModel.find({
-        $or: [
-          { role: { $in: ["Admin", "Supervisor"] } },
-          { department: chatDetails?.department?.toString() },
-        ],
-      }).lean();
-      [...receivers, chatDetails?.customerId].forEach((receiver) => {
-        socketObj.io
-          .to(receiver._id?.toString())
-          .emit("unread-count", {
-            counts: UnReadCounts[0]?.totalUnread || 0,
-            chatId: chatId,
-            isSeen: true,
-          });
-      });
+      // const UnReadCounts = await ChatModel.aggregate([
+      //   {
+      //     $lookup: {
+      //       from: "messages",
+      //       localField: "latestMessage",
+      //       foreignField: "_id",
+      //       as: "latestMessage",
+      //     },
+      //   },
+      //   {
+      //     $match: {
+      //       "latestMessage.isSeen": false,
+      //     },
+      //   },
+      //   {
+      //     $group: {
+      //       _id: null,
+      //       totalUnread: { $sum: 1 },
+      //     },
+      //   },
+      // ]);
+      if (updateMessages.modifiedCount > 0) {
+        const receivers = await UserModel.find({
+          $or: [
+            { role: { $in: ["Admin", "Supervisor"] } },
+            { department: chatDetails?.department?.toString() },
+          ],
+        }).lean();
+        [...receivers, chatDetails?.customerId].forEach((receiver) => {
+          socketObj.io
+            .to(receiver._id?.toString())
+            .emit("unread-count", {
+              // counts: UnReadCounts[0]?.totalUnread || 0,
+              chatId: chatId,
+              isSeen: true,
+            });
+        });
+      }
 
       if (typeof cb === "function")
         cb({
@@ -1143,8 +1152,7 @@ socketObj.config = (server) => {
           sendType: "admin",
           content:
             chat?.department?.messages?.chatClosingMessage ||
-            `This conversation has ended, thank you for contacting Methaq Takaful Insuance ${
-              chat?.department?.name ? chat?.department?.name : ""
+            `This conversation has ended, thank you for contacting Methaq Takaful Insuance ${chat?.department?.name ? chat?.department?.name : ""
             }. We hope we were able to serve you`,
           attachments: [],
           timestamp: new Date(),
@@ -1193,9 +1201,8 @@ socketObj.config = (server) => {
             undefined,
             undefined,
             chat?.department?.messages?.chatClosingMessage ||
-              `This conversation has ended, thank you for contacting Methaq Takaful Insuance ${
-                chat?.department?.name ? chat?.department?.name : ""
-              }. We hope we were able to serve you`,
+            `This conversation has ended, thank you for contacting Methaq Takaful Insuance ${chat?.department?.name ? chat?.department?.name : ""
+            }. We hope we were able to serve you`,
             updatedChat?.isHuman
           );
         }
@@ -1328,27 +1335,24 @@ socketObj.config = (server) => {
       const user = await UserModel.findOne({
         activeSocketIds: { $in: [socket.id] },
       });
-      console.log(user, "user");
-
-      const chats = await ChatModel.find({
-        currentViewingUser: { $in: [user?._id] },
-      });
-      console.log(chats, "chatsss");
-
-      await ChatModel.updateMany(
-        { currentViewingUser: user?._id }, // Find chats where user._id is in the array
-        { $pull: { currentViewingUser: user?._id } } // Remove user._id from the array
-      );
       const updatedRecord = await UserModel.findOneAndUpdate(
         { _id: user?._id }, // Find chats where user._id is in the array
         { $pull: { activeSocketIds: socket.id } },
         { new: true } // Remove user._id from the array
       );
-
+      const chats = await ChatModel.find({
+        currentViewingUser: { $in: [user?._id] },
+      });
       socketObj.io.to("allUsers").emit("close-status", {
         chatId: chats.map((chat) => chat._id?.toString()),
         users: user,
       });
+
+      await ChatModel.updateMany(
+        { currentViewingUser: user?._id }, // Find chats where user._id is in the array
+        { $pull: { currentViewingUser: user?._id } } // Remove user._id from the array
+      );
+
       if (agents[socket.id]) {
         delete agents[socket.id];
       }

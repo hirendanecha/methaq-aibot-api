@@ -15,7 +15,7 @@ const { assignAgentToMotorInquiry, updatedMotorInquiry, getMotorInquiryById, upd
 
 router.get("/", permissionAuthorization("commonPermission.department", ["read"]), departmentCtrl.getAllDepartment);
 
-router.get("/:id/getdepartmentdetails", permissionAuthorization("commonPermission.department", ["read"]), departmentCtrl.getParticularDepartment);
+router.get("/:id/getdepartmentdetails", permissionAuthorization("commonPermission.department", ["read"], ['Admin', 'Agent', 'Supervisor']), departmentCtrl.getParticularDepartment);
 
 router.post(
   "/",
@@ -55,7 +55,7 @@ router.delete("/:id", permissionAuthorization("commonPermission.department", ["d
 router.patch("/assign-agent-complaint/:id", permissionAuthorization("commonPermission.complain", ["update"], ['Admin']), assignAgentToComplaint);
 
 
-router.patch("/assign-agent-motor-inquiry/:id", permissionAuthorization("commonPermission.motorInquiry", ["update"], ['Admin']), assignAgentToMotorInquiry); 
+router.patch("/assign-agent-motor-inquiry/:id", permissionAuthorization("commonPermission.motorInquiry", ["update"], ['Admin']), assignAgentToMotorInquiry);
 router.put("/update-motor-inquiry/:id", permissionAuthorization("commonPermission.motorInquiry", ["update"], ['Admin']), updatedMotorInquiry);
 router.patch("/update-status-motor-inquiry/:id", permissionAuthorization("commonPermission.motorInquiry", ["update"], ['Admin']), updatMotorInquiryStatus);
 router.get("/getByIdMotorInquiry/:id", permissionAuthorization("commonPermission.motorInquiry", ["read"], ['Admin']), getMotorInquiryById);  //done
@@ -64,9 +64,12 @@ router.put("/update-complaint/:id", permissionAuthorization("commonPermission.co
 
 router.patch("/update-status-complaint/:id", permissionAuthorization("commonPermission.complain", ["update"], ['Admin']), updateComplaintStatus);
 
-router.get("/get-complaints", permissionAuthorization("commonPermission.complain", ["read"], ['Admin']), getAllComplaints);
+router.post("/get-complaints", permissionAuthorization("commonPermission.complain", ["read"], ['Admin']), getAllComplaints);
 
 router.get("/getByIdComplain/:id", permissionAuthorization("commonPermission.complain", ["read"], ['Admin']), getComplaintById);
 
+router.post("/update-department-working-hours", permissionAuthorization("commonPermission.department", ["update"], ['Admin']), departmentCtrl.updateDepartmentsWorkingHours);
+
+router.get('/getSubDepartmentId/:departmentId', departmentCtrl.getSubDepartmentId);
 
 module.exports = router;
