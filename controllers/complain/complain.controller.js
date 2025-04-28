@@ -30,6 +30,7 @@ const getAllComplaints = async (req, res) => {
       query.$or = [
         { customername: { $regex: search, $options: "i" } },
         { complainstatus: { $regex: search, $options: "i" } },
+        { complainNumber: { $regex: search, $options: "i" } }
       ];
     }
     // console.log("complaintType from body:", complaintType);
