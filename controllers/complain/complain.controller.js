@@ -97,21 +97,37 @@ const addComplaint = async (req, res) => {
       uniqueDocuments = [...new Set(normalizedDocuments)]; // Ensure uniqueness
     }
 
-    console.log(uniqueDocuments, req.body, "uniqueDocuments");
     const latest = await ComplaintModel.findOne({ complainNumber: { $exists: true } })
-      .sort({ createdAt: -1 })
-      .select("complainNumber")
-      .lean();
-    let nextNumber = 1;
-    if (latest && latest.complainNumber) {
-      const match = latest.complainNumber.match(/^COM(\d+)$/);
-      if (match) {
-        nextNumber = parseInt(match[1], 10) + 1;
+    .sort({ createdAt: -1 })
+    .select("complainNumber")
+    .lean();
+  
+  let nextNumber = 1;
+  const currentYear = new Date().getFullYear();
+  
+  if (latest && latest.complainNumber) {
+    const match = latest.complainNumber.match(/^COM(\d{4})(\d+)$/);
+    if (match) {
+      const latestYear = parseInt(match[1], 10);
+      const latestSeq = parseInt(match[2], 10);
+  
+      if (latestYear === currentYear) {
+        nextNumber = latestSeq + 1; // same year, just increment sequence
+      } else {
+        nextNumber = 1; // new year, reset sequence
       }
     }
+  }
+  
+  // Pad the number (e.g., 1 -> 001)
+  const paddedNumber = String(nextNumber).padStart(3, '0');
+  
+  // Final complaint number
+  const complainNumber = `COM${currentYear}${paddedNumber}`;
+  
+  console.log(latest, "latest");
     const newComplaint = new ComplaintModel({
       chatId: chat ? chat._id : null,
-      complainNumber: nextNumber,
       custid: customer ? customer._id : null,
       customername: customer ? customer.name : req.body.customername,
       customeremail: customer ? customer.email : req.body.customeremail,
@@ -119,6 +135,7 @@ const addComplaint = async (req, res) => {
       adminId: agent ? agent._id : null,
       ...req.body,
       complaindocuments: uniqueDocuments,
+      complainNumber,
       // Include any additional details from the request body
     });
     if (!chat?.tags?.includes("complaint_submitted")) {
