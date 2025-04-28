@@ -32,7 +32,7 @@ const getAllComplaints = async (req, res) => {
         { complainstatus: { $regex: search, $options: "i" } },
       ];
     }
-   // console.log("complaintType from body:", complaintType);
+    // console.log("complaintType from body:", complaintType);
     // Add complaintType filter if provided
     if (complaintType) {
       query.complainType = Array.isArray(complaintType)
@@ -98,9 +98,20 @@ const addComplaint = async (req, res) => {
     }
 
     console.log(uniqueDocuments, req.body, "uniqueDocuments");
-
+    const latest = await ComplaintModel.findOne({ complainNumber: { $exists: true } })
+      .sort({ createdAt: -1 })
+      .select("complainNumber")
+      .lean();
+    let nextNumber = 1;
+    if (latest && latest.complainNumber) {
+      const match = latest.complainNumber.match(/^COM(\d+)$/);
+      if (match) {
+        nextNumber = parseInt(match[1], 10) + 1;
+      }
+    }
     const newComplaint = new ComplaintModel({
       chatId: chat ? chat._id : null,
+      complainNumber: nextNumber,
       custid: customer ? customer._id : null,
       customername: customer ? customer.name : req.body.customername,
       customeremail: customer ? customer.email : req.body.customeremail,
@@ -110,7 +121,20 @@ const addComplaint = async (req, res) => {
       complaindocuments: uniqueDocuments,
       // Include any additional details from the request body
     });
-
+    const updatedChat = await ChatModel.findOneAndUpdate({ _id: chat?._id }, {
+      $push: { tags: "complaint_submitted" },
+    }, { new: true });
+    const receivers = await UserModel.find({
+      $or: [
+        { role: { $in: ["Admin", "Supervisor"] } },
+        { department: chat?.department?.toString() },
+      ],
+    });
+    receivers.forEach((receiver) => {
+      socketObj.io
+        .to(receiver._id?.toString())
+        .emit("update-chat", updatedChat);
+    });
     const savedComplaint = await newComplaint.save();
     console.log("Saved Complaint:", savedComplaint); // Log the saved complaint
     return sendSuccessResponse(res, { data: savedComplaint });
@@ -157,7 +181,7 @@ const transferChatToMainMenu = async (req, res) => {
     const final = await newMessage.save();
     const startChatResponse = await startChat(" ");
     const sessionIds = startChatResponse?.response?.data?.sessionId;
-    const firstMess = await continueChat(sessionIds,sessionIds);
+    const firstMess = await continueChat(sessionIds, sessionIds);
 
     // Update the chat with new session details
     const updatedChat = await ChatModel.findOneAndUpdate(
