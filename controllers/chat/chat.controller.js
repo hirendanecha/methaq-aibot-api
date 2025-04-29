@@ -716,14 +716,14 @@ const getUnReadChatCounts = async (req, res) => {
         $or: [
           { assignedTo: userId },
           {
-            department: { $in: adminDetails?.department },
+            department: { $in: adminDetails?.department || [] },
           },
         ],
       };
     }
     const UnReadCounts = await ChatModel.aggregate([
       {
-        $match: Object(condition)?.length > 0 ? condition : {},
+        $match: condition,
       },
       {
         $lookup: {
