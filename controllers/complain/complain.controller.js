@@ -2,6 +2,9 @@ const { default: mongoose } = require("mongoose");
 const ChatModel = require("../../models/chat.model");
 const ComplaintModel = require("../../models/complain.model");
 const CustomerModel = require("../../models/customer.model");
+const PDFDocument = require("pdfkit");
+const axios = require("axios");
+const fs = require("fs");
 const {
   getPagination,
   getPaginationData,
@@ -30,6 +33,7 @@ const getAllComplaints = async (req, res) => {
       query.$or = [
         { customername: { $regex: search, $options: "i" } },
         { complainstatus: { $regex: search, $options: "i" } },
+        { complainNumber: { $regex: search, $options: "i" } },
       ];
     }
     // console.log("complaintType from body:", complaintType);
@@ -39,7 +43,6 @@ const getAllComplaints = async (req, res) => {
         ? { $in: complaintType }
         : complaintType;
     }
-
 
     const count = await ComplaintModel.countDocuments(query);
 
@@ -97,35 +100,37 @@ const addComplaint = async (req, res) => {
       uniqueDocuments = [...new Set(normalizedDocuments)]; // Ensure uniqueness
     }
 
-    const latest = await ComplaintModel.findOne({ complainNumber: { $exists: true } })
-    .sort({ createdAt: -1 })
-    .select("complainNumber")
-    .lean();
-  
-  let nextNumber = 1;
-  const currentYear = new Date().getFullYear();
-  
-  if (latest && latest.complainNumber) {
-    const match = latest.complainNumber.match(/^COM(\d{4})(\d+)$/);
-    if (match) {
-      const latestYear = parseInt(match[1], 10);
-      const latestSeq = parseInt(match[2], 10);
-  
-      if (latestYear === currentYear) {
-        nextNumber = latestSeq + 1; // same year, just increment sequence
-      } else {
-        nextNumber = 1; // new year, reset sequence
+    const latest = await ComplaintModel.findOne({
+      complainNumber: { $exists: true },
+    })
+      .sort({ createdAt: -1 })
+      .select("complainNumber")
+      .lean();
+
+    let nextNumber = 1;
+    const currentYear = new Date().getFullYear();
+
+    if (latest && latest.complainNumber) {
+      const match = latest.complainNumber.match(/^COM(\d{4})(\d+)$/);
+      if (match) {
+        const latestYear = parseInt(match[1], 10);
+        const latestSeq = parseInt(match[2], 10);
+
+        if (latestYear === currentYear) {
+          nextNumber = latestSeq + 1; // same year, just increment sequence
+        } else {
+          nextNumber = 1; // new year, reset sequence
+        }
       }
     }
-  }
-  
-  // Pad the number (e.g., 1 -> 001)
-  const paddedNumber = String(nextNumber).padStart(3, '0');
-  
-  // Final complaint number
-  const complainNumber = `COM${currentYear}${paddedNumber}`;
-  
-  console.log(latest, "latest");
+
+    // Pad the number (e.g., 1 -> 001)
+    const paddedNumber = String(nextNumber).padStart(3, "0");
+
+    // Final complaint number
+    const complainNumber = `COM${currentYear}${paddedNumber}`;
+
+    console.log(latest, "latest");
     const newComplaint = new ComplaintModel({
       chatId: chat ? chat._id : null,
       custid: customer ? customer._id : null,
@@ -139,9 +144,13 @@ const addComplaint = async (req, res) => {
       // Include any additional details from the request body
     });
     if (!chat?.tags?.includes("complaint_submitted")) {
-      const updatedChat = await ChatModel.findOneAndUpdate({ _id: chat?._id }, {
-        $push: { tags: "complaint_submitted" },
-      }, { new: true });
+      const updatedChat = await ChatModel.findOneAndUpdate(
+        { _id: chat?._id },
+        {
+          $push: { tags: "complaint_submitted" },
+        },
+        { new: true }
+      );
       const receivers = await UserModel.find({
         $or: [
           { role: { $in: ["Admin", "Supervisor"] } },
@@ -167,19 +176,29 @@ const transferChatToMainMenu = async (req, res) => {
     const { sessionId } = req.params; // Get session ID from request parameters
 
     if (!sessionId) {
-      return res.status(400).json({ success: false, message: "Session ID is required." });
+      return res
+        .status(400)
+        .json({ success: false, message: "Session ID is required." });
     }
 
     // Find the chat by session ID
-    const chat = await ChatModel.findOne({ currentSessionId: sessionId }).lean();
+    const chat = await ChatModel.findOne({
+      currentSessionId: sessionId,
+    }).lean();
     if (!chat) {
-      return res.status(404).json({ success: false, message: "Chat not found." });
+      return res
+        .status(404)
+        .json({ success: false, message: "Chat not found." });
     }
 
     // Get chat details and populate customer information
-    const chatDetails = await ChatModel.findById(chat._id).populate("customerId").lean();
+    const chatDetails = await ChatModel.findById(chat._id)
+      .populate("customerId")
+      .lean();
     if (!chatDetails) {
-      return res.status(404).json({ success: false, message: "Chat details not found." });
+      return res
+        .status(404)
+        .json({ success: false, message: "Chat details not found." });
     }
 
     // Create a message indicating the transfer
@@ -413,6 +432,165 @@ const assignDepartmentBySessionId = async (req, res) => {
   }
 };
 
+const downloadComplaintPdf = async (req, res) => {
+  try {
+    const complaintId = req.params.id;
+    const complaint = await ComplaintModel.findById(complaintId);
+
+    const userId = req.user && req.user._id;
+    let generatedBy = "Unknown";
+    if (userId) {
+      const user = await UserModel.findById(userId).lean();
+      if (user && user.fullName) {
+        generatedBy = user.fullName;
+      }
+    }
+    if (!complaint) {
+      return res.status(404).json({ message: "Complaint not found" });
+    }
+
+    const doc = new PDFDocument();
+
+    const filename = `Complaint_${complaint.customername || "Unknown"}.pdf`;
+    res.setHeader(
+      "Content-disposition",
+      `attachment; filename="${encodeURIComponent(filename)}"`
+    );
+    res.setHeader("Content-type", "application/pdf");
+    doc.pipe(res);
+
+    const pageWidth = doc.page.width;
+    const x = (200 - 100) / 2;
+    // ---- HEADER ----
+    // const logoPath = "public/assets/dark-web-logo.jpg"; // change if needed
+    // if (fs.existsSync(logoPath)) {
+    //   doc.image(logoPath, x, 20, { width: 500, height: 100 });
+    // }
+
+    // doc
+    //   .fontSize(20)
+    //   .text('Company Name', 0, 50, { align: 'center' })
+    //   .fontSize(10)
+    //   .text('Address Line 1', 450, 50, { align: 'right' })
+    //   .text('Phone: +123456789', 450, 65, { align: 'right' });
+
+    doc.moveDown(0);
+
+    // ---- TITLE ----
+    doc.fontSize(18).text("Complaint & Suggestion Report", {
+      align: "center",
+      underline: true,
+    });
+
+    doc.moveDown(2);
+
+    // ---- COMPLAINT DETAILS ----
+    // doc
+    //   .roundedRect(50, doc.y, 500, 140, 8)
+    //   .stroke();
+
+    const startY = doc.y + 10;
+    const leftX = 60;
+    const rightX = 200;
+
+    const details = [
+      { label: "Complaint Number", value: complaint.complainNumber || "N/A" },
+      {
+        label: "Reference Number",
+        value: `REF-${complaint.complainNumber || "N/A"}`,
+      },
+      { label: "Customer Name", value: complaint.customername || "N/A" },
+      { label: "Customer Email", value: complaint.customeremail || "N/A" },
+      { label: "Customer Phone", value: complaint.customerphone || "N/A" },
+      { label: "Complaint Type", value: complaint.complainType || "N/A" },
+      { label: "Complaint Status", value: complaint.complainstatus || "N/A" },
+      {
+        label: "Complaint Description",
+        value: complaint.complaindesc || "N/A",
+      },
+    ];
+
+    let y = startY;
+    details.forEach((item) => {
+      doc
+        .font("Helvetica-Bold")
+        .fontSize(11)
+        .text(item.label + ":", leftX, y)
+        .font("Helvetica")
+        .text(item.value, rightX, y);
+      y += 20;
+    });
+
+    doc.moveDown(8);
+
+    // ---- ATTACHED DOCUMENTS ----
+
+    const imageWidth = 400; // or whatever width you use in fit
+    const imageHeight = 300; // or whatever height you use in fit
+
+    if (complaint.complaindocuments && complaint.complaindocuments.length > 0) {
+      doc
+        .font("Helvetica-Bold")
+        .fontSize(13)
+        .text("Attached Documents:", { underline: true })
+        .moveDown(1);
+
+      for (const docUrl of complaint.complaindocuments) {
+        try {
+          const response = await axios.get(docUrl, {
+            responseType: "arraybuffer",
+          });
+          const imgBuffer = Buffer.from(response.data);
+
+          // Center the image horizontally
+          const x = (pageWidth - imageWidth) / 2;
+          const y = doc.y; // current y position
+
+          doc.image(imgBuffer, x, y, {
+            width: imageWidth,
+            height: imageHeight,
+          });
+          doc.moveDown(2);
+        } catch (err) {
+          doc
+            .fillColor("red")
+            .font("Helvetica")
+            .fontSize(10)
+            .text("Failed to load attachment.", { align: "center" })
+            .fillColor("black");
+          doc.moveDown(1);
+        }
+      }
+    }
+    const generatedOn = new Date().toLocaleString();
+    doc
+      .font("Helvetica")
+      .fontSize(10)
+      .fillColor("#888888")
+      .text(`Generated by: ${generatedBy}\nGenerated on: ${generatedOn}`, {
+        align: 'right'
+      });
+    // ---- FOOTER ----
+    // const pageHeight = doc.page.height;
+    // doc
+    //   .fontSize(10)
+    //   .text(
+    //     `Generated on: ${new Date().toLocaleString()}`,
+    //     50,
+    //     pageHeight - 50,
+    //     {
+    //       align: "center",
+    //       width: 500,
+    //     }
+    //   );
+
+    doc.end();
+  } catch (error) {
+    console.error("Error generating complaint PDF:", error);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
 module.exports = {
   getAllComplaints,
   deleteComplaintById,
@@ -422,5 +600,6 @@ module.exports = {
   assignAgentToComplaint,
   getComplaintById,
   assignDepartmentBySessionId,
-  transferChatToMainMenu
+  transferChatToMainMenu,
+  downloadComplaintPdf,
 };
