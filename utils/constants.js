@@ -30,5 +30,5 @@ module.exports = {
     },
   },
   chatStatus: ["active", "archived"],
-  chatTags: ["document_received", "pending", "qulified_lead", "ai_answered", "abu_dhabi_claim", "al_ain_claim", "dubai_other_claim"],
+  chatTags: ["document_received", "pending", "qulified_lead", "ai_answered", "abu_dhabi_claim", "al_ain_claim", "dubai_other_claim", "complaint_submitted"],
 };
