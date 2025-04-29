@@ -465,7 +465,7 @@ const getDepartmentAvailability = async (req, res) => {
 const getChatReports = async (req, res) => {
   try {
     const user = req.user;
-    const { departmentId, startDate, endDate } = req.query;
+    const { departmentId, adminId, startDate, endDate } = req.query;
     console.log(
       departmentId,
       startDate,
@@ -480,11 +480,13 @@ const getChatReports = async (req, res) => {
       extraPayload["department"] = userDetails?.department;
     }
 
-    console.log(extraPayload, "extraPayload");
 
     // Add department filter if provided
     if (departmentId) {
       extraPayload["department"] = departmentId;
+    }
+    if (adminId) {
+      extraPayload["adminId"] = adminId
     }
 
     console.log(extraPayload, "extraPayload");

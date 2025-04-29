@@ -3,7 +3,7 @@ const router = express.Router();
 const { fileUpload } = require("../../../middleware/file-upload");
 const departmentCtrl = require("../../../controllers/admin/department.controller");
 const { permissionAuthorization } = require("../../../middleware/authorization");
-const { updateComplaintStatus, getAllComplaints, getComplaintById, assignAgentToComplaint, updateComplaint } = require("../../../controllers/complain/complain.controller");
+const { updateComplaintStatus, getAllComplaints, getComplaintById, assignAgentToComplaint, updateComplaint, downloadComplaintPdf } = require("../../../controllers/complain/complain.controller");
 const { assignAgentToMotorInquiry, updatedMotorInquiry, getMotorInquiryById, updatMotorInquiryStatus } = require("../../../controllers/motorInquiry/motor.controller");
 
 /* APIs for Department
@@ -71,5 +71,7 @@ router.get("/getByIdComplain/:id", permissionAuthorization("commonPermission.com
 router.post("/update-department-working-hours", permissionAuthorization("commonPermission.department", ["update"], ['Admin']), departmentCtrl.updateDepartmentsWorkingHours);
 
 router.get('/getSubDepartmentId/:departmentId', departmentCtrl.getSubDepartmentId);
+
+router.get('/complaint/:id/pdf',permissionAuthorization("commonPermission.complain", ["read"], ['Admin']),downloadComplaintPdf);
 
 module.exports = router;
