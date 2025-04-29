@@ -606,29 +606,40 @@ const getChatTrends = async (req, res) => {
 
     let dateFilter = {};
     if (startDate || endDate) {
-      dateFilter["createdAt"] = {};
+      dateFilter["updatedAt"] = {};
       if (startDate) {
         const start = new Date(startDate);
         start.setUTCHours(0, 0, 0, 0);
-        dateFilter["createdAt"]["$gte"] = start;
+        dateFilter["updatedAt"]["$gte"] = start;
       }
       if (endDate) {
         const end = new Date(endDate);
         end.setUTCHours(23, 59, 59, 999);
-        dateFilter["createdAt"]["$lte"] = end;
+        dateFilter["updatedAt"]["$lte"] = end;
       }
     }
 
     const groupByDate =
       mode === "month"
         ? {
-          month: { $month: "$createdAt" },
-          year: { $year: "$createdAt" },
+          month: { $month: "$updatedAt" },
+          year: { $year: "$updatedAt" },
         }
         : {
-          day: { $dayOfMonth: "$createdAt" },
-          month: { $month: "$createdAt" },
-          year: { $year: "$createdAt" },
+          day: { $dayOfMonth: "$updatedAt" },
+          month: { $month: "$updatedAt" },
+          year: { $year: "$updatedAt" },
+        };
+    const groupByDate1 =
+      mode === "month"
+        ? {
+          month: { $month: "$latestMessage.timestamp" },
+          year: { $year: "$latestMessage.timestamp" },
+        }
+        : {
+          day: { $dayOfMonth: "$latestMessage.timestamp" },
+          month: { $month: "$latestMessage.timestamp" },
+          year: { $year: "$latestMessage.timestamp" },
         };
 
     const chatTrends = await ChatModel.aggregate([
@@ -645,6 +656,12 @@ const getChatTrends = async (req, res) => {
       { $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1 } },
     ]);
     console.log(chatTrends, "chatTrends111");
+    const activeChats = chatTrends.filter(
+      (item) => item?._id?.status === "active"
+    )
+    const archiveChats = chatTrends.filter(
+      (item) => item?._id?.status === "archived"
+    )
 
     const unreadCounts = await ChatModel.aggregate([
       { $match: dateFilter },
@@ -660,7 +677,7 @@ const getChatTrends = async (req, res) => {
       {
         $group: {
           _id: {
-            ...groupByDate,
+            ...groupByDate1,
             isSeen: "$latestMessage.isSeen",
           },
           count: { $sum: 1 },
@@ -680,9 +697,12 @@ const getChatTrends = async (req, res) => {
     };
 
     res.status(200).json({
-      trends: chatTrends.map((item) => ({
+      activeChats: activeChats.map((item) => ({
         date: formatGroupKey(item._id),
-        status: item._id.status,
+        count: item.count,
+      })),
+      archiveChats: archiveChats.map((item) => ({
+        date: formatGroupKey(item._id),
         count: item.count,
       })),
       unreadCounts: unreadCounts
