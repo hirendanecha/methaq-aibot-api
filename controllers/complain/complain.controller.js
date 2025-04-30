@@ -5,6 +5,14 @@ const CustomerModel = require("../../models/customer.model");
 const PDFDocument = require("pdfkit");
 const axios = require("axios");
 const fs = require("fs");
+const path = require("path");
+const ejs = require("ejs");
+const { join } = require("path");
+const dayjs = require("dayjs");
+const { renderFile } = require("ejs");
+const puppeteer = require("puppeteer");
+const { launch } = require("puppeteer");
+const { writeFile, existsSync, mkdirSync } = require("fs");
 const {
   getPagination,
   getPaginationData,
@@ -20,6 +28,8 @@ const socketObj = require("../../helpers/socket.helper");
 const MessageModel = require("../../models/message.model");
 const { startChat, continueChat } = require("../typebot/typeBot.controller");
 const UserModel = require("../../models/user.model");
+const { generatePDF } = require("../../helpers/pdf.helper");
+const s3 = require("../../helpers/s3.helper");
 
 const getAllComplaints = async (req, res) => {
   try {
@@ -437,6 +447,10 @@ const downloadComplaintPdf = async (req, res) => {
     const complaintId = req.params.id;
     const complaint = await ComplaintModel.findById(complaintId);
 
+    if (!complaint) {
+      return res.status(404).json({ message: "Complaint not found" });
+    }
+
     const userId = req.user && req.user._id;
     let generatedBy = "Unknown";
     if (userId) {
@@ -445,149 +459,45 @@ const downloadComplaintPdf = async (req, res) => {
         generatedBy = user.fullName;
       }
     }
-    if (!complaint) {
-      return res.status(404).json({ message: "Complaint not found" });
-    }
 
-    const doc = new PDFDocument();
+    const generatedOn = dayjs().format("DD/MM/YYYY hh:mm:ss A");
 
-    const filename = `Complaint_${complaint.customername || "Unknown"}.pdf`;
-    res.setHeader(
-      "Content-disposition",
-      `attachment; filename="${encodeURIComponent(filename)}"`
+    // 1. Render HTML using ejs.renderFile (NOT res.render)
+    const templatePath = path.join(__dirname, "../../views/chabot.ejs");
+    // const data = { complaint, generatedBy, generatedOn };
+
+    const complaintt = {
+      complainNumber: complaint.complainNumber,
+      customername: complaint.customername,
+      customeremail: complaint.customeremail,
+      customerphone: complaint.customerphone,
+      complainType: complaint.complainType,
+      complaindesc: complaint.complaindesc,
+      generatedOn,
+      generatedBy,
+      docUrl: Array.isArray(complaint.complaindocuments) ? complaint.complaindocuments : [],
+    };
+
+    const pdf = await generatePDF(
+      "../views/chabot.ejs",
+      { complaintt },
+      "chatbot"
     );
-    res.setHeader("Content-type", "application/pdf");
-    doc.pipe(res);
 
-    const pageWidth = doc.page.width;
-    const x = (200 - 100) / 2;
-    // ---- HEADER ----
-    // const logoPath = "public/assets/dark-web-logo.jpg"; // change if needed
-    // if (fs.existsSync(logoPath)) {
-    //   doc.image(logoPath, x, 20, { width: 500, height: 100 });
-    // }
+    console.log("pdfRes", pdf);
+    const month = `${dayjs().year()}-${dayjs().month() + 1}`;
+    const url = await s3.uploadPublic(
+      pdf?.link,
+      `${pdf?.filename}`,
+      `complaint/${month}`
+    );
 
-    // doc
-    //   .fontSize(20)
-    //   .text('Company Name', 0, 50, { align: 'center' })
-    //   .fontSize(10)
-    //   .text('Address Line 1', 450, 50, { align: 'right' })
-    //   .text('Phone: +123456789', 450, 65, { align: 'right' });
-
-    doc.moveDown(0);
-
-    // ---- TITLE ----
-    doc.fontSize(18).text("Complaint & Suggestion Report", {
-      align: "center",
-      underline: true,
-    });
-
-    doc.moveDown(2);
-
-    // ---- COMPLAINT DETAILS ----
-    // doc
-    //   .roundedRect(50, doc.y, 500, 140, 8)
-    //   .stroke();
-
-    const startY = doc.y + 10;
-    const leftX = 60;
-    const rightX = 200;
-
-    const details = [
-      { label: "Complaint Number", value: complaint.complainNumber || "N/A" },
-      {
-        label: "Reference Number",
-        value: `REF-${complaint.complainNumber || "N/A"}`,
-      },
-      { label: "Customer Name", value: complaint.customername || "N/A" },
-      { label: "Customer Email", value: complaint.customeremail || "N/A" },
-      { label: "Customer Phone", value: complaint.customerphone || "N/A" },
-      { label: "Complaint Type", value: complaint.complainType || "N/A" },
-      { label: "Complaint Status", value: complaint.complainstatus || "N/A" },
-      {
-        label: "Complaint Description",
-        value: complaint.complaindesc || "N/A",
-      },
-    ];
-
-    let y = startY;
-    details.forEach((item) => {
-      doc
-        .font("Helvetica-Bold")
-        .fontSize(11)
-        .text(item.label + ":", leftX, y)
-        .font("Helvetica")
-        .text(item.value, rightX, y);
-      y += 20;
-    });
-
-    doc.moveDown(8);
-
-    // ---- ATTACHED DOCUMENTS ----
-
-    const imageWidth = 400; // or whatever width you use in fit
-    const imageHeight = 300; // or whatever height you use in fit
-
-    if (complaint.complaindocuments && complaint.complaindocuments.length > 0) {
-      doc
-        .font("Helvetica-Bold")
-        .fontSize(13)
-        .text("Attached Documents:", { underline: true })
-        .moveDown(1);
-
-      for (const docUrl of complaint.complaindocuments) {
-        try {
-          const response = await axios.get(docUrl, {
-            responseType: "arraybuffer",
-          });
-          const imgBuffer = Buffer.from(response.data);
-
-          // Center the image horizontally
-          const x = (pageWidth - imageWidth) / 2;
-          const y = doc.y; // current y position
-
-          doc.image(imgBuffer, x, y, {
-            width: imageWidth,
-            height: imageHeight,
-          });
-          doc.moveDown(2);
-        } catch (err) {
-          doc
-            .fillColor("red")
-            .font("Helvetica")
-            .fontSize(10)
-            .text("Failed to load attachment.", { align: "center" })
-            .fillColor("black");
-          doc.moveDown(1);
-        }
-      }
-    }
-    const generatedOn = new Date().toLocaleString();
-    doc
-      .font("Helvetica")
-      .fontSize(10)
-      .fillColor("#888888")
-      .text(`Generated by: ${generatedBy}\nGenerated on: ${generatedOn}`, {
-        align: 'right'
-      });
-    // ---- FOOTER ----
-    // const pageHeight = doc.page.height;
-    // doc
-    //   .fontSize(10)
-    //   .text(
-    //     `Generated on: ${new Date().toLocaleString()}`,
-    //     50,
-    //     pageHeight - 50,
-    //     {
-    //       align: "center",
-    //       width: 500,
-    //     }
-    //   );
-
-    doc.end();
+    res.send({ link: url });
   } catch (error) {
     console.error("Error generating complaint PDF:", error);
-    res.status(500).json({ message: "Internal Server Error" });
+    if (!res.headersSent) {
+      res.status(500).json({ message: "Internal Server Error" });
+    }
   }
 };
 

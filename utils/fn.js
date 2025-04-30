@@ -11,6 +11,7 @@ const {
   sendInteractiveMessage,
 } = require("../services/whatsaap.service");
 const dayjs = require("dayjs");
+const { agenda } = require("../helpers/agenda.helper");
 
 const baseUrl = "";
 exports.removeFile = (fileName) => {
@@ -328,6 +329,14 @@ exports.sendMessageToAdmins = async (socketObj, message, department, extraReceiv
       oldChatDetails?.latestMessage?.isSeen && (messageToExtr || !extraUserIds?.includes(receiver._id?.toString())) && socketObj.io
         .to(receiver._id?.toString())
         .emit("unread-count", { chatId: updatedChat?._id?.toString(), isSeen: false });
+    });
+    const result = await agenda.cancel({ 'data.chatId': message?.chatId });
+
+    const runAt = dayjs().add(24, "hour").toDate();
+    await agenda.schedule(runAt, 'archive old chats', {
+      chatId: message?.chatId
+    }, {
+      timezone: "Asia/Dubai",
     });
     return latestMess;
   } catch (error) {
