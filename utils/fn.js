@@ -332,7 +332,7 @@ exports.sendMessageToAdmins = async (socketObj, message, department, extraReceiv
     });
     const result = await agenda.cancel({ 'data.chatId': message?.chatId });
 
-    const runAt = dayjs().add(1, "minute").toDate();
+    const runAt = dayjs().add(24, "hour").toDate();
     await agenda.schedule(runAt, 'archive old chats', {
       chatId: message?.chatId
     }, {
