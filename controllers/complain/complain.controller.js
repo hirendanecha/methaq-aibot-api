@@ -486,10 +486,12 @@ const downloadComplaintPdf = async (req, res) => {
 
     console.log("pdfRes", pdf);
     const month = `${dayjs().year()}-${dayjs().month() + 1}`;
+
     const url = await s3.uploadPublic(
       pdf?.link,
       `${pdf?.filename}`,
-      `complaint/${month}`
+      `${complaint.complainNumber}`,
+      "complaint"
     );
 
     res.send({ link: url });
