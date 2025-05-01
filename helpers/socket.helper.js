@@ -896,6 +896,7 @@ socketObj.config = (server) => {
             adminId: adminId,
             department: department,
             isHuman: true,
+            agentTransferedAt: new Date(),
             latestMessage: final?._id,
           },
           { new: true }
