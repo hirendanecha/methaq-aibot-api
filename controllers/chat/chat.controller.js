@@ -723,6 +723,349 @@ const getChatTrends = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+const getUserStatistics = async (req, res) => {
+  try {
+    const { startDate, endDate } = req.body;
+    let dateFilter = {};
+    if (startDate || endDate) {
+      dateFilter["updatedAt"] = {};
+      if (startDate) {
+        const start = new Date(startDate);
+        start.setUTCHours(0, 0, 0, 0);
+        dateFilter["updatedAt"]["$gte"] = start;
+      }
+      if (endDate) {
+        const end = new Date(endDate);
+        end.setUTCHours(23, 59, 59, 999);
+        dateFilter["updatedAt"]["$lte"] = end;
+      }
+    }
+
+    const assignedChats = await ChatModel.aggregate([
+      { $match: { ...dateFilter, adminId: { $ne: null } } },
+      {
+        $group: {
+          _id: "$adminId",
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "_id",
+          foreignField: "_id",
+          as: "admin",
+        },
+      },
+      { $unwind: "$admin" },
+      {
+        $project: {
+          _id: "$admin._id",
+          name: "$admin.fullName",
+          count: 1,
+        },
+      }
+    ]);
+    const messageCounts = await MessageModel.aggregate([
+      { $match: { ...dateFilter, sender: { $ne: null } } },
+      {
+        $group: {
+          _id: "$sender",
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "_id",
+          foreignField: "_id",
+          as: "sender",
+        },
+      },
+      { $unwind: "$sender" },
+      {
+        $project: {
+          _id: "$sender._id",
+          name: "$sender.fullName",
+          count: 1,
+        },
+      }
+    ]);
+
+    const averageHandlingTime = await ChatModel.aggregate([
+      { $match: { ...dateFilter, adminId: { $ne: null } } },
+      {
+        $group: {
+          _id: "$adminId",
+          totalDuration: { $sum: "$initialHandlingTime" },
+          count: { $sum: 1 },
+        },
+      },
+      {
+        $lookup: {
+          from: "users",
+          localField: "_id",
+          foreignField: "_id",
+          as: "admin",
+        },
+      },
+      { $unwind: "$admin" },
+      {
+        $project: {
+          _id: "$admin._id",
+          name: "$admin.fullName",
+          totalDuration: 1,
+          count: 1,
+        },
+      },
+      {
+        $addFields: {
+          averageDuration: { $divide: ["$totalDuration", "$count"] },
+        },
+      },
+    ])
+    console.log(averageHandlingTime, "averageHandlingTime");
+
+    res.status(200).json({ assignedChats, messageCounts });
+  } catch (error) {
+    console.error("Error fetching chat trends:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+}
+
+const getAllReports = async (req, res) => {
+  try {
+    const { reportName, startDate, endDate, mode } = req.body;
+    let dateFilter = {};
+    if (reportName == "conversation") {
+      if (startDate || endDate) {
+        dateFilter["createdAt"] = {};
+        if (startDate) {
+          const start = new Date(startDate);
+          start.setUTCHours(0, 0, 0, 0);
+          dateFilter["createdAt"]["$gte"] = start;
+        }
+        if (endDate) {
+          const end = new Date(endDate);
+          end.setUTCHours(23, 59, 59, 999);
+          dateFilter["createdAt"]["$lte"] = end;
+        }
+      }
+      const groupByDate =
+        mode === "month"
+          ? {
+            month: { $month: "$createdAt" },
+            year: { $year: "$createdAt" },
+          }
+          : {
+            day: { $dayOfMonth: "$createdAt" },
+            month: { $month: "$createdAt" },
+            year: { $year: "$createdAt" },
+          };
+      const chatTrends = await ChatModel.aggregate([
+        { $match: dateFilter },
+        {
+          $group: {
+            _id: {
+              ...groupByDate,
+            },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1 } },
+      ]);
+      return res.status(200).json({ chatTrends });
+    }
+    if (reportName == "missedConversations") {
+      if (startDate || endDate) {
+        dateFilter["$latestMessage.isSeen"] = {};
+        if (startDate) {
+          const start = new Date(startDate);
+          start.setUTCHours(0, 0, 0, 0);
+          dateFilter["$latestMessage.isSeen"]["$gte"] = start;
+        }
+        if (endDate) {
+          const end = new Date(endDate);
+          end.setUTCHours(23, 59, 59, 999);
+          dateFilter["$latestMessage.isSeen"]["$lte"] = end;
+        }
+      }
+      const groupByDate =
+        mode === "month"
+          ? {
+            month: { $month: "$createdAt" },
+            year: { $year: "$createdAt" },
+          }
+          : {
+            day: { $dayOfMonth: "$createdAt" },
+            month: { $month: "$createdAt" },
+            year: { $year: "$createdAt" },
+          };
+      const chatTrends = await ChatModel.aggregate([
+        { $match: { ...dateFilter } },
+        {
+          $lookup: {
+            from: "messages",
+            localField: "latestMessage",
+            foreignField: "_id",
+            as: "latestMessage",
+          },
+        },
+        { $unwind: "$latestMessage" },
+        {
+          $match: {
+            "latestMessage.isSeen": false,
+          }
+        },
+        {
+          $group: {
+            _id: {
+              ...groupByDate,
+            },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1 } },
+      ])
+      return res.status(200).json({ chatTrends });
+    }
+    if (reportName == "registeredUsers") {
+      if (startDate || endDate) {
+        dateFilter["$createdAt"] = {};
+        if (startDate) {
+          const start = new Date(startDate);
+          start.setUTCHours(0, 0, 0, 0);
+          dateFilter["$createdAt"]["$gte"] = start;
+        }
+        if (endDate) {
+          const end = new Date(endDate);
+          end.setUTCHours(23, 59, 59, 999);
+          dateFilter["$createdAt"]["$lte"] = end;
+        }
+      }
+      const groupByDate =
+        mode === "month"
+          ? {
+            month: { $month: "$createdAt" },
+            year: { $year: "$createdAt" },
+          }
+          : {
+            day: { $dayOfMonth: "$createdAt" },
+            month: { $month: "$createdAt" },
+            year: { $year: "$createdAt" },
+          };
+      const chatTrends = await CustomerModel.aggregate([
+        {
+          $group: {
+            _id: {
+              ...groupByDate,
+            },
+            count: { $sum: 1 },
+          },
+        },
+        { $sort: { "_id.year": 1, "_id.month": 1 } },
+      ]);
+      return res.status(200).json({ chatTrends });
+
+    }
+    if (reportName == "agentReponseTime") {
+      if (startDate || endDate) {
+        dateFilter["$createdAt"] = {};
+        if (startDate) {
+          const start = new Date(startDate);
+          start.setUTCHours(0, 0, 0, 0);
+          dateFilter["$createdAt"]["$gte"] = start;
+        }
+        if (endDate) {
+          const end = new Date(endDate);
+          end.setUTCHours(23, 59, 59, 999);
+          dateFilter["$createdAt"]["$lte"] = end;
+        }
+      }
+      const chatTrends = await ChatModel.aggregate([
+        { $match: { ...dateFilter, adminId: { $ne: null } } },
+        {
+          $group: {
+            _id: "$adminId",
+            totalDuration: { $sum: "$initialHandlingTime" },
+            count: { $sum: 1 },
+          },
+        },
+        {
+          $lookup: {
+            from: "users",
+            localField: "_id",
+            foreignField: "_id",
+            as: "admin",
+          },
+        },
+        { $unwind: "$admin" },
+        {
+          $project: {
+            _id: "$admin._id",
+            name: "$admin.fullName",
+            totalDuration: 1,
+            count: 1,
+          },
+        },
+        {
+          $addFields: {
+            averageDuration: { $divide: ["$totalDuration", "$count"] },
+          },
+        },
+      ]);
+      return res.status(200).json({ chatTrends });
+    }
+    if (reportName == "handledChats") {
+      if (startDate || endDate) {
+        dateFilter["$createdAt"] = {};
+        if (startDate) {
+          const start = new Date(startDate);
+          start.setUTCHours(0, 0, 0, 0);
+          dateFilter["$createdAt"]["$gte"] = start;
+        }
+        if (endDate) {
+          const end = new Date(endDate);
+          end.setUTCHours(23, 59, 59, 999);
+          dateFilter["$createdAt"]["$lte"] = end;
+        }
+      }
+      const assignedChats = await ChatModel.aggregate([
+        { $match: { ...dateFilter, adminId: { $ne: null } } },
+        {
+          $group: {
+            _id: "$adminId",
+            count: { $sum: 1 },
+          },
+        },
+        {
+          $lookup: {
+            from: "users",
+            localField: "_id",
+            foreignField: "_id",
+            as: "admin",
+          },
+        },
+        { $unwind: "$admin" },
+        {
+          $project: {
+            _id: "$admin._id",
+            name: "$admin.fullName",
+            count: 1,
+          },
+        }
+      ]);
+      return res.status(200).json({ assignedChats });
+    }
+    return res.status(400).json({ error: "Invalid report name" });
+  } catch (error) {
+    console.error("Error fetching chat trends:", error.message);
+    res.status(500).json({ error: error.message });
+  }
+}
+
+
 const getUnReadChatCounts = async (req, res) => {
   try {
     const userId = req.user._id;
@@ -2134,4 +2477,6 @@ module.exports = {
   getChatReports,
   getUnReadChatCounts,
   getChatTrends,
+  getUserStatistics,
+  getAllReports
 };
