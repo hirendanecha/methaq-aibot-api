@@ -903,6 +903,8 @@ socketObj.config = (server) => {
         )
           .populate("adminId customerId")
           .lean();
+        console.log(updatedChat, "updatedChat211111");
+
         const users = [adminId];
         const departments = [updatedChat?.department?.toString()];
         if (oldAssignee) users.push(oldAssignee?.toString());
