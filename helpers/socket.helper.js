@@ -896,12 +896,15 @@ socketObj.config = (server) => {
             adminId: adminId,
             department: department,
             isHuman: true,
+            agentTransferedAt: new Date(),
             latestMessage: final?._id,
           },
           { new: true }
         )
           .populate("adminId customerId")
           .lean();
+        console.log(updatedChat, "updatedChat211111");
+
         const users = [adminId];
         const departments = [updatedChat?.department?.toString()];
         if (oldAssignee) users.push(oldAssignee?.toString());
