@@ -876,16 +876,16 @@ const getAllReports = async (req, res) => {
     }
     if (reportName == "missedConversations") {
       if (startDate || endDate) {
-        dateFilter["$latestMessage.isSeen"] = {};
+        dateFilter["latestMessage.isSeen"] = {};
         if (startDate) {
           const start = new Date(startDate);
           start.setUTCHours(0, 0, 0, 0);
-          dateFilter["$latestMessage.isSeen"]["$gte"] = start;
+          dateFilter["latestMessage.isSeen"]["$gte"] = start;
         }
         if (endDate) {
           const end = new Date(endDate);
           end.setUTCHours(23, 59, 59, 999);
-          dateFilter["$latestMessage.isSeen"]["$lte"] = end;
+          dateFilter["latestMessage.isSeen"]["$lte"] = end;
         }
       }
       const groupByDate =
@@ -929,16 +929,16 @@ const getAllReports = async (req, res) => {
     }
     if (reportName == "registeredUsers") {
       if (startDate || endDate) {
-        dateFilter["$createdAt"] = {};
+        dateFilter["createdAt"] = {};
         if (startDate) {
           const start = new Date(startDate);
           start.setUTCHours(0, 0, 0, 0);
-          dateFilter["$createdAt"]["$gte"] = start;
+          dateFilter["createdAt"]["$gte"] = start;
         }
         if (endDate) {
           const end = new Date(endDate);
           end.setUTCHours(23, 59, 59, 999);
-          dateFilter["$createdAt"]["$lte"] = end;
+          dateFilter["createdAt"]["$lte"] = end;
         }
       }
       const groupByDate =
@@ -968,18 +968,20 @@ const getAllReports = async (req, res) => {
     }
     if (reportName == "agentReponseTime") {
       if (startDate || endDate) {
-        dateFilter["$createdAt"] = {};
+        dateFilter["createdAt"] = {};
         if (startDate) {
           const start = new Date(startDate);
           start.setUTCHours(0, 0, 0, 0);
-          dateFilter["$createdAt"]["$gte"] = start;
+          dateFilter["createdAt"]["$gte"] = start;
         }
         if (endDate) {
           const end = new Date(endDate);
           end.setUTCHours(23, 59, 59, 999);
-          dateFilter["$createdAt"]["$lte"] = end;
+          dateFilter["createdAt"]["$lte"] = end;
         }
       }
+      console.log(dateFilter, "dateFilter11223344");
+
       const chatTrends = await ChatModel.aggregate([
         { $match: { ...dateFilter, adminId: { $ne: null }, ...agentIds?.length > 0 ? { adminId: { $in: agentIds } } : {}, ...departmentIds?.length > 0 ? { department: { $in: departmentIds } } : {} } },
         {
@@ -1016,16 +1018,16 @@ const getAllReports = async (req, res) => {
     }
     if (reportName == "handledChats") {
       if (startDate || endDate) {
-        dateFilter["$createdAt"] = {};
+        dateFilter["createdAt"] = {};
         if (startDate) {
           const start = new Date(startDate);
           start.setUTCHours(0, 0, 0, 0);
-          dateFilter["$createdAt"]["$gte"] = start;
+          dateFilter["createdAt"]["$gte"] = start;
         }
         if (endDate) {
           const end = new Date(endDate);
           end.setUTCHours(23, 59, 59, 999);
-          dateFilter["$createdAt"]["$lte"] = end;
+          dateFilter["createdAt"]["$lte"] = end;
         }
       }
       const assignedChats = await ChatModel.aggregate([
