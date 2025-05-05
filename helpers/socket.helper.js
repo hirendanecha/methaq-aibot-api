@@ -1041,7 +1041,7 @@ socketObj.config = (server) => {
       // Reset idle timer
       agents[socket.id] = {
         idleTimer: setTimeout(() => {
-          if (!agents[socket.id]) {
+          if (agents[socket.id]) {
             agents[socket.id].isIdle = true;
             updateOnlineStatus(false);
             socket.emit("idle", "You are idle. Click here to be active again.");

@@ -465,9 +465,9 @@ const getDepartmentAvailability = async (req, res) => {
 const getChatReports = async (req, res) => {
   try {
     const user = req.user;
-    const { departmentId, adminId, startDate, endDate } = req.query;
+    const { departmentIds, adminIds, startDate, endDate } = req.body;
     console.log(
-      departmentId,
+      departmentIds,
       startDate,
       endDate,
       "departmentId, startDate, endDate "
@@ -475,18 +475,17 @@ const getChatReports = async (req, res) => {
 
     const userDetails = await UserModel.findById(user._id);
     let extraPayload = {};
-
-    if (userDetails?.role !== "Admin" && userDetails?.role !== "Supervisor") {
+    if (userDetails && userDetails?.role !== "Admin" && userDetails?.role !== "Supervisor") {
       extraPayload["department"] = userDetails?.department;
     }
 
 
     // Add department filter if provided
-    if (departmentId) {
-      extraPayload["department"] = departmentId;
+    if (departmentIds?.length > 0) {
+      extraPayload["department"] = { $in: departmentIds };
     }
-    if (adminId) {
-      extraPayload["adminId"] = adminId
+    if (adminIds?.length > 0) {
+      extraPayload["adminId"] = { $in: adminIds };
     }
 
     console.log(extraPayload, "extraPayload");
@@ -511,7 +510,6 @@ const getChatReports = async (req, res) => {
       ...extraPayload,
       ...dateFilter,
     });
-
     // Number of open chats
     const openChats = await ChatModel.countDocuments({
       latestMessage: { $ne: null },
@@ -602,7 +600,7 @@ const getChatReports = async (req, res) => {
 
 const getChatTrends = async (req, res) => {
   try {
-    const { startDate, endDate, mode } = req.body;
+    const { startDate, endDate, mode, departmentIds, agentIds } = req.body;
 
     let dateFilter = {};
     if (startDate || endDate) {
@@ -643,7 +641,7 @@ const getChatTrends = async (req, res) => {
         };
 
     const chatTrends = await ChatModel.aggregate([
-      { $match: dateFilter },
+      { $match: { ...dateFilter, ...(departmentIds?.length > 0 ? { department: { $in: departmentIds } } : {}), ...(agentIds?.length > 0 ? { adminId: { $in: agentIds } } : {}) } },
       {
         $group: {
           _id: {
@@ -655,7 +653,6 @@ const getChatTrends = async (req, res) => {
       },
       { $sort: { "_id.year": 1, "_id.month": 1, "_id.day": 1 } },
     ]);
-    console.log(chatTrends, "chatTrends111");
     const activeChats = chatTrends.filter(
       (item) => item?._id?.status === "active"
     )
@@ -664,7 +661,7 @@ const getChatTrends = async (req, res) => {
     )
 
     const unreadCounts = await ChatModel.aggregate([
-      { $match: dateFilter },
+      { $match: { ...dateFilter, ...(departmentIds?.length > 0 ? { department: { $in: departmentIds } } : {}), ...(agentIds?.length > 0 ? { adminId: { $in: agentIds } } : {}) } },
       {
         $lookup: {
           from: "messages",
@@ -836,7 +833,7 @@ const getUserStatistics = async (req, res) => {
 
 const getAllReports = async (req, res) => {
   try {
-    const { reportName, startDate, endDate, mode } = req.body;
+    const { reportName, startDate, endDate, mode, agentIds, departmentIds } = req.body;
     let dateFilter = {};
     if (reportName == "conversation") {
       if (startDate || endDate) {
@@ -864,7 +861,7 @@ const getAllReports = async (req, res) => {
             year: { $year: "$createdAt" },
           };
       const chatTrends = await ChatModel.aggregate([
-        { $match: dateFilter },
+        { $match: { ...dateFilter, ...(agentIds?.length > 0 ? { adminId: { $in: agentIds } } : {}), ...(departmentIds?.length > 0 ? { department: { $in: departmentIds } } : {}) } },
         {
           $group: {
             _id: {
@@ -903,7 +900,7 @@ const getAllReports = async (req, res) => {
             year: { $year: "$createdAt" },
           };
       const chatTrends = await ChatModel.aggregate([
-        { $match: { ...dateFilter } },
+        { $match: { ...dateFilter, adminId: { $in: agentIds }, department: { $in: departmentIds } } },
         {
           $lookup: {
             from: "messages",
@@ -984,7 +981,7 @@ const getAllReports = async (req, res) => {
         }
       }
       const chatTrends = await ChatModel.aggregate([
-        { $match: { ...dateFilter, adminId: { $ne: null } } },
+        { $match: { ...dateFilter, adminId: { $ne: null }, ...agentIds?.length > 0 ? { adminId: { $in: agentIds } } : {}, ...departmentIds?.length > 0 ? { department: { $in: departmentIds } } : {} } },
         {
           $group: {
             _id: "$adminId",
@@ -1032,7 +1029,7 @@ const getAllReports = async (req, res) => {
         }
       }
       const assignedChats = await ChatModel.aggregate([
-        { $match: { ...dateFilter, adminId: { $ne: null } } },
+        { $match: { ...dateFilter, adminId: { $ne: null }, ...agentIds?.length > 0 ? { adminId: { $in: agentIds } } : {}, ...departmentIds?.length > 0 ? { department: { $in: departmentIds } } : {} } },
         {
           $group: {
             _id: "$adminId",
