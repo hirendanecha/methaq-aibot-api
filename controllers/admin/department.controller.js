@@ -335,8 +335,17 @@ exports.updateDepartmentsWorkingHours = async (req, res) => {
 exports.getSubDepartmentId = async (req, res) => {
   try {
     const { departmentId } = req.params;
+    const departmentDetails = await DepartmentModel.findOne({ depId: departmentId }).lean();
+    if (!departmentDetails) {
+      return sendErrorResponse(res, "Department not found.");
+    }
     const department = await DepartmentModel.findOne({ parentId: departmentId }).sort({ createdAt: -1 }).lean();
-    const newDeptId = getNextSubDeptId(department?.depId);
+    let newDeptId = "";
+    if (!department) {
+      newDeptId = `${departmentId}-A`
+    } else {
+      newDeptId = getNextSubDeptId(department?.depId);
+    }
     if (!newDeptId) {
       return sendErrorResponse(res, "Department is now full.");
     }
