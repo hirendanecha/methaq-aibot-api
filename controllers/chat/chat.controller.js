@@ -954,6 +954,11 @@ const getAllReports = async (req, res) => {
           };
       const chatTrends = await CustomerModel.aggregate([
         {
+          $match: {
+            ...dateFilter,
+          },
+        },
+        {
           $group: {
             _id: {
               ...groupByDate,
