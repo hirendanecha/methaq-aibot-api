@@ -482,10 +482,10 @@ const getChatReports = async (req, res) => {
 
     // Add department filter if provided
     if (departmentIds?.length > 0) {
-      extraPayload["department"] = { $in: departmentIds };
+      extraPayload["department"] = { $in: departmentIds.map(department => new mongoose.Types.ObjectId(department)) };
     }
     if (adminIds?.length > 0) {
-      extraPayload["adminId"] = { $in: adminIds };
+      extraPayload["adminId"] = { $in: adminIds.map(admin => new mongoose.Types.ObjectId(admin)) };
     }
 
     console.log(extraPayload, "extraPayload");
@@ -641,7 +641,7 @@ const getChatTrends = async (req, res) => {
         };
 
     const chatTrends = await ChatModel.aggregate([
-      { $match: { ...dateFilter, ...(departmentIds?.length > 0 ? { department: { $in: departmentIds } } : {}), ...(agentIds?.length > 0 ? { adminId: { $in: agentIds } } : {}) } },
+      { $match: { ...dateFilter, ...(departmentIds?.length > 0 ? { department: { $in: departmentIds.map(department => new mongoose.Types.ObjectId(department)) } } : {}), ...(agentIds?.length > 0 ? { adminId: { $in: agentIds.map(agent => new mongoose.Types.ObjectId(agent)) } } : {}) } },
       {
         $group: {
           _id: {
@@ -661,7 +661,7 @@ const getChatTrends = async (req, res) => {
     )
 
     const unreadCounts = await ChatModel.aggregate([
-      { $match: { ...dateFilter, ...(departmentIds?.length > 0 ? { department: { $in: departmentIds } } : {}), ...(agentIds?.length > 0 ? { adminId: { $in: agentIds } } : {}) } },
+      { $match: { ...dateFilter, ...(departmentIds?.length > 0 ? { department: { $in: departmentIds.map(department => new mongoose.Types.ObjectId(department)) } } : {}), ...(agentIds?.length > 0 ? { adminId: { $in: agentIds.map(agent => new mongoose.Types.ObjectId(agent)) } } : {}) } },
       {
         $lookup: {
           from: "messages",
@@ -861,7 +861,7 @@ const getAllReports = async (req, res) => {
             year: { $year: "$createdAt" },
           };
       const chatTrends = await ChatModel.aggregate([
-        { $match: { ...dateFilter, ...(agentIds?.length > 0 ? { adminId: { $in: agentIds } } : {}), ...(departmentIds?.length > 0 ? { department: { $in: departmentIds } } : {}) } },
+        { $match: { ...dateFilter, ...(agentIds?.length > 0 ? { adminId: { $in: agentIds.map(agent => new mongoose.Types.ObjectId(agent)) } } : {}), ...(departmentIds?.length > 0 ? { department: { $in: departmentIds.map(department => new mongoose.Types.ObjectId(department)) } } : {}) } },
         {
           $group: {
             _id: {
@@ -900,7 +900,7 @@ const getAllReports = async (req, res) => {
             year: { $year: "$createdAt" },
           };
       const chatTrends = await ChatModel.aggregate([
-        { $match: { ...dateFilter, adminId: { $in: agentIds }, department: { $in: departmentIds } } },
+        { $match: { ...dateFilter, ...(agentIds?.length > 0 ? { adminId: { $in: agentIds.map(agent => new mongoose.Types.ObjectId(agent)) } } : {}), ...(departmentIds?.length > 0 ? { department: { $in: departmentIds.map(department => new mongoose.Types.ObjectId(department)) } } : {}) } },
         {
           $lookup: {
             from: "messages",
@@ -983,7 +983,7 @@ const getAllReports = async (req, res) => {
       console.log(dateFilter, "dateFilter11223344");
 
       const chatTrends = await ChatModel.aggregate([
-        { $match: { ...dateFilter, adminId: { $ne: null }, ...agentIds?.length > 0 ? { adminId: { $in: agentIds } } : {}, ...departmentIds?.length > 0 ? { department: { $in: departmentIds } } : {} } },
+        { $match: { ...dateFilter, adminId: { $ne: null }, ...(agentIds?.length > 0 ? { adminId: { $in: agentIds.map(agent => new mongoose.Types.ObjectId(agent)) } } : {}), ...(departmentIds?.length > 0 ? { department: { $in: departmentIds.map(department => new mongoose.Types.ObjectId(department)) } } : {}) } },
         {
           $group: {
             _id: "$adminId",
@@ -1031,7 +1031,15 @@ const getAllReports = async (req, res) => {
         }
       }
       const assignedChats = await ChatModel.aggregate([
-        { $match: { ...dateFilter, adminId: { $ne: null }, ...agentIds?.length > 0 ? { adminId: { $in: agentIds } } : {}, ...departmentIds?.length > 0 ? { department: { $in: departmentIds } } : {} } },
+        {
+          $match: {
+            ...dateFilter, adminId: { $ne: null }, ...(agentIds?.length > 0 ? { adminId: { $in: agentIds.map(agent => new mongoose.Types.ObjectId(agent)) } } : {}), ...(departmentIds?.length > 0 ? {
+              department: {
+                $in: departmentIds.map(department => new mongoose.Types.ObjectId(department))
+              }
+            } : {})
+          }
+        },
         {
           $group: {
             _id: "$adminId",
