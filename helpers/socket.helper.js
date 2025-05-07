@@ -742,6 +742,7 @@ socketObj.config = (server) => {
           +chatDetails?.initialHandlingTime ||
           dayjs().diff(chatDetails?.agentTransferedAt, "minute"),
           chatDetails?.agentTransferedAt,
+          chatDetails?.agentHandledAt,
           "chatDetails?.initialHandlingTime"
         );
         const updatedChat = await ChatModel.findOneAndUpdate(
@@ -804,7 +805,11 @@ socketObj.config = (server) => {
       } else {
         const updatedChat = await ChatModel.findOneAndUpdate(
           { _id: params.chatId },
-          { latestMessage: final?._id },
+          {
+            latestMessage: final?._id, agentHandledAt: chatDetails?.agentHandledAt || dayjs(), initialHandlingTime:
+              +chatDetails?.initialHandlingTime ||
+              dayjs().diff(chatDetails?.agentTransferedAt || dayjs(), "minute")
+          },
           { new: true }
         )
           .populate("adminId customerId")
