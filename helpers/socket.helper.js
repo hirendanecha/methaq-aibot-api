@@ -742,6 +742,7 @@ socketObj.config = (server) => {
           +chatDetails?.initialHandlingTime ||
           dayjs().diff(chatDetails?.agentTransferedAt, "minute"),
           chatDetails?.agentTransferedAt,
+          chatDetails?.agentHandledAt,
           "chatDetails?.initialHandlingTime"
         );
         const updatedChat = await ChatModel.findOneAndUpdate(
@@ -804,7 +805,11 @@ socketObj.config = (server) => {
       } else {
         const updatedChat = await ChatModel.findOneAndUpdate(
           { _id: params.chatId },
-          { latestMessage: final?._id },
+          {
+            latestMessage: final?._id, agentHandledAt: chatDetails?.agentHandledAt || dayjs(), initialHandlingTime:
+              +chatDetails?.initialHandlingTime ||
+              dayjs().diff(chatDetails?.agentTransferedAt || dayjs(), "minute")
+          },
           { new: true }
         )
           .populate("adminId customerId")
@@ -1041,7 +1046,7 @@ socketObj.config = (server) => {
       // Reset idle timer
       agents[socket.id] = {
         idleTimer: setTimeout(() => {
-          if (!agents[socket.id]) {
+          if (agents[socket.id]) {
             agents[socket.id].isIdle = true;
             updateOnlineStatus(false);
             socket.emit("idle", "You are idle. Click here to be active again.");

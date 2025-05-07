@@ -3,7 +3,7 @@ const { getChatReports, getUnReadChatCounts, getChatTrends, getUserStatistics, g
 const router = express.Router();
 
 //chat-reports
-router.get("/reports", getChatReports);
+router.post("/reports", getChatReports);
 
 router.get("/unread-chats", getUnReadChatCounts);
 
