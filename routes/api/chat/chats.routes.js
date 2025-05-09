@@ -1,5 +1,6 @@
 const express = require("express");
 const router = express.Router();
+const rateLimit = require("express-rate-limit");
 const {
   storeChat,
   getChatHistory,
@@ -45,6 +46,12 @@ const {
 } = require("../../../controllers/setting/settings.controller");
 const { addMotorInquiry, getAllMotorInquiry, deleteMotorInquiryById } = require("../../../controllers/motorInquiry/motor.controller");
 const pinecone = new Pinecone({ apiKey: environment.pinecone.apiKey });
+
+const limiter = rateLimit({
+  windowMs: 10 * 1000, // 10 seconds
+  max: 1, // max 1 request per 10 seconds
+  message: "Too many requests, slow down!",
+});
 // Route to store chat
 router.post("/store-chat", storeChat);
 
@@ -118,10 +125,7 @@ router.get("/check-document-received/:sessionId", isDocumentReceived);
 
 router.get("/assign-agent/:sessionId", assignAgentController);
 
-router.get(
-  "/check-department-availability/:sessionId",
-  getDepartmentAvailability
-);
+router.get("/check-department-availability/:sessionId", limiter, getDepartmentAvailability);
 
 router.get("/get-tools", getToolFunctions);
 
