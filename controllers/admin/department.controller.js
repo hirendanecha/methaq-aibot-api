@@ -339,7 +339,7 @@ exports.getSubDepartmentId = async (req, res) => {
     if (!departmentDetails) {
       return sendErrorResponse(res, "Department not found.");
     }
-    const department = await DepartmentModel.findOne({ parentId: departmentId }).sort({ createdAt: -1 }).lean();
+    const department = await DepartmentModel.findOne({ parentId: departmentDetails?._id }).sort({ createdAt: -1 }).lean();
     let newDeptId = "";
     if (!department) {
       newDeptId = `${departmentId}-A`
