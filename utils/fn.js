@@ -287,7 +287,7 @@ exports.sendMessageToAdmins = async (socketObj, message, department, extraReceiv
     const oldChatDetails = await ChatModel.findOne({ _id: message?.chatId }).populate("latestMessage").lean();
     if (extraReceiver?.length > 0) {
       conditions.push(...extraReceiver)
-      const extraUsers = await UserModel.find(...extraReceiver).lean();
+      const extraUsers = await UserModel.find({ $or: extraReceiver }).lean();
       extraUserIds = extraUsers.map((user) => user._id?.toString());
     }
     const receivers = await UserModel.find({

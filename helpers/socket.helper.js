@@ -1008,7 +1008,7 @@ socketObj.config = (server) => {
             socketObj,
             mess,
             updatedChat?.department,
-            [{ _id: { $in: [oldAssignee] } }],
+            [{ _id: { $in: [oldAssignee] } }, { department: { $in: [oldDepartment] } }],
             true,
             false
           );
