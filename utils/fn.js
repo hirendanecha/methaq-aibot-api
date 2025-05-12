@@ -282,7 +282,7 @@ exports.sendMessageToAdmins = async (socketObj, message, department, extraReceiv
       { role: { $in: ["Admin", "Supervisor"] } },
     ]
     if (department?.length > 0) {
-      isArray(department) ? conditions.push({ department: { $in: department } }) : conditions.push({ department: department })
+      Array.isArray(department) ? conditions.push({ department: { $in: department } }) : conditions.push({ department: department })
     }
     const oldChatDetails = await ChatModel.findOne({ _id: message?.chatId }).populate("latestMessage").lean();
     if (extraReceiver?.length > 0) {
