@@ -1007,7 +1007,7 @@ socketObj.config = (server) => {
           await sendMessageToAdmins(
             socketObj,
             mess,
-            updatedChat?.department,
+            [updatedChat?.department, oldDepartment],
             [{ _id: { $in: [oldAssignee] } }],
             true,
             false
