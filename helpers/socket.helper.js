@@ -905,7 +905,7 @@ socketObj.config = (server) => {
             isHuman: true,
             agentTransferedAt: new Date(),
             latestMessage: final?._id,
-            tags: [...chatDetails?.tags?.filter((tag) => !(["pending", "qulified_lead"].includes(tag))), "transferred"],
+            tags: [...chatDetails?.tags?.filter((tag) => !(["new"].includes(tag))), "transferred"],
           },
           { new: true }
         )
@@ -991,7 +991,7 @@ socketObj.config = (server) => {
               department: department,
               agentTransferedAt: assigneeAgent ? new Date() : null,
               isHuman: true,
-              tags: [...chatDetails?.tags?.filter((tag) => !(["pending", "qulified_lead"].includes(tag))), "transferred"],
+              tags: [...chatDetails?.tags?.filter((tag) => !(["new"].includes(tag))), "transferred"],
             },
             { new: true }
           )
