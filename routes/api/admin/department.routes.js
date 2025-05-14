@@ -72,6 +72,6 @@ router.post("/update-department-working-hours", permissionAuthorization("commonP
 
 router.get('/getSubDepartmentId/:departmentId', departmentCtrl.getSubDepartmentId);
 
-router.get('/complaint/:id/pdf',permissionAuthorization("commonPermission.complain", ["read"], ['Admin']),downloadComplaintPdf);
+router.get('/complaint/:id/pdf', permissionAuthorization("commonPermission.complain", ["read"], ['Admin']), downloadComplaintPdf);
 
 module.exports = router;

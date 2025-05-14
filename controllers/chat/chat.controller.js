@@ -1289,7 +1289,7 @@ const whatsappMessages = async (req, res) => {
       const chat = new ChatModel({
         customerId: updatedCus._id,
         currentSessionId: sessionId,
-        tags: ["pending"],
+        tags: ["pending", "new"],
         // sessionId: sessionId,
         // threadId: threadId,
         source: "whatsapp",
@@ -1444,7 +1444,7 @@ const whatsappMessages = async (req, res) => {
         const newChatt = new ChatModel({
           customerId: user._id,
           // currentSessionId: sessionId,
-          tags: ["pending"],
+          tags: ["pending", "new"],
           // sessionId: sessionId,
           // threadId: threadId,
           source: "whatsapp",
