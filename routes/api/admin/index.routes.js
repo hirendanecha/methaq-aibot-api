@@ -7,6 +7,7 @@ const uploadRoutes = require("./upload.routes")
 const agentRoutes = require("./agents.routes")
 const customerRoutes = require("./customers.routes")
 const chatRoutes = require("./chats.routes")
+const messagetempletRoutes = require("./messagetemplet.routes")
 const openaiRoutes = require("./openaiconfig.routes")
 
 /*
@@ -26,5 +27,6 @@ router.use("/qna", qnaRoutes);
 router.use("/docTraining", uploadRoutes);
 router.use("/customers", customerRoutes);
 router.use("/chats", chatRoutes);
+router.use("/message-templet", messagetempletRoutes);
 router.use("/openai-config",openaiRoutes);
 module.exports = router;
