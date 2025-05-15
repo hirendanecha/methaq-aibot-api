@@ -1289,7 +1289,7 @@ const whatsappMessages = async (req, res) => {
       const chat = new ChatModel({
         customerId: updatedCus._id,
         currentSessionId: sessionId,
-        tags: ["pending"],
+        tags: ["pending", "new"],
         // sessionId: sessionId,
         // threadId: threadId,
         source: "whatsapp",
@@ -1444,7 +1444,7 @@ const whatsappMessages = async (req, res) => {
         const newChatt = new ChatModel({
           customerId: user._id,
           // currentSessionId: sessionId,
-          tags: ["pending"],
+          tags: ["pending", "new"],
           // sessionId: sessionId,
           // threadId: threadId,
           source: "whatsapp",
@@ -2472,6 +2472,22 @@ const whatsappMessages = async (req, res) => {
   }
 };
 
+const archiveOlderChat = async (req, res) => {
+  try {
+    const chats = await ChatModel.find({ status: "active" }).populate("latestMessage");
+    const olderChats = chats.filter((chat) => {
+      return dayjs(chat?.latestMessage?.timestamp).isBefore(dayjs('2025-05-14T14:00:00Z'));
+    })?.map((chat) => chat?._id?.toString());
+    const allChatsUpdated = await ChatModel.updateMany({ _id: { $in: olderChats } }, { status: "archived" });
+
+    return res.status(200).send({ allChatsUpdated, olderChats });
+  } catch (error) {
+    console.log(error.message);
+    // return res.status(200).send();
+    return res.status(500).send("Error processing message");
+  }
+}
+
 module.exports = {
   storeChat,
   getChatHistory,
@@ -2490,5 +2506,6 @@ module.exports = {
   getUnReadChatCounts,
   getChatTrends,
   getUserStatistics,
-  getAllReports
+  getAllReports,
+  archiveOlderChat
 };

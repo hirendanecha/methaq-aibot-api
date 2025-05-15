@@ -15,7 +15,6 @@ const {
   assignAgentController,
   getDepartmentAvailability,
   isDocumentReceived,
-  getChatReports,
 } = require("../../../controllers/chat/chat.controller");
 const {
   getAgentChats,
@@ -166,7 +165,7 @@ router.get("/get-all-motor-inquiry", getAllMotorInquiry);
 router.delete("/delete-motor-inquiry/:motorInquiryId", deleteMotorInquiryById);
 
 
-router.post('/assign-departmentbysessionid',assignDepartmentBySessionId);
+router.post('/assign-departmentbysessionid', assignDepartmentBySessionId);
 
 
 //

@@ -146,7 +146,7 @@ const startChat = async (botId, message) => {
     const finaloutput = getFormattedMessage(response?.data?.messages);
     return { response, finaloutput };
   } catch (error) {
-    console.error("Error continuing chat:", error.response.data.message);
+    console.error("Error continuing chat:", error.response);
     return "Axle broke!! Abort mission!!";
   }
 };
@@ -375,7 +375,7 @@ const continueChat = async (sessionId, message, urls = null) => {
       interactiveListPayload,
     };
   } catch (error) {
-    console.error("Error continuing chat:", error.response.data.message);
+    console.error("Error continuing chat:", error.response);
     const updatedChat = await ChatModel.findOneAndUpdate(
       { currentSessionId: sessionId },
       {

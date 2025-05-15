@@ -871,11 +871,13 @@ socketObj.config = (server) => {
       const chat = await ChatModel.findById(chatId);
       console.log(chat);
       if (!chat) {
-        cb({
-          success: false,
-          message: "Entr Valid chat",
-        });
-        return;
+        if (typeof cb === "function") {
+          cb({
+            success: false,
+            message: "Entr Valid chat",
+          });
+          return;
+        }
       }
       const oldAssignee = chat.adminId;
       const oldDepartment = chat.department;
@@ -903,6 +905,7 @@ socketObj.config = (server) => {
             isHuman: true,
             agentTransferedAt: new Date(),
             latestMessage: final?._id,
+            tags: [...chatDetails?.tags?.filter((tag) => !(["new", "transferred"].includes(tag))), "transferred"],
           },
           { new: true }
         )
@@ -922,11 +925,11 @@ socketObj.config = (server) => {
           ],
         });
         receivers.forEach((receiver) => {
+          console.log(receiver?.department, updatedChat?.department, "receiver?.department");
           socketObj.io
             .to(receiver._id?.toString())
-            .emit("update-chat", updatedChat);
-          receiver?.department?.toString() ===
-            updatedChat?.department?.toString() &&
+            .emit("update-chat", { ...updatedChat, latestMessage: final });
+          (["Admin", "Supervisor"].includes(receiver?.role) || receiver?.department?.includes(updatedChat?.department)) &&
             socketObj.io
               .to(receiver._id?.toString())
               .emit("message", { ...updatedChat, latestMessage: final });
@@ -988,6 +991,7 @@ socketObj.config = (server) => {
               department: department,
               agentTransferedAt: assigneeAgent ? new Date() : null,
               isHuman: true,
+              tags: [...chatDetails?.tags?.filter((tag) => !(["new", "transferred"].includes(tag))), "transferred"],
             },
             { new: true }
           )
