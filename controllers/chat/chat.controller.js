@@ -661,7 +661,7 @@ const getChatTrends = async (req, res) => {
     )
 
     const unreadCounts = await ChatModel.aggregate([
-      { $match: { ...dateFilter, ...(departmentIds?.length > 0 ? { department: { $in: departmentIds.map(department => new mongoose.Types.ObjectId(department)) } } : {}), ...(agentIds?.length > 0 ? { adminId: { $in: agentIds.map(agent => new mongoose.Types.ObjectId(agent)) } } : {}) } },
+      { $match: { ...dateFilter, status: "active", ...(departmentIds?.length > 0 ? { department: { $in: departmentIds.map(department => new mongoose.Types.ObjectId(department)) } } : {}), ...(agentIds?.length > 0 ? { adminId: { $in: agentIds.map(agent => new mongoose.Types.ObjectId(agent)) } } : {}) } },
       {
         $lookup: {
           from: "messages",
@@ -2474,13 +2474,21 @@ const whatsappMessages = async (req, res) => {
 
 const archiveOlderChat = async (req, res) => {
   try {
-    const chats = await ChatModel.find({ status: "active" }).populate("latestMessage");
-    const olderChats = chats.filter((chat) => {
-      return dayjs(chat?.latestMessage?.timestamp).isBefore(dayjs('2025-05-14T14:00:00Z'));
-    })?.map((chat) => chat?._id?.toString());
-    const allChatsUpdated = await ChatModel.updateMany({ _id: { $in: olderChats } }, { status: "archived" });
+    // const chats = await ChatModel.find({ status: "active" }).populate("latestMessage");
+    // const olderChats = chats.filter((chat) => {
+    //   return dayjs(chat?.latestMessage?.timestamp).isBefore(dayjs('2025-05-14T14:00:00Z'));
+    // })?.map((chat) => chat?._id);
+    const allChatsUpdated = await ChatModel.updateMany({ status: "archived" }, {
+      adminId: null,
+      isHuman: false,
+      status: "archived",
+      department: null,
+      currentSessionId: null,
+      depId: "",
+      sessionIds: {},
+    });
 
-    return res.status(200).send({ allChatsUpdated, olderChats });
+    return res.status(200).send({ allChatsUpdated });
   } catch (error) {
     console.log(error.message);
     // return res.status(200).send();
