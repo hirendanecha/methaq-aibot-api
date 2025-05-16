@@ -74,4 +74,6 @@ router.get('/getSubDepartmentId/:departmentId', departmentCtrl.getSubDepartmentI
 
 router.get('/complaint/:id/pdf', permissionAuthorization("commonPermission.complain", ["read"], ['Admin']), downloadComplaintPdf);
 
+router.post('/tranfer-department-bulk', departmentCtrl.transferDepartmentInBulk)
+
 module.exports = router;

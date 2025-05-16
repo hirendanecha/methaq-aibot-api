@@ -2472,6 +2472,25 @@ const whatsappMessages = async (req, res) => {
   }
 };
 
+const createNewChat = async (req, res) => {
+  try {
+    let customer = new CustomerModel({ name: req.body.customer_name, email: req.body.customer_email, countryCode: req.body.customer_countryCode, phone: req.body.customer_phone });
+    customer = await customer.save();
+    let newChat = await ChatModel.create({
+      department: req.body.department,
+      depId: req.body.depId,
+      customerId: customer._id,
+      source: req.body.source,
+      isHuman: true
+    });
+    newChat = await newChat.save();
+    return res.status(200).json({ newChat });
+  } catch (error) {
+    console.log(error.message);
+    return res.status(500).send("Error processing message");
+  }
+};
+
 const archiveOlderChat = async (req, res) => {
   try {
     // const chats = await ChatModel.find({ status: "active" }).populate("latestMessage");
@@ -2515,5 +2534,6 @@ module.exports = {
   getChatTrends,
   getUserStatistics,
   getAllReports,
-  archiveOlderChat
+  archiveOlderChat,
+  createNewChat
 };
