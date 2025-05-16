@@ -446,6 +446,7 @@ const completedDocumentController = async (req, res) => {
 
 const getDepartmentAvailability = async (req, res) => {
   try {
+    console.log("getDepartmentAvailability Prit")
     const { sessionId } = req.params;
     const chatDetails = await ChatModel.findOne({
       currentSessionId: sessionId,

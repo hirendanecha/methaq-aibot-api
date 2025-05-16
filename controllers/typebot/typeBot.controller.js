@@ -123,6 +123,7 @@ const getAllTypeBots = async () => {
 const startChat = async (botId, message) => {
   // const url = `https://typebot-uqjtp-u35950.vm.elestio.app/api/v1/typebots/${botId}/startChat`; // Use the specific URL
   const url = `https://botauto.vionextech.com/api/v1/typebots/${process.env.TYPEBOT_BOT_ID_WELCOME}/startChat`;
+  //const url = `https://typebot.io/api/v1/typebots/${process.env.TYPEBOT_BOT_ID_WELCOME}/startChat`;
   console.log(process.env.TYPEBOT_BOT_ID_WELCOME);
   try {
     const response = await axios.post(
@@ -251,7 +252,7 @@ const continueChat = async (sessionId, message, urls = null) => {
   let interactivePayload = null;
   console.log("sessionId aaa", sessionId, message, urls);
   const url = `https://botauto.vionextech.com/api/v1/sessions/${sessionId}/continueChat`; // Use the specific URL
-
+  // const url = `https://typebot.io/api/v1/sessions/${sessionId}/continueChat`;
   try {
     const requestBody = {
       textBubbleContentFormat: "richText", // Set the text bubble content format
