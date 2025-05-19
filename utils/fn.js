@@ -387,13 +387,13 @@ exports.checkDepartmentAvailability = async (
     console.log(currentDay, "currentDay");
     const daySchedule = existingChat?.department?.workingHours[`${currentDay}`];
     const holidays = existingChat?.department?.holidays;
-    let isTodayHoliday = false;
+    let finalHolidays = [];
     if (holidays?.length > 0) {
-      isTodayHoliday = holidays.some((holiday) => dayjs(holiday?.start).isBefore(dayjs()) && dayjs(holiday?.end).isAfter(dayjs()));
+      finalHolidays = holidays.filter((holiday) => dayjs(holiday?.start).isBefore(dayjs()) && dayjs(holiday?.end).isAfter(dayjs()));
     }
 
-    if (isTodayHoliday) {
-      return existingChat?.department?.messages?.afterHoursResponse;
+    if (finalHolidays?.length > 0) {
+      return { availableMess: existingChat?.department?.messages?.afterHoursResponse, holiday: finalHolidays };
     }
 
     if (daySchedule?.isAvailable) {
@@ -441,13 +441,13 @@ exports.checkDepartmentAvailability = async (
         //   undefined,
         //   existingChat?.department?.messages?.afterHoursResponse
         // );
-        return existingChat?.department?.messages?.afterHoursResponse;
+        return { availableMess: existingChat?.department?.messages?.afterHoursResponse, daySchedule };
       }
     }
     else {
-      return existingChat?.department?.messages?.afterHoursResponse;
+      return { availableMess: existingChat?.department?.messages?.afterHoursResponse, daySchedule };
     }
-    return "True";
+    return { availableMess: "True", daySchedule };
   } catch (error) {
     console.error("Error checking department availability:", error);
     throw error;
