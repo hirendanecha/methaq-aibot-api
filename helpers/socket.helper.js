@@ -762,7 +762,14 @@ socketObj.config = (server) => {
           .populate("adminId customerId")
           .lean();
         console.log(updatedChat, "updatedChatupdatedChat");
-
+        sendWhatsAppMessage(
+          updatedChat?.customerId?.phone,
+          undefined,
+          undefined,
+          undefined,
+          `Chat is now assigned to ${adminDetails?.fullName}`,
+          updatedChat?.isHuman
+        );
         [...receivers, ...customers].forEach((receiver) => {
           socketObj.io
             .to(receiver._id?.toString())
@@ -912,7 +919,14 @@ socketObj.config = (server) => {
           .populate("adminId customerId")
           .lean();
         console.log(updatedChat, "updatedChat211111");
-
+        sendWhatsAppMessage(
+          updatedChat?.customerId?.phone,
+          undefined,
+          undefined,
+          undefined,
+          `Chat is now assigned to ${adminDetails?.fullName}`,
+          updatedChat?.isHuman
+        );
         const users = [adminId];
         const departments = [updatedChat?.department?.toString()];
         if (oldAssignee) users.push(oldAssignee?.toString());
@@ -1008,6 +1022,14 @@ socketObj.config = (server) => {
             receiverType: "user",
             messageType: "tooltip",
           };
+          sendWhatsAppMessage(
+            updatedChat?.customerId?.phone,
+            undefined,
+            undefined,
+            undefined,
+            `Chat is now assigned to ${updatedChat?.adminId?.fullName}`,
+            updatedChat?.isHuman
+          );
           await sendMessageToAdmins(
             socketObj,
             mess,

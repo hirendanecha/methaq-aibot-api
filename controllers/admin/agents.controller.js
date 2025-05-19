@@ -296,7 +296,7 @@ exports.getChatList = async (req, res) => {
     // const { limit, offset } = getPagination(page, size);
     const userDetails = await UserModel.findById(userId);
 
-    let searchCondition = { latestMessage: { $ne: null }, status };
+    let searchCondition = { status };
 
     if (department) {
       searchCondition.department = { $in: department };
@@ -311,13 +311,13 @@ exports.getChatList = async (req, res) => {
     }
 
     if (customerId) {
-    
+
       searchCondition.customerId = new mongoose.Types.ObjectId(customerId);
     }
 
     let pipeline = [
       { $match: searchCondition },
-    
+
       // Lookup customer
       {
         $lookup: {
@@ -328,18 +328,18 @@ exports.getChatList = async (req, res) => {
         },
       },
       { $unwind: "$customerId" },
-    
+
       // Search on customer name
       ...(search
         ? [
-            {
-              $match: {
-                "customerId.name": { $regex: new RegExp(search, "i") },
-              },
+          {
+            $match: {
+              "customerId.name": { $regex: new RegExp(search, "i") },
             },
-          ]
+          },
+        ]
         : []),
-    
+
       // Lookup admin
       {
         $lookup: {
@@ -350,7 +350,7 @@ exports.getChatList = async (req, res) => {
         },
       },
       { $unwind: { path: "$adminId", preserveNullAndEmptyArrays: true } },
-    
+
       // ✅ Lookup messages before isRead filter
       {
         $lookup: {
@@ -361,21 +361,21 @@ exports.getChatList = async (req, res) => {
         },
       },
       { $unwind: { path: "$latestMessage", preserveNullAndEmptyArrays: true } },
-    
+
       // ✅ Filter on isRead after message details available
       ...(isRead !== undefined
         ? [
-            {
-              $match: {
-                "latestMessage.isSeen": isRead,
-              },
+          {
+            $match: {
+              "latestMessage.isSeen": isRead,
             },
-          ]
+          },
+        ]
         : []),
-    
+
       // Sort & paginate
       { $sort: { "latestMessage.timestamp": -1 } },
-    
+
       {
         $facet: {
           totalCount: [{ $count: "count" }],

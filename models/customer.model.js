@@ -6,7 +6,7 @@ const CustomerSchema = new Schema({
     email: { type: String },
     countryCode: { type: String },
     phone: { type: String },
-    notes: [{ type: String }],
+    notes: [{ type: String, default: [] }],
     isGuestUser: { type: Boolean, default: false },
     status: { type: String, default: 'active', enum: ['active', 'inactive'] },
 }, {

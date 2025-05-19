@@ -124,7 +124,7 @@ router.get("/check-document-received/:sessionId", isDocumentReceived);
 
 router.get("/assign-agent/:sessionId", assignAgentController);
 
-router.get("/check-department-availability/:sessionId", limiter, getDepartmentAvailability);
+ router.get("/check-department-availability/:sessionId", getDepartmentAvailability);
 
 router.get("/get-tools", getToolFunctions);
 
