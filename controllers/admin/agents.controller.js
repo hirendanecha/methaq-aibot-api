@@ -290,7 +290,8 @@ exports.getChatList = async (req, res) => {
       search,
       tags,
       isRead,
-      customerId
+      customerId,
+      sortOrder = "desc"
     } = req.body;
 
     // const { limit, offset } = getPagination(page, size);
@@ -335,6 +336,7 @@ exports.getChatList = async (req, res) => {
           {
             $match: {
               "customerId.name": { $regex: new RegExp(search, "i") },
+              "customerId.phone": { $regex: new RegExp(search, "i") },
             },
           },
         ]
@@ -374,7 +376,9 @@ exports.getChatList = async (req, res) => {
         : []),
 
       // Sort & paginate
-      { $sort: { "latestMessage.timestamp": -1 } },
+      {
+        $sort: { "latestMessage.timestamp": sortOrder === "asc" ? 1 : -1 }
+      },
 
       {
         $facet: {
