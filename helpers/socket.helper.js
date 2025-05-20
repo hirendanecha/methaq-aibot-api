@@ -729,7 +729,7 @@ socketObj.config = (server) => {
           chatId: params.chatId,
           sender: null,
           sendType: "admin",
-          content: `Chat is now assigned to ${adminDetails?.fullName}`,
+          content: `Please note, the inquiry has been transferred to ${adminDetails?.fullName}`,
           attachments: [],
           timestamp: new Date(),
           receiver: chatDetails?.customerId?._id?.toString(),
@@ -767,7 +767,7 @@ socketObj.config = (server) => {
           undefined,
           undefined,
           undefined,
-          `Chat is now assigned to ${adminDetails?.fullName}`,
+          `Please note, the inquiry has been transferred to ${adminDetails?.fullName}`,
           updatedChat?.isHuman
         );
         [...receivers, ...customers].forEach((receiver) => {
@@ -895,7 +895,7 @@ socketObj.config = (server) => {
           chatId: chatId,
           sender: null,
           sendType: "admin",
-          content: `Chat is now assigned to ${adminDetails?.fullName}`,
+          content: `Please note, the inquiry has been transferred to ${adminDetails?.fullName}`,
           attachments: [],
           timestamp: new Date(),
           receiver: chatDetails?.customerId?.toString(),
@@ -924,7 +924,7 @@ socketObj.config = (server) => {
           undefined,
           undefined,
           undefined,
-          `Chat is now assigned to ${adminDetails?.fullName}`,
+          `Please note, the inquiry has been transferred to ${adminDetails?.fullName}`,
           updatedChat?.isHuman
         );
         const users = [adminId];
@@ -1017,7 +1017,7 @@ socketObj.config = (server) => {
             chatId: chatId,
             sender: null,
             sendType: "assistant",
-            content: `Chat is now assigned to ${updatedChat?.adminId?.fullName}`,
+            content: `Please note, the inquiry has been transferred to ${updatedChat?.adminId?.fullName}`,
             receiver: chatDetails?.customerId?._id?.toString(),
             receiverType: "user",
             messageType: "tooltip",
@@ -1027,7 +1027,7 @@ socketObj.config = (server) => {
             undefined,
             undefined,
             undefined,
-            `Chat is now assigned to ${updatedChat?.adminId?.fullName}`,
+            `Please note, the inquiry has been transferred to ${updatedChat?.adminId?.fullName}`,
             updatedChat?.isHuman
           );
           await sendMessageToAdmins(
