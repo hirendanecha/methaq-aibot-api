@@ -90,12 +90,12 @@ exports.getAllAgents = async (req, res) => {
       role: { $nin: ["User", "Admin"] },
       ...(search
         ? {
-          $or: [
-            { fullName: new RegExp(search, "i") },
-            { email: new RegExp(search, "i") },
-            { mobileNumber: new RegExp(search, "i") },
-          ],
-        }
+            $or: [
+              { fullName: new RegExp(search, "i") },
+              { email: new RegExp(search, "i") },
+              { mobileNumber: new RegExp(search, "i") },
+            ],
+          }
         : {}),
     });
     const users = await UserModel.find({
@@ -103,12 +103,12 @@ exports.getAllAgents = async (req, res) => {
       ...(department ? { department: { $in: department } } : {}),
       ...(search
         ? {
-          $or: [
-            { fullName: new RegExp(search, "i") },
-            { email: new RegExp(search, "i") },
-            { mobileNumber: new RegExp(search, "i") },
-          ],
-        }
+            $or: [
+              { fullName: new RegExp(search, "i") },
+              { email: new RegExp(search, "i") },
+              { mobileNumber: new RegExp(search, "i") },
+            ],
+          }
         : {}),
     })
       .populate("department")
@@ -291,7 +291,7 @@ exports.getChatList = async (req, res) => {
       tags,
       isRead,
       customerId,
-      sortOrder = "desc"
+      sortOrder = "desc",
     } = req.body;
 
     // const { limit, offset } = getPagination(page, size);
@@ -312,7 +312,6 @@ exports.getChatList = async (req, res) => {
     }
 
     if (customerId) {
-
       searchCondition.customerId = new mongoose.Types.ObjectId(customerId);
     }
 
@@ -328,18 +327,29 @@ exports.getChatList = async (req, res) => {
           as: "customerId",
         },
       },
+      {
+        $lookup: {
+          from: "messages",
+          localField: "latestMessage",
+          foreignField: "_id",
+          as: "messages",
+        },
+      },
       { $unwind: "$customerId" },
 
       // Search on customer name
       ...(search
         ? [
-          {
-            $match: {
-              "customerId.name": { $regex: new RegExp(search, "i") },
-              "customerId.phone": { $regex: new RegExp(search, "i") },
+            {
+              $match: {
+                $or: [
+                  { "customerId.name": { $regex: new RegExp(search, "i") } },
+                  { "customerId.phone": { $regex: new RegExp(search, "i") } },
+                  { "messages.content": { $regex: new RegExp(search, "i") } },
+                ],
+              },
             },
-          },
-        ]
+          ]
         : []),
 
       // Lookup admin
@@ -367,17 +377,17 @@ exports.getChatList = async (req, res) => {
       // ✅ Filter on isRead after message details available
       ...(isRead !== undefined
         ? [
-          {
-            $match: {
-              "latestMessage.isSeen": isRead,
+            {
+              $match: {
+                "latestMessage.isSeen": isRead,
+              },
             },
-          },
-        ]
+          ]
         : []),
 
       // Sort & paginate
       {
-        $sort: { "latestMessage.timestamp": sortOrder === "asc" ? 1 : -1 }
+        $sort: { "latestMessage.timestamp": sortOrder === "asc" ? 1 : -1 },
       },
 
       {
