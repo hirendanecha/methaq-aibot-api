@@ -26,6 +26,7 @@ const {
   toolFunctions,
 } = require("../../services/openai/openai-functions/function-schema/functionsSchema");
 const { getNextSubDeptId } = require("../../utils/fn");
+const ChatModel = require("../../models/chat.model");
 
 exports.getAllDepartment = async (req, res) => {
   try {
@@ -350,6 +351,23 @@ exports.getSubDepartmentId = async (req, res) => {
       return sendErrorResponse(res, "Department is now full.");
     }
     return sendSuccessResponse(res, { data: newDeptId });
+  } catch (error) {
+    return sendErrorResponse(res, error.message);
+  }
+}
+
+exports.transferDepartmentInBulk = async (req, res) => {
+  try {
+    const { departmentTranferArray } = req.body;
+    console.log(req.body, "departmentTranferArray")
+    for (let i = 0; i < departmentTranferArray?.length; i++) {
+      const { fromDepartment, toDepartment } = departmentTranferArray[i];
+      const fromDepartmentDetails = await DepartmentModel.findOne({ _id: fromDepartment }).lean();
+      const toDepartmentDetails = await DepartmentModel.findOne({ _id: toDepartment }).lean();
+      // const chats = await ChatModel.find({ department: fromDepartmentDetails?._id, tags: "transferred" });
+      const chats = await ChatModel.updateMany({ department: fromDepartmentDetails?._id }, { $set: { department: toDepartmentDetails?._id, adminId: null, depId: toDepartmentDetails?.depId } }).lean();
+    }
+    return sendSuccessResponse(res, { message: "Department transfered successfully." });
   } catch (error) {
     return sendErrorResponse(res, error.message);
   }

@@ -90,7 +90,7 @@ const incrementUsage = async (req, res) => {
 const getAllTemplates = async (req, res) => {
   try {
     let { page, size, search = "", category } = req.query;
-    search = search?.replace(/^[^a-zA-Z0-9\u0600-\u06FF]+/, "");
+    search = search.replace(/[^\w\u0600-\u06FF ]+/g, "");
 
     const query = {};
 
