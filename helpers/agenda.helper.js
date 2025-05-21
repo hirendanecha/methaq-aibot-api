@@ -21,57 +21,57 @@ agenda.define("archive old chats", async (job) => {
     console.log(chat, "archived chat in cronjob");
 });
 
-agenda.define("not replying", async (job) => {
+// agenda.define("not replying", async (job) => {
 
-    const aggregate = [];
-    const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
+//     const aggregate = [];
+//     const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
 
-    aggregate.push({
-        $lookup: {
-            from: "messages",
-            localField: "latestMessage",
-            foreignField: "_id",
-            as: "message",
-        },
-    });
+//     aggregate.push({
+//         $lookup: {
+//             from: "messages",
+//             localField: "latestMessage",
+//             foreignField: "_id",
+//             as: "message",
+//         },
+//     });
 
-    aggregate.push({
-        $unwind: {
-            path: "$message",
-            preserveNullAndEmptyArrays: true // Optional: if no message found, still include the chat document
-        }
-    });
+//     aggregate.push({
+//         $unwind: {
+//             path: "$message",
+//             preserveNullAndEmptyArrays: true // Optional: if no message found, still include the chat document
+//         }
+//     });
 
-    aggregate.push({
-         $match: {
-            $and: [
-                {"message.sendType" : "user"},
-                { "message.timestamp": { $lt: thirtyMinutesAgo } },
-            ]
-        }
-    })
+//     aggregate.push({
+//          $match: {
+//             $and: [
+//                 {"message.sendType" : "user"},
+//                 { "message.timestamp": { $lt: thirtyMinutesAgo } },
+//             ]
+//         }
+//     })
 
-    aggregate.push({ 
-        $lookup: {
-            from: "users",
-            localField: "adminId",
-            foreignField: "_id",
-            as: "user",
-        },
-    })
+//     aggregate.push({ 
+//         $lookup: {
+//             from: "users",
+//             localField: "adminId",
+//             foreignField: "_id",
+//             as: "user",
+//         },
+//     })
 
-    aggregate.push({
-        $unwind: { 
-            path: "$user",
-            preserveNullAndEmptyArrays: true 
-        }
-        })
+//     aggregate.push({
+//         $unwind: { 
+//             path: "$user",
+//             preserveNullAndEmptyArrays: true 
+//         }
+//         })
 
-    const chats = await ChatModel.aggregate(aggregate);
-    console.log(chats)
-        //for send mail use chats.user.email
+//     const chats = await ChatModel.aggregate(aggregate);
+//     console.log(chats)
+//         //for send mail use chats.user.email
 
-});
+// });
 
 
 // Start the agenda scheduler
