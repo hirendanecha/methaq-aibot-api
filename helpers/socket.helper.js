@@ -907,7 +907,7 @@ socketObj.config = (server) => {
       if (adminId) {
         const adminDetails = await UserModel.findById(adminId).lean();
         const chatDetails = await ChatModel.findOne({ _id: chatId })
-          .populate("customerId latestMessage")
+          .populate("latestMessage")
           .lean();
 
         let langChoice = await detectLanguage(
@@ -989,7 +989,7 @@ socketObj.config = (server) => {
         chat.adminId = null;
         const agents = await UserModel.find({ role: "Agent", department });
         const chatDetails = await ChatModel.findOne({ _id: chatId })
-          .populate("customerId latestMessage")
+          .populate("latestMessage")
           .lean();
         console.log(chatDetails, agents, "chatDetailschatDetails");
 
