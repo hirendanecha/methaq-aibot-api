@@ -20,4 +20,10 @@ const updateChatStatus = async (chatId, status) => {
   return chat;
 };
 
-module.exports = { getChatHistory, logTransfer, updateChatStatus };
+const detectLanguage= async (text)=> {
+  const arabicRegex = /[\u0600-\u06FF]/; // Arabic Unicode range
+  if (!text || typeof text !== 'string') return "english"; // Default to English
+  return arabicRegex.test(text) ? "arabic" : "english";
+}
+
+module.exports = { getChatHistory, logTransfer, updateChatStatus,detectLanguage };
