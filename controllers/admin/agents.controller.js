@@ -294,6 +294,7 @@ exports.getChatList = async (req, res) => {
       sortOrder = "desc",
     } = req.body;
 
+    // const { limit, offset } = getPagination(page, size);
     const userDetails = await UserModel.findById(userId);
 
     let searchCondition = { status };
@@ -305,9 +306,8 @@ exports.getChatList = async (req, res) => {
       };
     }
 
-    // ✅ Tags filter
     if (tags?.length > 0) {
-      searchCondition.tags = { $in: tags };
+      searchCondition.tags = { $in: tags }; // Assuming tags is an array
     }
 
     // ✅ Role-based restriction for non-admins
@@ -322,10 +322,10 @@ exports.getChatList = async (req, res) => {
       searchCondition.customerId = new mongoose.Types.ObjectId(customerId);
     }
 
-    const pipeline = [
+    let pipeline = [
       { $match: searchCondition },
 
-      // ✅ Lookup customer details
+      // Lookup customer
       {
         $lookup: {
           from: "customers",
@@ -334,9 +334,17 @@ exports.getChatList = async (req, res) => {
           as: "customerId",
         },
       },
+      {
+        $lookup: {
+          from: "messages",
+          localField: "latestMessage",
+          foreignField: "_id",
+          as: "messages",
+        },
+      },
       { $unwind: "$customerId" },
 
-      // ✅ Optional search on name, phone, or message content
+      // Search on customer name
       ...(search
         ? [
             {
@@ -344,13 +352,14 @@ exports.getChatList = async (req, res) => {
                 $or: [
                   { "customerId.name": { $regex: new RegExp(search, "i") } },
                   { "customerId.phone": { $regex: new RegExp(search, "i") } },
+                  { "messages.content": { $regex: new RegExp(search, "i") } },
                 ],
               },
             },
           ]
         : []),
 
-      // ✅ Lookup admin user
+      // Lookup admin
       {
         $lookup: {
           from: "users",
@@ -361,7 +370,7 @@ exports.getChatList = async (req, res) => {
       },
       { $unwind: { path: "$adminId", preserveNullAndEmptyArrays: true } },
 
-      // ✅ Lookup latest message
+      // ✅ Lookup messages before isRead filter
       {
         $lookup: {
           from: "messages",
@@ -396,11 +405,10 @@ exports.getChatList = async (req, res) => {
         },
       },
     ];
+    let result = await ChatModel.aggregate(pipeline);
 
-    const result = await ChatModel.aggregate(pipeline);
-
-    const totalChats = result[0]?.totalCount?.[0]?.count || 0;
-    const chats = result[0]?.paginatedResults || [];
+    let totalChats = result[0]?.totalCount?.[0]?.count || 0;
+    let chats = result[0]?.paginatedResults || [];
 
     return sendSuccessResponse(
       res,

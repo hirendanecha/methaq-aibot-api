@@ -310,17 +310,29 @@ const getComplaintById = async (req, res) => {
 const updateComplaintStatus = async (req, res) => {
   try {
     const { id } = req.params; // Get complaint ID from URL parameters
-    const { complainstatus } = req.body; // Get the new status from the request body
+    const { complainstatus, closedReason, reasonContent } = req.body; // Get the new status and reasons from the request body
 
     // Validate the new status
     if (!["in_progress", "new", "closed"].includes(complainstatus)) {
       return sendErrorResponse(res, "Invalid status value", 400, true, true);
     }
 
+    // Prepare update object
+    const updateFields = { complainstatus };
+
+    // Only set closedReason and reasonContent if status is 'closed'
+    if (complainstatus === "closed") {
+      updateFields.closedReason = closedReason || null;
+      updateFields.reasonContent = reasonContent || "";
+    } else {
+      updateFields.closedReason = null;
+      updateFields.reasonContent = "";
+    }
+
     // Find and update the complaint's status using the complaint ID
     const updatedComplaint = await ComplaintModel.findByIdAndUpdate(
       id,
-      { complainstatus },
+      updateFields,
       { new: true }
     );
 
