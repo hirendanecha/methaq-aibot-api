@@ -276,7 +276,8 @@ const fetchDepartmentsAndPrompts = async () => {
 exports.sendMessageToAdmins = async (socketObj, message, department, extraReceiver, sendUpdate, messageToExtr = true) => {
   try {
     const newMessage = new MessageModel(message);
-    const latestMess = await newMessage.save();
+    let latestMess = await newMessage.save();
+    latestMess = await MessageModel.findById(latestMess._id).populate("sender receiver", "fullName email").lean();
     let extraUserIds = [];
     const conditions = [
       { role: { $in: ["Admin", "Supervisor"] } },
