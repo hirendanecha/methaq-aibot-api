@@ -294,31 +294,38 @@ exports.getChatList = async (req, res) => {
       sortOrder = "desc",
     } = req.body;
 
-    // const { limit, offset } = getPagination(page, size);
     const userDetails = await UserModel.findById(userId);
 
     let searchCondition = { status };
 
-    if (department) {
-      searchCondition.department = { $in: department };
+    // ✅ Department filter (if passed from frontend)
+    if (department?.length > 0) {
+      searchCondition.department = {
+        $in: department.map(dep => new mongoose.Types.ObjectId(dep)),
+      };
     }
 
+    // ✅ Tags filter
     if (tags?.length > 0) {
-      searchCondition.tags = { $in: tags }; // Assuming tags is an array
+      searchCondition.tags = { $in: tags };
     }
 
+    // ✅ Role-based restriction for non-admins
     if (role !== "Admin" && role !== "Supervisor") {
-      searchCondition.department = { $in: userDetails?.department };
+      searchCondition.department = {
+        $in: userDetails?.department || [],
+      };
     }
 
+    // ✅ Filter by customer ID
     if (customerId) {
       searchCondition.customerId = new mongoose.Types.ObjectId(customerId);
     }
 
-    let pipeline = [
+    const pipeline = [
       { $match: searchCondition },
 
-      // Lookup customer
+      // ✅ Lookup customer details
       {
         $lookup: {
           from: "customers",
@@ -327,17 +334,9 @@ exports.getChatList = async (req, res) => {
           as: "customerId",
         },
       },
-      {
-        $lookup: {
-          from: "messages",
-          localField: "latestMessage",
-          foreignField: "_id",
-          as: "messages",
-        },
-      },
       { $unwind: "$customerId" },
 
-      // Search on customer name
+      // ✅ Optional search on name, phone, or message content
       ...(search
         ? [
             {
@@ -345,14 +344,13 @@ exports.getChatList = async (req, res) => {
                 $or: [
                   { "customerId.name": { $regex: new RegExp(search, "i") } },
                   { "customerId.phone": { $regex: new RegExp(search, "i") } },
-                  { "messages.content": { $regex: new RegExp(search, "i") } },
                 ],
               },
             },
           ]
         : []),
 
-      // Lookup admin
+      // ✅ Lookup admin user
       {
         $lookup: {
           from: "users",
@@ -363,7 +361,7 @@ exports.getChatList = async (req, res) => {
       },
       { $unwind: { path: "$adminId", preserveNullAndEmptyArrays: true } },
 
-      // ✅ Lookup messages before isRead filter
+      // ✅ Lookup latest message
       {
         $lookup: {
           from: "messages",
@@ -374,8 +372,8 @@ exports.getChatList = async (req, res) => {
       },
       { $unwind: { path: "$latestMessage", preserveNullAndEmptyArrays: true } },
 
-      // ✅ Filter on isRead after message details available
-      ...(isRead !== undefined
+      // ✅ Filter by message isRead if specified
+      ...(typeof isRead === "boolean"
         ? [
             {
               $match: {
@@ -385,11 +383,12 @@ exports.getChatList = async (req, res) => {
           ]
         : []),
 
-      // Sort & paginate
+      // ✅ Sort by latest message timestamp
       {
         $sort: { "latestMessage.timestamp": sortOrder === "asc" ? 1 : -1 },
       },
 
+      // ✅ Paginate results
       {
         $facet: {
           totalCount: [{ $count: "count" }],
@@ -397,10 +396,11 @@ exports.getChatList = async (req, res) => {
         },
       },
     ];
-    let result = await ChatModel.aggregate(pipeline);
 
-    let totalChats = result[0]?.totalCount?.[0]?.count || 0;
-    let chats = result[0]?.paginatedResults || [];
+    const result = await ChatModel.aggregate(pipeline);
+
+    const totalChats = result[0]?.totalCount?.[0]?.count || 0;
+    const chats = result[0]?.paginatedResults || [];
 
     return sendSuccessResponse(
       res,

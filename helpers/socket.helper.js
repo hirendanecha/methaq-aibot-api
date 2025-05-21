@@ -674,6 +674,7 @@ socketObj.config = (server) => {
     socket.on("get-messages", async (params, cb) => {
       params = typeof params === "string" ? JSON.parse(params) : params;
       const messages = await MessageModel.find({ chatId: params.chatId })
+        .populate("sender receiver", "fullName email")
         .sort({ timestamp: -1 })
         .skip(params.offset)
         .limit(params.limit)
@@ -715,8 +716,11 @@ socketObj.config = (server) => {
       }).lean();
       console.log(receivers, "receivers");
       const newMessage = new MessageModel(mess);
-      const final = await newMessage.save();
-      console.log(chatDetails?.adminId, "chatDetails?.adminId");
+      let final = await newMessage.save();
+      final = await MessageModel.findById(final?._id)
+        .populate("sender receiver", "fullName")
+        .lean();
+      console.log(final, "chatDetails final");
       if (!chatDetails?.adminId) {
         const authHeader = socket.handshake.headers.authorization || "";
         const token = authHeader && authHeader.split(" ")[1];
