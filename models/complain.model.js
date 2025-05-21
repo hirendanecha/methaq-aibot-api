@@ -24,7 +24,20 @@ const ComplaintSchema = new Schema(
     },
     complainType: { type: String, default: "" },
     customername: { type: String },
-    complainComment: { type: String, default: "" },
+    complainComments: [
+      {
+        content: { type: String, required: true },
+        commentBy: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "user", // Or you can use String if it's system/user label
+          required: true,
+        },
+        date: {
+          type: Date,
+          default: Date.now,
+        },
+      }
+    ],
     customeremail: { type: String },
     customerphone: { type: String },
     complaindesc: { type: String },

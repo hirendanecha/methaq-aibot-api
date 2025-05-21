@@ -287,10 +287,17 @@ const transferChatToMainMenu = async (req, res) => {
 };
 const getComplaintById = async (req, res) => {
   try {
-    const { id } = req.params; // Get complaint ID from URL parameters
+    const { id } = req.params;
 
-    // Find the complaint using the complaint ID
-    const complaint = await ComplaintModel.findById(id).lean();
+    // console.log(id, "id");
+
+    const complaint = await ComplaintModel.findById(id)
+      .populate({
+        path: "complainComments.commentBy",
+        select: "fullName", // Only fetch fullName from user
+      })
+      .lean();
+
     if (!complaint) {
       return sendErrorResponse(res, "Complaint not found", 404, true, true);
     }
@@ -356,11 +363,34 @@ const assignAgentToComplaint = async (req, res) => {
 const updateComplaint = async (req, res) => {
   try {
     const { id } = req.params; // Get complaint ID from URL parameters
+    const userId = req.user._id;
+    const { newComment, ...otherUpdates } = req.body;
 
-    // Find and update the complaint using the complaint ID
+    const updateOps = {};
+
+    // Handle top-level field updates (like complainstatus, complaindesc, etc.)
+    if (Object.keys(otherUpdates).length > 0) {
+      updateOps.$set = otherUpdates;
+    }
+
+    // Handle comment addition
+    if (newComment && newComment.content) {
+      updateOps.$push = {
+        complainComments: {
+          content: newComment.content,
+          commentBy: userId,
+          date: new Date(),
+        },
+      };
+    }
+
+    if (Object.keys(updateOps).length === 0) {
+      return sendErrorResponse(res, "No valid update data provided", 400);
+    }
+
     const updatedComplaint = await ComplaintModel.findByIdAndUpdate(
       id,
-      req.body,
+      updateOps,
       { new: true }
     );
 
@@ -373,6 +403,7 @@ const updateComplaint = async (req, res) => {
     return sendErrorResponse(res, error.message);
   }
 };
+
 const deleteComplaintById = async (req, res) => {
   try {
     const { id } = req.params; // Get complaint ID from URL parameters
