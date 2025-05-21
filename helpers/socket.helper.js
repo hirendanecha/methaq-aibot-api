@@ -973,8 +973,12 @@ socketObj.config = (server) => {
       } else {
         chat.adminId = null;
         const agents = await UserModel.find({ role: "Agent", department });
-        const chatDetails = await ChatModel.findOne({ _id: chatId }).lean();
+        const chatDetails = await ChatModel.findOne({ _id: chatId }).populate("customerId latestMessage").lean();
         console.log(chatDetails, agents, "chatDetailschatDetails");
+
+        let langChoice = detectLanguage(
+          chatDetails.latestMessage?.content || ""
+        );
 
         if (!(agents.length > 0)) {
           const mess = {
