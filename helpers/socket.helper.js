@@ -247,7 +247,8 @@ socketObj.config = (server) => {
               sendType: "assistant",
               receiverType: "admin",
               messageType: "tooltip",
-              content: `Chat is transferred to ${userInput?.split("-")[1]
+              content: `Chat is transferred to ${
+                userInput?.split("-")[1]
               } department`,
             };
             sendMessageToAdmins(socketObj, mess2, chatDetails?.department);
@@ -720,9 +721,11 @@ socketObj.config = (server) => {
         .populate("sender receiver", "fullName")
         .lean();
 
-      let langChoice = detectLanguage(chatDetails.latestMessage?.content || "");
+      let langChoice = await detectLanguage(
+        chatDetails.latestMessage?.content || ""
+      );
 
-      console.log(chatDetails.latestMessage, "chatDetails final ankit");
+      console.log(langChoice, "clangChoice");
       if (!chatDetails?.adminId) {
         const authHeader = socket.handshake.headers.authorization || "";
         const token = authHeader && authHeader.split(" ")[1];
@@ -824,9 +827,11 @@ socketObj.config = (server) => {
         const updatedChat = await ChatModel.findOneAndUpdate(
           { _id: params.chatId },
           {
-            latestMessage: final?._id, agentHandledAt: chatDetails?.agentHandledAt || dayjs(), initialHandlingTime:
+            latestMessage: final?._id,
+            agentHandledAt: chatDetails?.agentHandledAt || dayjs(),
+            initialHandlingTime:
               +chatDetails?.initialHandlingTime ||
-              dayjs().diff(chatDetails?.agentTransferedAt || dayjs(), "minute")
+              dayjs().diff(chatDetails?.agentTransferedAt || dayjs(), "minute"),
           },
           { new: true }
         )
@@ -905,7 +910,7 @@ socketObj.config = (server) => {
           .populate("customerId latestMessage")
           .lean();
 
-        let langChoice = detectLanguage(
+        let langChoice = await detectLanguage(
           chatDetails.latestMessage?.content || ""
         );
         const mess = {
@@ -932,7 +937,12 @@ socketObj.config = (server) => {
             isHuman: true,
             agentTransferedAt: new Date(),
             latestMessage: final?._id,
-            tags: [...chatDetails?.tags?.filter((tag) => !(["new", "transferred"].includes(tag))), "transferred"],
+            tags: [
+              ...chatDetails?.tags?.filter(
+                (tag) => !["new", "transferred"].includes(tag)
+              ),
+              "transferred",
+            ],
           },
           { new: true }
         )
@@ -961,11 +971,16 @@ socketObj.config = (server) => {
           ],
         });
         receivers.forEach((receiver) => {
-          console.log(receiver?.department, updatedChat?.department, "receiver?.department");
+          console.log(
+            receiver?.department,
+            updatedChat?.department,
+            "receiver?.department"
+          );
           socketObj.io
             .to(receiver._id?.toString())
             .emit("update-chat", { ...updatedChat, latestMessage: final });
-          (["Admin", "Supervisor"].includes(receiver?.role) || receiver?.department?.includes(updatedChat?.department)) &&
+          (["Admin", "Supervisor"].includes(receiver?.role) ||
+            receiver?.department?.includes(updatedChat?.department)) &&
             socketObj.io
               .to(receiver._id?.toString())
               .emit("message", { ...updatedChat, latestMessage: final });
@@ -973,10 +988,12 @@ socketObj.config = (server) => {
       } else {
         chat.adminId = null;
         const agents = await UserModel.find({ role: "Agent", department });
-        const chatDetails = await ChatModel.findOne({ _id: chatId }).populate("customerId latestMessage").lean();
+        const chatDetails = await ChatModel.findOne({ _id: chatId })
+          .populate("customerId latestMessage")
+          .lean();
         console.log(chatDetails, agents, "chatDetailschatDetails");
 
-        let langChoice = detectLanguage(
+        let langChoice = await detectLanguage(
           chatDetails.latestMessage?.content || ""
         );
 
@@ -1031,7 +1048,12 @@ socketObj.config = (server) => {
               department: department,
               agentTransferedAt: assigneeAgent ? new Date() : null,
               isHuman: true,
-              tags: [...chatDetails?.tags?.filter((tag) => !(["new", "transferred"].includes(tag))), "transferred"],
+              tags: [
+                ...chatDetails?.tags?.filter(
+                  (tag) => !["new", "transferred"].includes(tag)
+                ),
+                "transferred",
+              ],
             },
             { new: true }
           )
@@ -1066,7 +1088,10 @@ socketObj.config = (server) => {
             socketObj,
             mess,
             updatedChat?.department,
-            [{ _id: { $in: [oldAssignee] } }, { department: { $in: [oldDepartment] } }],
+            [
+              { _id: { $in: [oldAssignee] } },
+              { department: { $in: [oldDepartment] } },
+            ],
             true,
             false
           );
@@ -1177,9 +1202,7 @@ socketObj.config = (server) => {
           ],
         }).lean();
         [...receivers, chatDetails?.customerId].forEach((receiver) => {
-          socketObj.io
-            .to(receiver._id?.toString())
-            .emit("unread-count", {
+          socketObj.io.to(receiver._id?.toString()).emit("unread-count", {
             // counts: UnReadCounts[0]?.totalUnread || 0,
             chatId: chatId,
             isSeen: true,
@@ -1220,7 +1243,8 @@ socketObj.config = (server) => {
           sendType: "admin",
           content:
             chat?.department?.messages?.chatClosingMessage ||
-            `This conversation has ended, thank you for contacting Methaq Takaful Insuance ${chat?.department?.name ? chat?.department?.name : ""
+            `This conversation has ended, thank you for contacting Methaq Takaful Insuance ${
+              chat?.department?.name ? chat?.department?.name : ""
             }. We hope we were able to serve you`,
           attachments: [],
           timestamp: new Date(),
@@ -1269,7 +1293,8 @@ socketObj.config = (server) => {
             undefined,
             undefined,
             chat?.department?.messages?.chatClosingMessage ||
-            `This conversation has ended, thank you for contacting Methaq Takaful Insuance ${chat?.department?.name ? chat?.department?.name : ""
+              `This conversation has ended, thank you for contacting Methaq Takaful Insuance ${
+                chat?.department?.name ? chat?.department?.name : ""
               }. We hope we were able to serve you`,
             updatedChat?.isHuman
           );
