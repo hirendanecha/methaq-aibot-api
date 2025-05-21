@@ -298,9 +298,14 @@ const getComplaintById = async (req, res) => {
       })
       .lean();
 
-    if (!complaint) {
-      return sendErrorResponse(res, "Complaint not found", 404, true, true);
-    }
+
+      if (!complaint) {
+        return sendErrorResponse(res, "Complaint not found", 404, true, true);
+      }
+
+      complaint.complainComments.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+ 
 
     return sendSuccessResponse(res, { data: complaint });
   } catch (error) {
