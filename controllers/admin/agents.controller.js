@@ -334,6 +334,14 @@ exports.getChatList = async (req, res) => {
           as: "customerId",
         },
       },
+      {
+        $lookup: {
+          from: "messages",
+          localField: "latestMessage",
+          foreignField: "_id",
+          as: "latestMessage",
+        },
+      },
       { $unwind: "$customerId" },
 
       // ✅ Optional search on name, phone, or message content
@@ -344,6 +352,7 @@ exports.getChatList = async (req, res) => {
                 $or: [
                   { "customerId.name": { $regex: new RegExp(search, "i") } },
                   { "customerId.phone": { $regex: new RegExp(search, "i") } },
+                  { "messages.content": { $regex: new RegExp(search, "i") } },
                 ],
               },
             },
@@ -362,14 +371,7 @@ exports.getChatList = async (req, res) => {
       { $unwind: { path: "$adminId", preserveNullAndEmptyArrays: true } },
 
       // ✅ Lookup latest message
-      {
-        $lookup: {
-          from: "messages",
-          localField: "latestMessage",
-          foreignField: "_id",
-          as: "latestMessage",
-        },
-      },
+     
       { $unwind: { path: "$latestMessage", preserveNullAndEmptyArrays: true } },
 
       // ✅ Filter by message isRead if specified
