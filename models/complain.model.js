@@ -10,7 +10,7 @@ const ComplaintSchema = new Schema(
     },
     complainNumber: {
       type: String,
-      default: null
+      default: null,
     },
     adminId: {
       type: Schema.Types.ObjectId,
@@ -36,7 +36,7 @@ const ComplaintSchema = new Schema(
           type: Date,
           default: Date.now,
         },
-      }
+      },
     ],
     customeremail: { type: String },
     customerphone: { type: String },
@@ -47,6 +47,17 @@ const ComplaintSchema = new Schema(
       enum: ["new", "in_progress", "closed"],
       default: "new",
     },
+    closedReason: {
+      type: String,
+      enum: [
+        "Solved",
+        "Not related - transferred to Different department",
+        "Not related",
+        "Other",
+      ],
+      default: null,
+    },
+    reasonContent: { type: String, default: "" },
   },
   {
     timestamps: true,
