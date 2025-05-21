@@ -8,7 +8,7 @@ const cors = require("cors");
 var indexRouter = require('./routes/index');
 const middleware = require("./middleware");
 const database = require("./utils/database");
-const agenda = require("./helpers/agenda.helper");
+const { agenda } = require("./helpers/agenda.helper");
 
 var app = express();
 
@@ -32,6 +32,8 @@ database.connect();
 
 // agenda start
 agenda.start();
+agenda.schedule('every 1 second', 'not replying');
+
 
 app.use('/', indexRouter);
 
