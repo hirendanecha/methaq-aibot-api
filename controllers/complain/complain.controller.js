@@ -289,7 +289,7 @@ const getComplaintById = async (req, res) => {
   try {
     const { id } = req.params;
 
-    console.log(id, "id");
+    // console.log(id, "id");
 
     const complaint = await ComplaintModel.findById(id)
       .populate({
