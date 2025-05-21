@@ -25,6 +25,7 @@ const {
 } = require("../controllers/typebot/typeBot.controller");
 const DepartmentModel = require("../models/department.model");
 const dayjs = require("dayjs");
+const { detectLanguage } = require("./chat.helper");
 
 let logger = console;
 const socketObj = {};
@@ -40,8 +41,6 @@ socketObj.config = (server) => {
     pingTimeout: 20000, // 20 seconds timeout to detect dead connections
     pingInterval: 25000, // Try to keep connection alive
   });
-
-
 
   socketObj.io = io;
 
@@ -248,8 +247,9 @@ socketObj.config = (server) => {
               sendType: "assistant",
               receiverType: "admin",
               messageType: "tooltip",
-              content: `Chat is transferred to ${userInput?.split("-")[1]
-                } department`,
+              content: `Chat is transferred to ${
+                userInput?.split("-")[1]
+              } department`,
             };
             sendMessageToAdmins(socketObj, mess2, chatDetails?.department);
           }
@@ -688,7 +688,7 @@ socketObj.config = (server) => {
     });
 
     socket.on("send-message", async (params, cb) => {
-      console.log(params, typeof params, socket.user, "params");
+      //console.log(params, typeof params, socket.user, "params");
 
       params = typeof params === "string" ? JSON.parse(params) : params;
       const mess = {
@@ -703,7 +703,7 @@ socketObj.config = (server) => {
       };
 
       const chatDetails = await ChatModel.findById(params.chatId)
-        .populate("customerId")
+        .populate("customerId latestMessage")
         .lean();
       const receivers = await UserModel.find({
         $or: [
@@ -720,7 +720,12 @@ socketObj.config = (server) => {
       final = await MessageModel.findById(final?._id)
         .populate("sender receiver", "fullName")
         .lean();
-      console.log(final, "chatDetails final");
+
+      let langChoice = await detectLanguage(
+        chatDetails.latestMessage?.content || ""
+      );
+
+      console.log(langChoice, "clangChoice");
       if (!chatDetails?.adminId) {
         const authHeader = socket.handshake.headers.authorization || "";
         const token = authHeader && authHeader.split(" ")[1];
@@ -733,7 +738,10 @@ socketObj.config = (server) => {
           chatId: params.chatId,
           sender: null,
           sendType: "admin",
-          content: `Please note, the inquiry has been transferred to ${adminDetails?.fullName}`,
+          content:
+            langChoice === "english"
+              ? `Please note, the inquiry has been transferred to ${adminDetails?.fullName}`
+              : `يرجى الملاحظة، تم تحويل الاستفسار إلى ${adminDetails?.fullName}`,
           attachments: [],
           timestamp: new Date(),
           receiver: chatDetails?.customerId?._id?.toString(),
@@ -744,7 +752,7 @@ socketObj.config = (server) => {
         const tooltipMess = await newMessage.save();
         console.log(
           +chatDetails?.initialHandlingTime ||
-          dayjs().diff(chatDetails?.agentTransferedAt, "minute"),
+            dayjs().diff(chatDetails?.agentTransferedAt, "minute"),
           chatDetails?.agentTransferedAt,
           chatDetails?.agentHandledAt,
           "chatDetails?.initialHandlingTime"
@@ -771,7 +779,9 @@ socketObj.config = (server) => {
           undefined,
           undefined,
           undefined,
-          `Please note, the inquiry has been transferred to ${adminDetails?.fullName}`,
+          langChoice === "english"
+            ? `Please note, the inquiry has been transferred to ${adminDetails?.fullName}`
+            : `يرجى الملاحظة، تم تحويل الاستفسار إلى ${adminDetails?.fullName}`,
           updatedChat?.isHuman
         );
         [...receivers, ...customers].forEach((receiver) => {
@@ -817,9 +827,11 @@ socketObj.config = (server) => {
         const updatedChat = await ChatModel.findOneAndUpdate(
           { _id: params.chatId },
           {
-            latestMessage: final?._id, agentHandledAt: chatDetails?.agentHandledAt || dayjs(), initialHandlingTime:
+            latestMessage: final?._id,
+            agentHandledAt: chatDetails?.agentHandledAt || dayjs(),
+            initialHandlingTime:
               +chatDetails?.initialHandlingTime ||
-              dayjs().diff(chatDetails?.agentTransferedAt || dayjs(), "minute")
+              dayjs().diff(chatDetails?.agentTransferedAt || dayjs(), "minute"),
           },
           { new: true }
         )
@@ -894,12 +906,21 @@ socketObj.config = (server) => {
       const oldDepartment = chat.department;
       if (adminId) {
         const adminDetails = await UserModel.findById(adminId).lean();
-        const chatDetails = await ChatModel.findOne({ _id: chatId }).lean();
+        const chatDetails = await ChatModel.findOne({ _id: chatId })
+          .populate("customerId latestMessage")
+          .lean();
+
+        let langChoice = await detectLanguage(
+          chatDetails.latestMessage?.content || ""
+        );
         const mess = {
           chatId: chatId,
           sender: null,
           sendType: "admin",
-          content: `Please note, the inquiry has been transferred to ${adminDetails?.fullName}`,
+          content:
+            langChoice === "english"
+              ? `Please note, the inquiry has been transferred to ${adminDetails?.fullName}`
+              : `يرجى الملاحظة، تم تحويل الاستفسار إلى ${adminDetails?.fullName}`,
           attachments: [],
           timestamp: new Date(),
           receiver: chatDetails?.customerId?.toString(),
@@ -916,7 +937,12 @@ socketObj.config = (server) => {
             isHuman: true,
             agentTransferedAt: new Date(),
             latestMessage: final?._id,
-            tags: [...chatDetails?.tags?.filter((tag) => !(["new", "transferred"].includes(tag))), "transferred"],
+            tags: [
+              ...chatDetails?.tags?.filter(
+                (tag) => !["new", "transferred"].includes(tag)
+              ),
+              "transferred",
+            ],
           },
           { new: true }
         )
@@ -928,7 +954,9 @@ socketObj.config = (server) => {
           undefined,
           undefined,
           undefined,
-          `Please note, the inquiry has been transferred to ${adminDetails?.fullName}`,
+          langChoice === "english"
+            ? `Please note, the inquiry has been transferred to ${adminDetails?.fullName}`
+            : `يرجى الملاحظة، تم تحويل الاستفسار إلى ${adminDetails?.fullName}`,
           updatedChat?.isHuman
         );
         const users = [adminId];
@@ -943,11 +971,16 @@ socketObj.config = (server) => {
           ],
         });
         receivers.forEach((receiver) => {
-          console.log(receiver?.department, updatedChat?.department, "receiver?.department");
+          console.log(
+            receiver?.department,
+            updatedChat?.department,
+            "receiver?.department"
+          );
           socketObj.io
             .to(receiver._id?.toString())
             .emit("update-chat", { ...updatedChat, latestMessage: final });
-          (["Admin", "Supervisor"].includes(receiver?.role) || receiver?.department?.includes(updatedChat?.department)) &&
+          (["Admin", "Supervisor"].includes(receiver?.role) ||
+            receiver?.department?.includes(updatedChat?.department)) &&
             socketObj.io
               .to(receiver._id?.toString())
               .emit("message", { ...updatedChat, latestMessage: final });
@@ -955,8 +988,14 @@ socketObj.config = (server) => {
       } else {
         chat.adminId = null;
         const agents = await UserModel.find({ role: "Agent", department });
-        const chatDetails = await ChatModel.findOne({ _id: chatId }).lean();
+        const chatDetails = await ChatModel.findOne({ _id: chatId })
+          .populate("customerId latestMessage")
+          .lean();
         console.log(chatDetails, agents, "chatDetailschatDetails");
+
+        let langChoice = await detectLanguage(
+          chatDetails.latestMessage?.content || ""
+        );
 
         if (!(agents.length > 0)) {
           const mess = {
@@ -1009,7 +1048,12 @@ socketObj.config = (server) => {
               department: department,
               agentTransferedAt: assigneeAgent ? new Date() : null,
               isHuman: true,
-              tags: [...chatDetails?.tags?.filter((tag) => !(["new", "transferred"].includes(tag))), "transferred"],
+              tags: [
+                ...chatDetails?.tags?.filter(
+                  (tag) => !["new", "transferred"].includes(tag)
+                ),
+                "transferred",
+              ],
             },
             { new: true }
           )
@@ -1021,7 +1065,11 @@ socketObj.config = (server) => {
             chatId: chatId,
             sender: null,
             sendType: "assistant",
-            content: `Please note, the inquiry has been transferred to ${updatedChat?.adminId?.fullName}`,
+            content:
+              langChoice === "english"
+                ? `Please note, the inquiry has been transferred to ${updatedChat?.adminId?.fullName}`
+                : `يرجى الملاحظة، تم تحويل الاستفسار إلى ${updatedChat?.adminId?.fullName}`,
+
             receiver: chatDetails?.customerId?._id?.toString(),
             receiverType: "user",
             messageType: "tooltip",
@@ -1031,14 +1079,19 @@ socketObj.config = (server) => {
             undefined,
             undefined,
             undefined,
-            `Please note, the inquiry has been transferred to ${updatedChat?.adminId?.fullName}`,
+            langChoice === "english"
+              ? `Please note, the inquiry has been transferred to ${updatedChat?.adminId?.fullName}`
+              : `يرجى الملاحظة، تم تحويل الاستفسار إلى ${updatedChat?.adminId?.fullName}`,
             updatedChat?.isHuman
           );
           await sendMessageToAdmins(
             socketObj,
             mess,
             updatedChat?.department,
-            [{ _id: { $in: [oldAssignee] } }, { department: { $in: [oldDepartment] } }],
+            [
+              { _id: { $in: [oldAssignee] } },
+              { department: { $in: [oldDepartment] } },
+            ],
             true,
             false
           );
@@ -1149,13 +1202,11 @@ socketObj.config = (server) => {
           ],
         }).lean();
         [...receivers, chatDetails?.customerId].forEach((receiver) => {
-          socketObj.io
-            .to(receiver._id?.toString())
-            .emit("unread-count", {
-              // counts: UnReadCounts[0]?.totalUnread || 0,
-              chatId: chatId,
-              isSeen: true,
-            });
+          socketObj.io.to(receiver._id?.toString()).emit("unread-count", {
+            // counts: UnReadCounts[0]?.totalUnread || 0,
+            chatId: chatId,
+            isSeen: true,
+          });
         });
       }
 
@@ -1192,7 +1243,8 @@ socketObj.config = (server) => {
           sendType: "admin",
           content:
             chat?.department?.messages?.chatClosingMessage ||
-            `This conversation has ended, thank you for contacting Methaq Takaful Insuance ${chat?.department?.name ? chat?.department?.name : ""
+            `This conversation has ended, thank you for contacting Methaq Takaful Insuance ${
+              chat?.department?.name ? chat?.department?.name : ""
             }. We hope we were able to serve you`,
           attachments: [],
           timestamp: new Date(),
@@ -1241,8 +1293,9 @@ socketObj.config = (server) => {
             undefined,
             undefined,
             chat?.department?.messages?.chatClosingMessage ||
-            `This conversation has ended, thank you for contacting Methaq Takaful Insuance ${chat?.department?.name ? chat?.department?.name : ""
-            }. We hope we were able to serve you`,
+              `This conversation has ended, thank you for contacting Methaq Takaful Insuance ${
+                chat?.department?.name ? chat?.department?.name : ""
+              }. We hope we were able to serve you`,
             updatedChat?.isHuman
           );
         }
