@@ -32,7 +32,7 @@ database.connect();
 
 // agenda start
 agenda.start();
-agenda.schedule('every 1 second', 'not replying');
+// agenda.schedule('every 1 second', 'not replying');
 
 
 app.use('/', indexRouter);
