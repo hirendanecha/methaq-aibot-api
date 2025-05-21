@@ -21,9 +21,15 @@ const updateChatStatus = async (chatId, status) => {
 };
 
 const detectLanguage= async (text)=> {
-  const arabicRegex = /[\u0600-\u06FF]/; // Arabic Unicode range
-  if (!text || typeof text !== 'string') return "english"; // Default to English
-  return arabicRegex.test(text) ? "arabic" : "english";
+  if (!text || typeof text !== 'string') return "english"; // default
+
+  const arabicChars = text.match(/[\u0600-\u06FF]/g) || [];
+  const englishChars = text.match(/[a-zA-Z]/g) || [];
+
+  // If Arabic characters clearly outnumber English ones
+  if (arabicChars.length > englishChars.length) return "arabic";
+
+  return "english";
 }
 
 module.exports = { getChatHistory, logTransfer, updateChatStatus,detectLanguage };
