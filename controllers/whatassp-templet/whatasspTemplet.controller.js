@@ -50,6 +50,34 @@ const getAllWhatsappTemplet = async (req, res) => {
     }
   };
 
+
+// Delete WhatsApp Template by name
+const deleteWhatsappTemplet = async (req, res) => {
+    try {
+      const { name } = req.query;
+      if (!name) {
+        return sendErrorResponse(res, "Template name is required");
+      }
+  
+      const url = `https://graph.facebook.com/v22.0/${WABA_ID}/message_templates?name=${encodeURIComponent(name)}`;
+  
+      const response = await axios.delete(url, {
+        headers: {
+          Authorization: `Bearer ${TOKEN}`,
+          "Content-Type": "application/json",
+        },
+      });
+  
+      return sendSuccessResponse(res, response.data);
+    } catch (error) {
+      return sendErrorResponse(
+        res,
+        error?.response?.data?.error?.message || error.message
+      );
+    }
+  };
+
 module.exports = {
   getAllWhatsappTemplet,
+  deleteWhatsappTemplet
 };
