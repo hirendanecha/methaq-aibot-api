@@ -3,6 +3,7 @@ var router = express.Router();
 const agentCtrl = require("../../../controllers/admin/agents.controller");
 const { permissionAuthorization } = require('../../../middleware/authorization');
 const { createTemplate, updateTemplate, deleteTemplate, incrementUsage, getAllTemplates,getTemplateById } = require('../../../controllers/message-templet/messageTemplate.controller');
+const { getAllWhatsappTemplet } = require('../../../controllers/whatassp-templet/whatasspTemplet.controller');
 
 /* APIs for agents
  1. Create message templet
@@ -16,6 +17,11 @@ router.get("/gettemestemplets",getAllTemplates);
 router.get("/gettemestempletById/:id",getTemplateById);
 
 router.post('/:id/incrementtemestempletuse',incrementUsage);
+
+//whatsapp templet
+router.get("/get-whatsapp-templet",getAllWhatsappTemplet);
+
+// router.post("/crete-whatassp-messtemplet", permissionAuthorization("commonPermission.whatsappTemplet", ["create"],["Admin"]), createTemplate);
 
 
 module.exports = router;
