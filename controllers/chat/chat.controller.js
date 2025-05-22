@@ -2120,7 +2120,9 @@ const whatsappMessages = async (req, res) => {
             );
             await ChatTransferHistoryModel.create({
               historyType: "department_tranfer",
-
+              chatId: existingChat?._id,
+              oldDepartment: null,
+              newDepartment: departmentDetails?._id,
             })
           }
           // const userInput = ;

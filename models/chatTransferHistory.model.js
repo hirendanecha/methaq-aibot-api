@@ -4,10 +4,15 @@ const Schema = mongoose.Schema;
 
 const ChatTransferHistorySchema = Schema(
     {
-        historyType: {
+        historyType: [{
             type: String,
-            enum: ['department_tranfer', 'agent_tranfer', 'archive_chat'],
-            default: 'department_tranfer',
+            enum: ['department_tranfer', 'agent_tranfer', 'archive_chat', 'change_tags', 'transfer_main_menu', 'transfer_bot'],
+            default: ['department_tranfer'],
+        }],
+        chatId: {
+            type: Schema.Types.ObjectId,
+            ref: "chat",
+            default: null,
         },
         oldDepartment: {
             type: Schema.Types.ObjectId,
