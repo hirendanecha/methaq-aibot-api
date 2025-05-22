@@ -1138,10 +1138,45 @@ const assignDepartmentController = async (req, res) => {
   try {
     const { sessionId } = req.params;
     const { department } = req.body;
-    // const chatDetails = await ChatModel.findOne({ sessionId: sessionId });
+    const chatDetails = await ChatModel.findOne({ currentSessionId: sessionId }).populate("department adminId");
+    const newdep = await DepartmentModel.findOne({ _id: new mongoose.Types.ObjectId(department) });
+    console.log(newdep, "newdep");
     const assigneeAgent = await getAssigneeAgent(
       new mongoose.Types.ObjectId(department)
     );
+
+    const DepTranshistory = await ChatTransferHistoryModel.findOne({
+      chatId: chatDetails?._id,
+      historyType: "department_transfer"
+    }).sort({ createdAt: -1 }).limit(1);
+
+    const depSpendTimeMinutes = Math.floor((new Date() - new Date(DepTranshistory.createdAt)) / 1000 / 60);
+
+    if (depSpendTimeMinutes) {
+      await ChatTransferHistoryModel.findOneAndUpdate(
+        { _id: DepTranshistory._id },
+        {
+          departmentSpendTime: depSpendTimeMinutes,
+        }
+      );
+    }
+
+    const AgentTranshistory = await ChatTransferHistoryModel.findOne({
+      chatId: chatDetails?._id,
+      historyType: "agent_tranfer"
+    }).sort({ createdAt: -1 }).limit(1);
+
+    const agentSpendTimeMinutes = Math.floor((new Date() - new Date(AgentTranshistory.createdAt)) / 1000 / 60);
+
+    if (agentSpendTimeMinutes) {
+      await ChatTransferHistoryModel.findOneAndUpdate(
+        { _id: DepTranshistory._id },
+        {
+          agentSpendTime: agentSpendTimeMinutes,
+        }
+      );
+    }
+
     const updatedChat = await ChatModel.findOneAndUpdate(
       { currentSessionId: sessionId },
       {
@@ -1156,6 +1191,27 @@ const assignDepartmentController = async (req, res) => {
       }
     );
     console.log(updatedChat, "updatedChat");
+
+    if (chatDetails && updatedChat) {
+
+      if (newdep?.name != chatDetails?.department?.name) {
+        await ChatTransferHistoryModel.create({
+          historyType: ["department_tranfer", "agent_tranfer"],
+          chatId: chatDetails?._id,
+          newDepartment: newdep.name,
+          newAgent: assigneeAgent.fullName,
+        })
+      }
+      else {
+        await ChatTransferHistoryModel.create({
+          historyType: ["department_tranfer", "agent_tranfer"],
+          chatId: chatDetails?._id,
+          newDepartment: newdep._id,
+          newAgent: assigneeAgent._id,
+        })
+      }
+
+    }
 
     return res
       .status(200)
