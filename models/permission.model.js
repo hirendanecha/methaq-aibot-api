@@ -63,6 +63,7 @@ const ModuleAcessSchema = new Schema(
       complain: { ...readPermissionSchema, ...updatePermissionSchema },
       motorInquiry: { ...readPermissionSchema, ...updatePermissionSchema },
       templet: permissionSchema,
+      whatsappTemplet: permissionSchema,
     },
   },
   {

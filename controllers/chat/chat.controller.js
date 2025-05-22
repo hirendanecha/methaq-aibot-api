@@ -50,6 +50,7 @@ const { unlinkSync, existsSync } = require("fs");
 const { deleteFileByPath } = require("../../helpers/files.helper");
 const { startChat, continueChat } = require("../typebot/typeBot.controller");
 const { mongoose } = require("mongoose");
+const ChatTransferHistoryModel = require("../../models/chatTransferHistory.model");
 
 const fetchDepartmentsAndPrompts = async () => {
   try {
@@ -2117,6 +2118,10 @@ const whatsappMessages = async (req, res) => {
               mess2,
               existingChat?.department?._id
             );
+            await ChatTransferHistoryModel.create({
+              historyType: "department_tranfer",
+
+            })
           }
           // const userInput = ;
           const aiResponse = await continueChat(
