@@ -26,6 +26,7 @@ const {
 const DepartmentModel = require("../models/department.model");
 const dayjs = require("dayjs");
 const { detectLanguage } = require("./chat.helper");
+const ChatTransferHistoryModel = require("../models/chatTransferHistory.model");
 
 let logger = console;
 const socketObj = {};
@@ -247,9 +248,8 @@ socketObj.config = (server) => {
               sendType: "assistant",
               receiverType: "admin",
               messageType: "tooltip",
-              content: `Chat is transferred to ${
-                userInput?.split("-")[1]
-              } department`,
+              content: `Chat is transferred to ${userInput?.split("-")[1]
+                } department`,
             };
             sendMessageToAdmins(socketObj, mess2, chatDetails?.department);
           }
@@ -752,7 +752,7 @@ socketObj.config = (server) => {
         const tooltipMess = await newMessage.save();
         console.log(
           +chatDetails?.initialHandlingTime ||
-            dayjs().diff(chatDetails?.agentTransferedAt, "minute"),
+          dayjs().diff(chatDetails?.agentTransferedAt, "minute"),
           chatDetails?.agentTransferedAt,
           chatDetails?.agentHandledAt,
           "chatDetails?.initialHandlingTime"
@@ -891,6 +891,9 @@ socketObj.config = (server) => {
     socket.on("transfer-chat", async (params, cb) => {
       const { chatId, department, adminId } =
         typeof params === "string" ? JSON.parse(params) : params;
+      const authHeader = socket.handshake.headers.authorization || "";
+      const token = authHeader && authHeader.split(" ")[1];
+      let decoded = jwt.decode(token);
       const chat = await ChatModel.findById(chatId);
       console.log(chat);
       if (!chat) {
@@ -959,6 +962,73 @@ socketObj.config = (server) => {
             : `يرجى الملاحظة، تم تحويل الاستفسار إلى ${adminDetails?.fullName}`,
           updatedChat?.isHuman
         );
+
+        if (oldDepartment !== department) {
+
+          const oldhistory = await ChatTransferHistoryModel.findOne({
+            chatId: chatId,
+            historyType: "department_transfer",
+          }).sort({ createdAt: -1 });
+
+          console.log(oldhistory, "oldhistory");
+          if (oldhistory) {
+            const departmentSpendTime = dayjs().diff(oldhistory?.createdAt, "minute");
+            // const agentSpendTime = dayjs().diff(oldhistory.createdAt, "minute");
+            const updatehistory = await ChatTransferHistoryModel.findOneAndUpdate(oldhistory?._id, {
+              $set: {
+                departmentSpendTime: departmentSpendTime,
+              },
+            })
+            console.log(updatehistory, "updatehistory");
+          }
+        }
+
+        if (oldAssignee !== adminId) {
+          const prevhistory = await ChatTransferHistoryModel.findOne({
+            chatId: chatId,
+            historyType: "agent_tranfer",
+          }).sort({ createdAt: -1 });
+          console.log(prevhistory, "prevhistory");
+
+          if (prevhistory) {
+            const agentSpendTime = dayjs().diff(oldhistory.createdAt, "minute");
+            const updatedhistory = await ChatTransferHistoryModel.findOneAndUpdate(oldhistory?._id, {
+              $set: {
+                agentSpendTime: agentSpendTime,
+              },
+            })
+            console.log(updatedhistory, "updatedhistory");
+          }
+        }
+
+
+
+        if (oldDepartment !== department) {
+          const addhistory = await ChatTransferHistoryModel.create({
+            chatId: chatId,
+            historyType: ["agent_tranfer", "department-transfer"],
+            oldAssignee: oldAssignee,
+            newAssignee: adminId,
+            oldDepartment: oldDepartment,
+            newDepartment: department,
+            addedBy: decoded?._id,
+          })
+          console.log(addhistory, "addhistory");
+        }
+        if (oldAssignee !== adminId)
+        {
+          const addhistory = await ChatTransferHistoryModel.create({
+            chatId: chatId,
+            historyType: ["agent_tranfer"],
+            oldAssignee: oldAssignee,
+            newAssignee: adminId,
+            oldDepartment: oldDepartment,
+            newDepartment: department,
+            addedBy: decoded?._id,
+          })
+          console.log(addhistory, "addhistory");
+        }
+
         const users = [adminId];
         const departments = [updatedChat?.department?.toString()];
         if (oldAssignee) users.push(oldAssignee?.toString());
@@ -1243,8 +1313,7 @@ socketObj.config = (server) => {
           sendType: "admin",
           content:
             chat?.department?.messages?.chatClosingMessage ||
-            `This conversation has ended, thank you for contacting Methaq Takaful Insuance ${
-              chat?.department?.name ? chat?.department?.name : ""
+            `This conversation has ended, thank you for contacting Methaq Takaful Insuance ${chat?.department?.name ? chat?.department?.name : ""
             }. We hope we were able to serve you`,
           attachments: [],
           timestamp: new Date(),
@@ -1293,9 +1362,8 @@ socketObj.config = (server) => {
             undefined,
             undefined,
             chat?.department?.messages?.chatClosingMessage ||
-              `This conversation has ended, thank you for contacting Methaq Takaful Insuance ${
-                chat?.department?.name ? chat?.department?.name : ""
-              }. We hope we were able to serve you`,
+            `This conversation has ended, thank you for contacting Methaq Takaful Insuance ${chat?.department?.name ? chat?.department?.name : ""
+            }. We hope we were able to serve you`,
             updatedChat?.isHuman
           );
         }
