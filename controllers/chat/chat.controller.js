@@ -1196,7 +1196,7 @@ const assignDepartmentController = async (req, res) => {
 
       if (newdep?.name != chatDetails?.department?.name) {
         await ChatTransferHistoryModel.create({
-          historyType: ["department_tranfer", "agent_tranfer"],
+          historyType: ["department_transfer", "agent_tranfer"],
           chatId: chatDetails?._id,
           newDepartment: newdep.name,
           newAgent: assigneeAgent.fullName,
@@ -1204,7 +1204,7 @@ const assignDepartmentController = async (req, res) => {
       }
       else {
         await ChatTransferHistoryModel.create({
-          historyType: ["department_tranfer", "agent_tranfer"],
+          historyType: ["department_transfer", "agent_tranfer"],
           chatId: chatDetails?._id,
           newDepartment: newdep._id,
           newAgent: assigneeAgent._id,
@@ -2175,7 +2175,7 @@ const whatsappMessages = async (req, res) => {
               existingChat?.department?._id
             );
             await ChatTransferHistoryModel.create({
-              historyType: "department_tranfer",
+              historyType: "department_transfer",
               chatId: existingChat?._id,
               oldDepartment: null,
               newDepartment: departmentDetails?._id,

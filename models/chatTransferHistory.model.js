@@ -6,8 +6,8 @@ const ChatTransferHistorySchema = Schema(
     {
         historyType: [{
             type: String,
-            enum: ['department_tranfer', 'agent_tranfer', 'archive_chat', 'change_tags', 'transfer_main_menu', 'transfer_bot'],
-            default: ['department_tranfer'],
+            enum: ['department_transfer', 'agent_tranfer', 'archive_chat', 'change_tags', 'transfer_main_menu', 'transfer_bot'],
+            default: ['department_transfer'],
         }],
         chatId: {
             type: Schema.Types.ObjectId,
