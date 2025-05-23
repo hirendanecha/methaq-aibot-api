@@ -52,6 +52,17 @@ const createWhatsappTemplate = async (req, res) => {
       return sendErrorResponse(res, "Missing required fields: name, language, category, bodyText", 400, true, true);
     }
 
+    let parsedButtons = [];
+    if (buttons) {
+      parsedButtons = JSON.parse(buttons);
+    }
+
+    let parsedBodyExample = [];
+    if (bodyExample) {
+      parsedBodyExample = JSON.parse(bodyExample);
+    }
+
+
     const files = req.files
     if (files.doc) {
       const fileData = files.doc[0];
@@ -98,15 +109,15 @@ const createWhatsappTemplate = async (req, res) => {
     const header = buildHeaderComponent(mediaType, mediaUrl);
     if (header) components.push(header);
 
-    if (bodyExample) {
+    if (parsedBodyExample) {
       components.push({
         type: "BODY",
         text: bodyText,
-        example: { "body_text": [bodyExample] }
+        example: { "body_text": [JSON.parse(bodyExample)] }
       })
     }
 
-    if (!bodyExample) {
+    if (!parsedBodyExample) {
       components.push({
         type: "BODY",
         text: bodyText,
@@ -120,13 +131,12 @@ const createWhatsappTemplate = async (req, res) => {
       });
     }
 
-    if (Array.isArray(buttons) && buttons.length > 0) {
+    if (parsedButtons && parsedButtons.length > 0) {
       components.push({
         type: "BUTTONS",
-        buttons
+        buttons: parsedButtons,
       });
     }
-
 
     const payload = {
       name,
