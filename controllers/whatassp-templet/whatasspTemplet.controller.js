@@ -109,7 +109,7 @@ const createWhatsappTemplate = async (req, res) => {
     const header = buildHeaderComponent(mediaType, mediaUrl);
     if (header) components.push(header);
 
-    if (parsedBodyExample) {
+    if (parsedBodyExample && parsedBodyExample.length > 0) {
       components.push({
         type: "BODY",
         text: bodyText,
@@ -117,7 +117,7 @@ const createWhatsappTemplate = async (req, res) => {
       })
     }
 
-    if (!parsedBodyExample) {
+    if (!parsedBodyExample || parsedBodyExample.length === 0) {
       components.push({
         type: "BODY",
         text: bodyText,
