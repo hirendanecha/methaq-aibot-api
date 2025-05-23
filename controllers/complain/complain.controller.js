@@ -497,7 +497,7 @@ const assignDepartmentBySessionId = async (req, res) => {
     const chatTransferHistory = await ChatTransferHistoryModel.create({
       historyType: "department_transfer",
       chatId: chat?._id,
-      oldDepartment: null,
+      oldDepartment: previousDepTranshistory ? previousDepTranshistory?.newDepartment : null,
       newDepartment: department?._id,
     })
     console.log(chatTransferHistory, "chatTransferHistory")
