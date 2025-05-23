@@ -15,25 +15,39 @@ const TOKEN = process.env.WHATSAPP_CLOUD_API_ACCESS_TOKEN;
 const APPID = process.env.WhatsApp_APPID;
 
 
-const buildHeaderComponent = (mediaType, mediaUrl) => {
+const buildHeaderComponent = (mediaType, mediaUrl, headerExample) => {
+  let parsedHeaderExample = [];
+
+  if (headerExample) {
+    parsedHeaderExample = JSON.parse(headerExample);
+  }
+
   if (!mediaType || mediaType === "NONE") return null;
 
   if (mediaType === "TEXT") {
     return {
       type: "HEADER",
       format: "TEXT",
-      text: mediaUrl,
+      text: mediaUrl || "",
+      ...(parsedHeaderExample.length > 0 && {
+        example: {
+          header_text: parsedHeaderExample,
+        },
+      }),
     };
   }
 
   return {
     type: "HEADER",
-    format: mediaType, // IMAGE, VIDEO, DOCUMENT,
+    format: mediaType,
     example: {
-      header_handle: [mediaUrl],
+      header_handle: parsedHeaderExample.length > 0
+        ? parsedHeaderExample
+        : [mediaUrl],
     },
   };
 };
+
 
 
 const createWhatsappTemplate = async (req, res) => {
@@ -44,6 +58,7 @@ const createWhatsappTemplate = async (req, res) => {
       category,
       mediaType,   // "TEXT", "IMAGE", "VIDEO", "DOCUMENT", "NONE"
       mediaUrl,    // media handle URL or text (for TEXT header)
+      headerExample,
       bodyText,
       bodyExample,
       footerText,
@@ -108,7 +123,7 @@ const createWhatsappTemplate = async (req, res) => {
 
     const components = [];
 
-    const header = buildHeaderComponent(mediaType, mediaUrl);
+    const header = buildHeaderComponent(mediaType, mediaUrl, headerExample);
     if (header) components.push(header);
 
     if (parsedBodyExample && parsedBodyExample.length > 0) {
@@ -363,6 +378,46 @@ const upsertTemplateAccess = async (userId, templateNames, assignedBy) => {
       templateNames,
       assignedBy,
     });
+  }
+};
+
+exports.sendWhatsappTemplate = async (req, res) => {
+  try {
+    const { to, templateName, language = "en_US", components = [] } = req.body;
+
+    if (!to || !templateName) {
+      return sendErrorResponse(res, "to and templateName are required", 400, true, true);
+    }
+
+    const payload = {
+      messaging_product: "whatsapp",
+      to,
+      type: "template",
+      template: {
+        name: templateName,
+        language: {
+          code: language,
+        },
+        ...(components?.length > 0 && { components }),
+      },
+    };
+
+    const response = await axios.post(
+      `https://graph.facebook.com/${process.env.WHATSAPP_CLOUD_API_VERSION}/${process.env.WHATSAPP_CLOUD_API_PHONE_NUMBER_ID}/messages`,
+      payload,
+      {
+        headers: {
+          Authorization: `Bearer ${TOKEN}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    return sendSuccessResponse(res, {
+      data: response.data
+    });
+  } catch (error) {
+    return sendErrorResponse(res, error.message || "Failed to send template!");
   }
 };
 
