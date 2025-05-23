@@ -479,14 +479,14 @@ const assignDepartmentBySessionId = async (req, res) => {
     // Send the message to admins
     sendMessageToAdmins(socketObj, mess2, department._id);
 
-    const DepTranshistory = await ChatTransferHistoryModel.findOne({
+    const previousDepTranshistory = await ChatTransferHistoryModel.findOne({
       chatId: chat?._id,
       historyType: "department_transfer"
     }).sort({ createdAt: -1 });
-    console.log(DepTranshistory, "DepTranshistory")
-    if (DepTranshistory) {
-      const departmentSpendTime = dayjs().diff(DepTranshistory.createdAt, "minute");
-      const updateHistory = await ChatTransferHistoryModel.findByIdAndUpdate(DepTranshistory._id, {
+    console.log(previousDepTranshistory, "DepTranshistory")
+    if (previousDepTranshistory) {
+      const departmentSpendTime = dayjs().diff(previousDepTranshistory.createdAt, "minute");
+      const updateHistory = await ChatTransferHistoryModel.findByIdAndUpdate(previousDepTranshistory._id, {
         $set: {
           departmentSpendTime: departmentSpendTime
         }
