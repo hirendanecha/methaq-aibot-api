@@ -32,7 +32,7 @@ database.connect();
 
 // agenda start
 agenda.start();
-agenda.schedule('every 30 minute', 'not replying');
+agenda.every('30 minutes', 'not replying');
 
 
 app.use('/', indexRouter);
