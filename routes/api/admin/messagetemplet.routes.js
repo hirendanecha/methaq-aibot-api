@@ -3,7 +3,7 @@ var router = express.Router();
 const agentCtrl = require("../../../controllers/admin/agents.controller");
 const { permissionAuthorization } = require('../../../middleware/authorization');
 const { createTemplate, updateTemplate, deleteTemplate, incrementUsage, getAllTemplates, getTemplateById } = require('../../../controllers/message-templet/messageTemplate.controller');
-const { getAllWhatsappTemplet, deleteWhatsappTemplet, createWhatsappTemplate } = require('../../../controllers/whatassp-templet/whatasspTemplet.controller');
+const { getAllWhatsappTemplet, deleteWhatsappTemplet, createWhatsappTemplate, getWhatsappTempletNames } = require('../../../controllers/whatassp-templet/whatasspTemplet.controller');
 const pdfUpload = require("../../../middleware/file-upload");
 
 
@@ -33,8 +33,7 @@ router.post("/create-whatsapp-templet", permissionAuthorization("commonPermissio
 ), createWhatsappTemplate);
 
 router.get("/get-whatsapp-templet", permissionAuthorization("commonPermission.whatsappTemplet", ["read"], ["Admin"]), getAllWhatsappTemplet);
-
-// Delete WhatsApp template by name
+router.get("/getWhatsappTempletNames", permissionAuthorization("commonPermission.whatsappTemplet", ["read"], ["Admin"]), getWhatsappTempletNames);
 router.delete('/delete-whatsapp-templet', permissionAuthorization("commonPermission.whatsappTemplet", ["delete"], ["Admin"]), deleteWhatsappTemplet);
 
 // router.post("/crete-whatassp-messtemplet", permissionAuthorization("commonPermission.whatsappTemplet", ["create"],["Admin"]), createTemplate);
