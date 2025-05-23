@@ -646,6 +646,45 @@ socketObj.config = (server) => {
       )
         .populate("adminId customerId")
         .lean();
+
+      const previousAgentTranshistory = await ChatTransferHistoryModel.findOne({
+        chatId: params.chatId,
+        historyType: "agent_transfer",
+      }).sort({ createdAt: -1 });
+      const previousDepTranshistory = await ChatTransferHistoryModel.findOne({
+        chatId: params.chatId,
+        historyType: "department_transfer",
+      }).sort({ createdAt: -1 });
+
+      if (previousAgentTranshistory) {
+        const updateHistory = await ChatTransferHistoryModel.findOneAndUpdate(
+          { _id: previousAgentTranshistory._id },
+          {
+            agentSpendTime: dayjs().diff(
+              previousAgentTranshistory.createdAt,
+              "minute"
+            ),
+          }
+        )
+      }
+      if (previousDepTranshistory) {
+        const updateHistory = await ChatTransferHistoryModel.findOneAndUpdate(
+          { _id: previousDepTranshistory._id },
+          {
+            departmentSpendTime: dayjs().diff(
+              previousDepTranshistory.createdAt,
+              "minute"
+            ),
+          }
+        )
+      }
+      await ChatTransferHistoryModel.create({
+        historyType: ["transfer_main_menu"],
+        chatId: chatDetails?._id,
+        oldAgent: previousAgentTranshistory ? previousAgentTranshistory?.newAgent : null,
+        oldDepartment: previousDepTranshistory ? previousDepTranshistory?.newDepartment : null,
+      })
+
       const receivers = await UserModel.find({
         $or: [
           { role: { $in: ["Admin", "Supervisor"] } },
@@ -1360,6 +1399,43 @@ socketObj.config = (server) => {
         )
           ?.populate("adminId customerId")
           .lean();
+        const previousDepTranshistory = await ChatTransferHistoryModel.findOne({
+          chatId: chatId,
+          historyType: "department_transfer",
+        }).sort({ createdAt: -1 });
+        const previousAgentTranshistory = await ChatTransferHistoryModel.findOne({
+          chatId: chatId,
+          historyType: "agent_transfer",
+        }).sort({ createdAt: -1 });
+
+        if (previousDepTranshistory) {
+          const updateHistory = await ChatTransferHistoryModel.findOneAndUpdate(
+            { _id: previousDepTranshistory._id },
+            {
+              departmentSpendTime: dayjs().diff(
+                previousDepTranshistory.createdAt,
+                "minute"
+              ),
+            }
+          )
+        }
+        if (previousAgentTranshistory) {
+          const updateHistory = await ChatTransferHistoryModel.findOneAndUpdate(
+            { _id: previousAgentTranshistory._id },
+            {
+              agentSpendTime: dayjs().diff(
+                previousAgentTranshistory.createdAt,
+                "minute"
+              ),
+            }
+          )
+        }
+        await ChatTransferHistoryModel.create({
+          historyType: ["archive_chat"],
+          chatId: chatId,
+          oldAgent: previousAgentTranshistory ? previousAgentTranshistory?.newAgent : null,
+          oldDepartment: previousDepTranshistory ? previousDepTranshistory?.newDepartment : null,
+        })
         const receivers = await UserModel.find({
           $or: [
             { role: { $in: ["Admin", "Supervisor"] } },
