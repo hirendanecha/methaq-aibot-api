@@ -1013,8 +1013,8 @@ socketObj.config = (server) => {
           console.log(prevhistory, "prevhistory");
 
           if (prevhistory) {
-            const agentSpendTime = dayjs().diff(oldhistory.createdAt, "minute");
-            const updatedhistory = await ChatTransferHistoryModel.findOneAndUpdate(oldhistory?._id, {
+            const agentSpendTime = dayjs().diff(prevhistory.createdAt, "minute");
+            const updatedhistory = await ChatTransferHistoryModel.findOneAndUpdate(prevhistory?._id, {
               $set: {
                 agentSpendTime: agentSpendTime,
               },
@@ -1025,25 +1025,25 @@ socketObj.config = (server) => {
 
 
 
-        if (oldDepartment !== department) {
+        if (oldDepartment?.toString() !== department) {
           const addhistory = await ChatTransferHistoryModel.create({
             chatId: chatId,
             historyType: ["agent_transfer", "department-transfer"],
-            oldAssignee: oldAssignee,
+            oldAssignee: oldAssignee?.toString(),
             newAssignee: adminId,
-            oldDepartment: oldDepartment,
+            oldDepartment: oldDepartment?.toString(),
             newDepartment: department,
             addedBy: decoded?._id,
           })
           console.log(addhistory, "addhistory");
         }
-        if (oldAssignee !== adminId) {
+        if (oldAssignee?.toString() !== adminId) {
           const addhistory = await ChatTransferHistoryModel.create({
             chatId: chatId,
             historyType: ["agent_transfer"],
-            oldAssignee: oldAssignee,
+            oldAssignee: oldAssignee?.toString(),
             newAssignee: adminId,
-            oldDepartment: oldDepartment,
+            oldDepartment: oldDepartment?.toString(),
             newDepartment: department,
             addedBy: decoded?._id,
           })
