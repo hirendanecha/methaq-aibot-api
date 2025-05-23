@@ -2,13 +2,93 @@
 <html lang="en">
 
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Document</title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Upwork Message</title>
+     <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f3f3f3;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            max-width: 600px;
+            background-color: #fff;
+            margin: 40px auto;
+            border: 1px solid #ddd;
+            padding: 30px;
+            box-shadow: 0 0 8px rgba(0, 0, 0, 0.05);
+        }
+
+        .unread-msg {
+            margin-top: 20px;
+            font-size: 16px;
+        }
+
+        .unread-msg a {
+            color: #007bff;
+            text-decoration: none;
+        }
+
+        .message-box {
+            margin-top: 25px;
+            padding: 15px;
+            background-color: #f9f9f9;
+            border-left: 4px solid #007bff;
+        }
+
+        .sender-name {
+            font-weight: bold;
+            font-size: 15px;
+            color: black;
+        }
+
+        .timestamp {
+            color: black;
+            font-size: 13px;
+            margin-top: 2px;
+        }
+
+        .message-content {
+            font-size: 16px;
+            margin-top: 10px;
+        }
+
+        .reply-alt {
+            font-size: 14px;
+            color: #555;
+            margin-top: 25px;
+        }
+    </style> 
 </head>
 
 <body>
-    <h1> Reply to <%= data.customerName  %></h1>
+    <div class="container">
+
+        <p class="unread-msg">
+            You have unread messages for user <strong>
+                <%= data?.customersName %>
+            </strong> on Methaq-Bot.
+        </p>
+
+        <div class="message-box">
+            <p class="sender-name">
+                <%= data?.customersName %>
+            </p>
+            <p class="sender-name">
+                <%= data?.phone %>
+            </p>
+            <p class="timestamp">
+                <%= data?.timestamp %>
+            </p>
+            <p class="message-content">
+                <%= data?.message %>
+            </p>
+        </div>
+
+    </div>
 </body>
 
 </html>

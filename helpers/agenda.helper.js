@@ -96,17 +96,23 @@ agenda.define("not replying", async (job) => {
 
     for (const admin of Object.keys(unreadChats)) {
         const chats = unreadChats[admin];
+        console.log(chats, "chats");
         const customers = chats?.map((chat) => chat?.customerId?.name);
+        const phone = chats?.map((chat) => chat?.customerId?.phone);
+        const message  = chats?.map((chat) => chat?.latestMessage?.content);
+        const timestamp = chats?.map((chat) => chat?.latestMessage?.timestamp);
         const adminMail = chats[0]?.adminId?.email;
-        const adminName = chats[0]?.adminId?.fullName;
+        console.log(customers, "customers");
         console.log(adminMail, "Sending email to admin");
         if (adminMail) {
             const data = {
                 serverBaseUrl: environment.server,
-                adminName: adminName,
                 emailTitle: "Not Replying chats",
                 requestType: "reply chats",
-                customersName: customers
+                customersName: customers,
+                timestamp: timestamp,
+                phone: phone,
+                message: message,
             };
 
             try {
@@ -118,9 +124,9 @@ agenda.define("not replying", async (job) => {
                     },
                     { data }
                 );
-                console.log(`Email sent to ${email}`);
+                console.log(`Email sent to ${adminMail}`);
             } catch (error) {
-                console.error(`Failed to send email to ${email}`, error);
+                console.error(`Failed to send email to ${adminMail}`, error);
             }
         }
     }
