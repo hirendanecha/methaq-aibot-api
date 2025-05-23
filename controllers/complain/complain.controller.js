@@ -30,6 +30,7 @@ const { startChat, continueChat } = require("../typebot/typeBot.controller");
 const UserModel = require("../../models/user.model");
 const { generatePDF } = require("../../helpers/pdf.helper");
 const s3 = require("../../helpers/s3.helper");
+const ChatTransferHistoryModel = require("../../models/chatTransferHistory.model");
 
 const getAllComplaints = async (req, res) => {
   try {
@@ -299,13 +300,13 @@ const getComplaintById = async (req, res) => {
       .lean();
 
 
-      if (!complaint) {
-        return sendErrorResponse(res, "Complaint not found", 404, true, true);
-      }
+    if (!complaint) {
+      return sendErrorResponse(res, "Complaint not found", 404, true, true);
+    }
 
-      complaint.complainComments.sort((a, b) => new Date(b.date) - new Date(a.date));
+    complaint.complainComments.sort((a, b) => new Date(b.date) - new Date(a.date));
 
- 
+
 
     return sendSuccessResponse(res, { data: complaint });
   } catch (error) {
@@ -478,6 +479,13 @@ const assignDepartmentBySessionId = async (req, res) => {
     // Send the message to admins
     sendMessageToAdmins(socketObj, mess2, department._id);
 
+    const chatTransferHistory = await ChatTransferHistoryModel.create({
+      historyType: "department_tranfer",
+      chatId: chat?._id,
+      oldDepartment: null,
+      newDepartment: department?._id,
+    })
+    console.log(chatTransferHistory, "chatTransferHistory")
     // Send a success response
     res.status(200).json({
       success: true,
