@@ -580,6 +580,46 @@ socketObj.config = (server) => {
       )
         .populate("adminId customerId")
         .lean();
+
+      const previousAgentTranshistory = await ChatTransferHistoryModel.findOne({
+        chatId: chatDetails?._id,
+        historyType: "agent_transfer",
+      }).sort({ createdAt: -1 });
+      const previousDepTranshistory = await ChatTransferHistoryModel.findOne({
+        chatId: chatDetails?._id,
+        historyType: "department_transfer",
+      }).sort({ createdAt: -1 });
+
+      if (previousAgentTranshistory) {
+        const updateHistory = await ChatTransferHistoryModel.findOneAndUpdate(
+          { _id: previousAgentTranshistory._id },
+          {
+            agentSpendTime: dayjs().diff(
+              previousAgentTranshistory.createdAt,
+              "minute"
+            ),
+          }
+        )
+      }
+      if (previousDepTranshistory) {
+        const updateHistory = await ChatTransferHistoryModel.findOneAndUpdate(
+          { _id: previousDepTranshistory._id },
+          {
+            departmentSpendTime: dayjs().diff(
+              previousDepTranshistory.createdAt,
+              "minute"
+            ),
+          }
+        )
+      }
+
+      await ChatTransferHistoryModel.create({
+        historyType: ["transfer_bot"],
+        chatId: chatDetails?._id,
+        oldAgent: previousAgentTranshistory ? previousAgentTranshistory?.newAgent : null,
+        oldDepartment: previousDepTranshistory ? previousDepTranshistory?.newDepartment : null,
+      })
+
       const receivers = await UserModel.find({
         $or: [
           { role: { $in: ["Admin", "Supervisor"] } },
