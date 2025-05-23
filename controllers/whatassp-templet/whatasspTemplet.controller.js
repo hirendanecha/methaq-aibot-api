@@ -7,6 +7,8 @@ const { getPaginationData, getPagination } = require("../../utils/fn");
 require("dotenv").config();
 const fs = require("fs");
 const path = require("path");
+const TemplateAccessModel = require("../../models/whatsappTemplate-access.model");
+const UserModel = require("../../models/user.model");
 
 const WABA_ID = process.env.WhatsApp_Business_Account_ID;
 const TOKEN = process.env.WHATSAPP_CLOUD_API_ACCESS_TOKEN;
@@ -171,6 +173,7 @@ const createWhatsappTemplate = async (req, res) => {
 
 const getAllWhatsappTemplet = async (req, res) => {
   try {
+    const { _id: adminId, role } = req.user;
     const { page = 1, size = 10, search } = req.query;
     const url = `https://graph.facebook.com/v22.0/${WABA_ID}/message_templates`;
 
@@ -185,15 +188,22 @@ const getAllWhatsappTemplet = async (req, res) => {
 
     let templates = response.data.data || [];
 
-    // Filter by search
+    if (role === "Agent") {
+      const access = await TemplateAccessModel.findOne({ userId: adminId });
+      const allowedTemplates = access?.templateNames || [];
+
+      templates = templates.filter(template =>
+        allowedTemplates.includes(template.name)
+      );
+    }
+
     if (search) {
       const cleanSearch = search.replace(/^[^a-zA-Z0-9]+/, "").toLowerCase();
-      templates = templates.filter((template) =>
+      templates = templates.filter(template =>
         template.name.toLowerCase().includes(cleanSearch)
       );
     }
 
-    // Manual pagination
     const responcedate = templates.slice(offset, offset + limit);
 
     return sendSuccessResponse(
@@ -295,10 +305,73 @@ const deleteWhatsappTemplet = async (req, res) => {
   }
 };
 
+const assignTemplatesToUser = async (req, res) => {
+  try {
+    const { _id: adminId } = req.user;
+    const { userId, templateNames, departmentId } = req.body;
+
+    if (!Array.isArray(templateNames) || templateNames.length === 0) {
+      return sendErrorResponse(res, "templateNames is required", 400, true, true);
+    }
+
+    if (userId) {
+      await upsertTemplateAccess(userId, templateNames, adminId);
+      return sendSuccessResponse(res, { message: "Templates assigned to user" });
+    }
+
+    if (departmentId) {
+      const agents = await UserModel.find(
+        { role: "Agent", department: departmentId },
+        { _id: 1 }
+      );
+
+      const bulkOps = agents.map(agent => ({
+        updateOne: {
+          filter: { userId: agent._id },
+          update: {
+            $addToSet: { templateNames: { $each: templateNames } },
+            $setOnInsert: { assignedBy: adminId },
+          },
+          upsert: true,
+        }
+      }));
+
+      await TemplateAccessModel.bulkWrite(bulkOps);
+
+      return sendSuccessResponse(res, {
+        message: `Templates assigned to ${agents.length} agents in the department`,
+      });
+    }
+
+    return sendErrorResponse(res, "Either userId or departmentId is required", 400, true, true);
+  } catch (error) {
+    return sendErrorResponse(res, error.message || "Assignment failed");
+  }
+};
+
+const upsertTemplateAccess = async (userId, templateNames, assignedBy) => {
+  const existingAccess = await TemplateAccessModel.findOne({ userId });
+
+  if (existingAccess) {
+    await TemplateAccessModel.updateOne(
+      { userId },
+      { $addToSet: { templateNames: { $each: templateNames } } }
+    );
+  } else {
+    await TemplateAccessModel.create({
+      userId,
+      templateNames,
+      assignedBy,
+    });
+  }
+};
+
+
 module.exports = {
   createWhatsappTemplate,
   getAllWhatsappTemplet,
   deleteWhatsappTemplet,
   getWhatsappTempletNames,
-  getTemplateByName
+  getTemplateByName,
+  assignTemplatesToUser
 };
