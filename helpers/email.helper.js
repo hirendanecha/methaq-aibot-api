@@ -14,7 +14,7 @@ const templates = [
 ];
 
 const senders = {
-    primary: environment.sendgrid.senders.primary,
+    primary: environment.sendgrid.senders.primary.email,
     cls: environment.sendgrid.senders.cls,
 };
 
