@@ -8,6 +8,7 @@ require("dotenv").config();
 const fs = require("fs");
 const path = require("path");
 const TemplateAccessModel = require("../../models/whatsappTemplate-access.model");
+const UserModel = require("../../models/user.model");
 
 const WABA_ID = process.env.WhatsApp_Business_Account_ID;
 const TOKEN = process.env.WHATSAPP_CLOUD_API_ACCESS_TOKEN;
@@ -307,37 +308,64 @@ const deleteWhatsappTemplet = async (req, res) => {
 const assignTemplatesToUser = async (req, res) => {
   try {
     const { _id: adminId } = req.user;
-    const { userId, templateNames } = req.body;
+    const { userId, templateNames, departmentId } = req.body;
 
-    if (!userId || !Array.isArray(templateNames)) {
-      return sendErrorResponse(res, "userId and templateNames are required", 400, true, true);
+    if (!Array.isArray(templateNames) || templateNames.length === 0) {
+      return sendErrorResponse(res, "templateNames is required", 400, true, true);
     }
 
-    const existingAccess = await TemplateAccessModel.findOne({ userId });
+    if (userId) {
+      await upsertTemplateAccess(userId, templateNames, adminId);
+      return sendSuccessResponse(res, { message: "Templates assigned to user" });
+    }
 
-    let updated;
-    if (existingAccess) {
-      updated = await TemplateAccessModel.findOneAndUpdate(
-        { userId },
-        { $addToSet: { templateNames: { $each: templateNames } } },
-        { new: true }
+    if (departmentId) {
+      const agents = await UserModel.find(
+        { role: "Agent", department: departmentId },
+        { _id: 1 }
       );
-    } else {
-      updated = await TemplateAccessModel.create({
-        userId,
-        templateNames,
-        assignedBy: adminId
+
+      const bulkOps = agents.map(agent => ({
+        updateOne: {
+          filter: { userId: agent._id },
+          update: {
+            $addToSet: { templateNames: { $each: templateNames } },
+            $setOnInsert: { assignedBy: adminId },
+          },
+          upsert: true,
+        }
+      }));
+
+      await TemplateAccessModel.bulkWrite(bulkOps);
+
+      return sendSuccessResponse(res, {
+        message: `Templates assigned to ${agents.length} agents in the department`,
       });
     }
 
-    return sendSuccessResponse(res, {
-      message: "Templates assigned successfully",
-      data: updated,
-    });
+    return sendErrorResponse(res, "Either userId or departmentId is required", 400, true, true);
   } catch (error) {
     return sendErrorResponse(res, error.message || "Assignment failed");
   }
 };
+
+const upsertTemplateAccess = async (userId, templateNames, assignedBy) => {
+  const existingAccess = await TemplateAccessModel.findOne({ userId });
+
+  if (existingAccess) {
+    await TemplateAccessModel.updateOne(
+      { userId },
+      { $addToSet: { templateNames: { $each: templateNames } } }
+    );
+  } else {
+    await TemplateAccessModel.create({
+      userId,
+      templateNames,
+      assignedBy,
+    });
+  }
+};
+
 
 module.exports = {
   createWhatsappTemplate,
