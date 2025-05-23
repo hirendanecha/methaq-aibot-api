@@ -23,105 +23,100 @@ agenda.define("archive old chats", async (job) => {
 
 agenda.define("not replying", async (job) => {
 
-    const aggregate = [];
     const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
-
-    aggregate.push({
-        $lookup: {
-            from: "messages",
-            localField: "latestMessage",
-            foreignField: "_id",
-            as: "message",
+    const aggregate = [
+        {
+            $lookup: {
+                from: "messages",
+                localField: "latestMessage",
+                foreignField: "_id",
+                as: "latestMessage",
+            },
         },
-    });
-
-    aggregate.push({
-        $unwind: {
-            path: "$message",
-            preserveNullAndEmptyArrays: true // Optional: if no message found, still include the chat document
-        }
-    });
-
-    aggregate.push({
-        $match: {
-            $and: [
-                { "message.sendType": "user" },
-                { "message.timestamp": { $lt: thirtyMinutesAgo } },
-            ]
-        }
-    })
-
-    aggregate.push({
-        $lookup: {
-            from: "users",
-            localField: "adminId",
-            foreignField: "_id",
-            as: "user",
+        {
+            $unwind: {
+                path: "$latestMessage",
+                preserveNullAndEmptyArrays: true // Optional: if no message found, still include the chat document
+            }
         },
-    })
-
-    aggregate.push({
-        $unwind: {
-            path: "$user",
-            preserveNullAndEmptyArrays: true
+        {
+            $match: {
+                $and: [
+                    { "latestMessage.sendType": "user" },
+                    { "latestMessage.timestamp": { $lt: thirtyMinutesAgo } },
+                ]
+            }
+        },
+        {
+            $lookup: {
+                from: "users",
+                localField: "adminId",
+                foreignField: "_id",
+                as: "adminId",
+            },
+        },
+        {
+            $unwind: {
+                path: "$adminId",
+                preserveNullAndEmptyArrays: true
+            }
+        },
+        {
+            $lookup: {
+                from: "customers",
+                localField: "customerId",
+                foreignField: "_id",
+                as: "customerId",
+            }
+        },
+        {
+            $unwind: {
+                path: "$customerId",
+                preserveNullAndEmptyArrays: true
+            }
         }
-    })  
+    ];
 
-    aggregate.push({ 
-        $lookup: {
-            from: "customers",
-            localField: "customerId",
-            foreignField: "_id",
-            as: "customer",
-        }
-    })
-
-    aggregate.push({
-        $unwind: {  
-            path: "$customer",
-            preserveNullAndEmptyArrays: true
-        }
-    })
 
     const chats = await ChatModel.aggregate(aggregate);
-    console.log(chats)
+    const unreadChats = {};
+    for (const chat of chats) {
+        if (chat?.adminId?._id) {
+            unreadChats[chat?.adminId?._id?.toString()] = Array.isArray(unreadChats[chat?.adminId?._id?.toString()]) ? unreadChats[chat?.adminId?._id?.toString()].push(chat) : [chat];
+        }
+    }
+    console.log(unreadChats, "sdgdfg")
     //for send mail use chats.user.email
 
-    console.log("Sending email to admin");
 
     if (chats.length === 0) {
         console.log("No chats found.");
         return;
     }
 
-    for (const chat of chats) {
-        if (chat?.user?.email) {
-            const email = chat?.user?.email;
-            console.log(chat.user.email)
-            const adminName = chat?.user?.fullName || "Admin";
-
-            if (!email) {
-                console.warn("No email found for chat:", chat._id);
-                continue;
-            }
-
+    for (const admin of Object.keys(unreadChats)) {
+        const chats = unreadChats[admin];
+        const customers = chats?.map((chat) => chat?.customerId?.name);
+        const adminMail = chats[0]?.adminId?.email;
+        const adminName = chats[0]?.adminId?.fullName;
+        console.log(adminMail, "Sending email to admin");
+        if (adminMail) {
             const data = {
                 serverBaseUrl: environment.server,
-                customerName: adminName,
+                adminName: adminName,
                 emailTitle: "Not Replying chats",
                 requestType: "reply chats",
-                endorsementType: "Accepted",
-                customerName: chat?.customer?.name
+                customersName: customers
             };
 
             try {
                 await sendHtmlEmail(
                     "views/templates/noreply.ejs",
                     {
-                        to: email,
+                        to: adminMail,
                         subject: "Not replying chats",
                     },
-                    {data}
+                    { data }
                 );
                 console.log(`Email sent to ${email}`);
             } catch (error) {
