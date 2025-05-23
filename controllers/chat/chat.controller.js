@@ -1163,7 +1163,7 @@ const assignDepartmentController = async (req, res) => {
 
     const AgentTranshistory = await ChatTransferHistoryModel.findOne({
       chatId: chatDetails?._id,
-      historyType: "agent_tranfer"
+      historyType: "agent_transfer"
     }).sort({ createdAt: -1 }).limit(1);
 
     const agentSpendTimeMinutes = Math.floor((new Date() - new Date(AgentTranshistory.createdAt)) / 1000 / 60);
@@ -1196,7 +1196,7 @@ const assignDepartmentController = async (req, res) => {
 
       if (newdep?.name != chatDetails?.department?.name) {
         await ChatTransferHistoryModel.create({
-          historyType: ["department_transfer", "agent_tranfer"],
+          historyType: ["department_transfer", "agent_transfer"],
           chatId: chatDetails?._id,
           newDepartment: newdep.name,
           newAgent: assigneeAgent.fullName,
@@ -1204,7 +1204,7 @@ const assignDepartmentController = async (req, res) => {
       }
       else {
         await ChatTransferHistoryModel.create({
-          historyType: ["department_transfer", "agent_tranfer"],
+          historyType: ["department_transfer", "agent_transfer"],
           chatId: chatDetails?._id,
           newDepartment: newdep._id,
           newAgent: assigneeAgent._id,

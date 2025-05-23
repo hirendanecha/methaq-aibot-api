@@ -774,6 +774,28 @@ socketObj.config = (server) => {
           .populate("adminId customerId")
           .lean();
         console.log(updatedChat, "updatedChatupdatedChat");
+        const previousDepTranshistory = await ChatTransferHistoryModel.findOne({
+          chatId: params.chatId,
+          historyType: "agent_transfer",
+        }).sort({ createdAt: -1 });
+
+        if (previousDepTranshistory) {
+          const updateHistory = await ChatTransferHistoryModel.findOneAndUpdate(
+            { _id: previousDepTranshistory._id },
+            {
+              agentSpendTime: dayjs().diff(
+                previousDepTranshistory.createdAt,
+                "minute"
+              ),
+            }
+          )
+        }
+        await ChatTransferHistoryModel.create({
+          historyType: ["agent_transfer"],
+          chatId: chatDetails?._id,
+          oldAgent: previousDepTranshistory ? previousDepTranshistory?.newAgent : null,
+          newAgent: updatedChat?.adminId,
+        })
         sendWhatsAppMessage(
           updatedChat?.customerId?.phone,
           undefined,
@@ -963,7 +985,7 @@ socketObj.config = (server) => {
           updatedChat?.isHuman
         );
 
-        if (oldDepartment !== department) {
+        if (oldDepartment?.toString() != department) {
 
           const oldhistory = await ChatTransferHistoryModel.findOne({
             chatId: chatId,
@@ -983,10 +1005,10 @@ socketObj.config = (server) => {
           }
         }
 
-        if (oldAssignee !== adminId) {
+        if (oldAssignee?.toString() != adminId) {
           const prevhistory = await ChatTransferHistoryModel.findOne({
             chatId: chatId,
-            historyType: "agent_tranfer",
+            historyType: "agent_transfer",
           }).sort({ createdAt: -1 });
           console.log(prevhistory, "prevhistory");
 
@@ -1006,7 +1028,7 @@ socketObj.config = (server) => {
         if (oldDepartment !== department) {
           const addhistory = await ChatTransferHistoryModel.create({
             chatId: chatId,
-            historyType: ["agent_tranfer", "department-transfer"],
+            historyType: ["agent_transfer", "department-transfer"],
             oldAssignee: oldAssignee,
             newAssignee: adminId,
             oldDepartment: oldDepartment,
@@ -1015,11 +1037,10 @@ socketObj.config = (server) => {
           })
           console.log(addhistory, "addhistory");
         }
-        if (oldAssignee !== adminId)
-        {
+        if (oldAssignee !== adminId) {
           const addhistory = await ChatTransferHistoryModel.create({
             chatId: chatId,
-            historyType: ["agent_tranfer"],
+            historyType: ["agent_transfer"],
             oldAssignee: oldAssignee,
             newAssignee: adminId,
             oldDepartment: oldDepartment,
