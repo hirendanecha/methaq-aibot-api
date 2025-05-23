@@ -208,6 +208,41 @@ const getAllWhatsappTemplet = async (req, res) => {
   }
 };
 
+const getTemplateByName = async (req, res) => {
+  try {
+    const { name } = req.query;
+
+    if (!name) {
+      return sendErrorResponse(res, "Template name is required", 400, true, true);
+    }
+
+    const url = `https://graph.facebook.com/v22.0/${WABA_ID}/message_templates`;
+
+    const response = await axios.get(url, {
+      headers: {
+        Authorization: `Bearer ${TOKEN}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    const templates = response.data?.data || [];
+    const foundTemplate = templates.find(t => t.name === name);
+
+    if (!foundTemplate) {
+      return sendErrorResponse(res, "Template not found", 404, true, true);
+    }
+
+    return sendSuccessResponse(res, { data: foundTemplate });
+  } catch (error) {
+    return sendErrorResponse(
+      res,
+      error?.response?.data?.error?.message || error.message,
+      error?.response?.status || 500
+    );
+  }
+};
+
+
 const getWhatsappTempletNames = async (req, res) => {
   try {
     const url = `https://graph.facebook.com/v22.0/${WABA_ID}/message_templates`;
@@ -221,7 +256,6 @@ const getWhatsappTempletNames = async (req, res) => {
 
     const templates = response.data.data || [];
 
-    // 👇 Extract only the names
     const templateNames = templates.map(t => t.name);
 
     return sendSuccessResponse(res, {
@@ -265,5 +299,6 @@ module.exports = {
   createWhatsappTemplate,
   getAllWhatsappTemplet,
   deleteWhatsappTemplet,
-  getWhatsappTempletNames
+  getWhatsappTempletNames,
+  getTemplateByName
 };
