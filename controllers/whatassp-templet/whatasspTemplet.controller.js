@@ -45,11 +45,11 @@ const createWhatsappTemplate = async (req, res) => {
       bodyText,
       bodyExample,
       footerText,
-      buttonText,
+      buttons,
     } = req.body;
 
     if (!name || !language || !category || !bodyText) {
-      return sendErrorResponse(res, "Missing required fields: name, language, category, bodyText", 400);
+      return sendErrorResponse(res, "Missing required fields: name, language, category, bodyText", 400, true, true);
     }
 
     const files = req.files
@@ -120,17 +120,13 @@ const createWhatsappTemplate = async (req, res) => {
       });
     }
 
-    if (buttonText) {
+    if (Array.isArray(buttons) && buttons.length > 0) {
       components.push({
         type: "BUTTONS",
-        buttons: [
-          {
-            type: "QUICK_REPLY",
-            text: buttonText,
-          },
-        ],
+        buttons
       });
     }
+
 
     const payload = {
       name,
@@ -202,6 +198,32 @@ const getAllWhatsappTemplet = async (req, res) => {
   }
 };
 
+const getWhatsappTempletNames = async (req, res) => {
+  try {
+    const url = `https://graph.facebook.com/v22.0/${WABA_ID}/message_templates`;
+
+    const response = await axios.get(url, {
+      headers: {
+        Authorization: `Bearer ${TOKEN}`,
+        "Content-Type": "application/json",
+      },
+    });
+
+    const templates = response.data.data || [];
+
+    // 👇 Extract only the names
+    const templateNames = templates.map(t => t.name);
+
+    return sendSuccessResponse(res, {
+      data: templateNames,
+    });
+  } catch (error) {
+    return sendErrorResponse(
+      res,
+      error?.response?.data?.error?.message || error.message
+    );
+  }
+};
 
 // Delete WhatsApp Template by name
 const deleteWhatsappTemplet = async (req, res) => {
@@ -232,5 +254,6 @@ const deleteWhatsappTemplet = async (req, res) => {
 module.exports = {
   createWhatsappTemplate,
   getAllWhatsappTemplet,
-  deleteWhatsappTemplet
+  deleteWhatsappTemplet,
+  getWhatsappTempletNames
 };
