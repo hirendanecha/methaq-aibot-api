@@ -1028,7 +1028,7 @@ socketObj.config = (server) => {
         if (oldDepartment?.toString() !== department) {
           const addhistory = await ChatTransferHistoryModel.create({
             chatId: chatId,
-            historyType: ["agent_transfer", "department-transfer"],
+            historyType: ["agent_transfer", "department_transfer"],
             oldAssignee: oldAssignee?.toString(),
             newAssignee: adminId,
             oldDepartment: oldDepartment?.toString(),
